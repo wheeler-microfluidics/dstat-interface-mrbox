@@ -7,7 +7,7 @@
 #
 ################################################################################
 
-import sys, serial
+import sys, serial, io
 import numpy as np
 from time import sleep
 from collections import deque
@@ -16,40 +16,41 @@ from matplotlib import pyplot as plt
 # class that holds analog data for N samples
 class AnalogData:
     # constr
-    def __init__(self, maxLen):
-        self.ax = deque([0.0]*maxLen)
-        self.ay = deque([0.0]*maxLen)
-        self.maxLen = maxLen
-    
-    # ring buffer
-    def addToBuf(self, buf, val):
-        if len(buf) < self.maxLen:
-            buf.append(val)
-        else:
-            buf.pop()
-            buf.appendleft(val)
+    def __init__(self):
+        self.ax = []
+        self.ay = []
     
     # add data
     def add(self, data):
         assert(len(data) == 2)
-        self.addToBuf(self.ax, data[0])
-        self.addToBuf(self.ay, data[1])
+        self.ax.append(data[0])
+        self.ay.append(data[1])
+
+    # clear data
+    def clear(self):
+        self.ax = []
+        self.ay = []
+
 
 # plot class
 class AnalogPlot:
+    
     # constr
     def __init__(self, analogData):
+        self.i = 0
         # set plot to animated
-        plt.ion()
-        self.axline, = plt.plot(analogData.ax)
-        self.ayline, = plt.plot(analogData.ay)
-        plt.ylim([0, 1023])
+        plt.ion() #interactive mode on
+        plt.autoscale(True,True,True)
+        self.line = plt.plot(analogData.ax,analogData.ay)
     
     # update plot
     def update(self, analogData):
-        self.axline.set_ydata(analogData.ax)
-        self.ayline.set_ydata(analogData.ay)
+        if self.i < 5:
+            self.i += 1
+            return
+        plt.setp(self.line,xdata=analogData.ax, ydata=analogData.ay)
         plt.draw()
+        self.i=0
 
 # main() function
 def main():
@@ -60,26 +61,49 @@ def main():
     
     #strPort = '/dev/tty.usbserial-A7006Yqh'
     strPort = sys.argv[1];
-    
-    # plot parameters
-    analogData = AnalogData(100)
-    analogPlot = AnalogPlot(analogData)
-    
-    print 'plotting data...'
-    
+
     # open serial port
-    ser = serial.Serial(strPort, 9600)
-    while True:
-        try:
-            line = ser.readline()
-            data = [float(val) for val in line.split()]
-            #print data
-            if(len(data) == 2):
-                analogData.add(data)
-                analogPlot.update(analogData)
-        except KeyboardInterrupt:
-            print 'exiting'
-            break
+    ser = serial.Serial(strPort, 1024000,timeout=2)
+    sio = io.TextIOWrapper(io.BufferedRWPair(ser,ser,buffer_size=1),
+                            newline = '\n',
+                            line_buffering = True)
+    ser.write("ck")
+
+    # plot parameters
+    digiData = AnalogData()
+    digiPlot = AnalogPlot(digiData)
+
+    try:
+        while True:
+            output = raw_input('Commands:')
+            ser.flushInput() #clear input buffer
+            digiData.clear() #clear old data
+            ser.write(output)
+            print output
+            
+            while True:
+                for line in ser:
+                    if line.lstrip().startswith("no"):
+                        ser.flushInput()
+                        break
+                    if not (line.isspace() or line.lstrip().startswith('#')):
+                        print line
+                        data = [float(val) for val in line.split()]
+                        if(len(data) == 2):
+                            digiData.add(data)
+                            digiPlot.update(digiData)
+
+                break
+#                if not line.lstrip().startswith('#'):
+#                    data = [float(val) for val in line.split()]
+##                    if(len(data) == 2):
+##                        analogData.add(data)
+##                        analogPlot.update(analogData)
+#                    block.append(line)
+#                    print line
+#            print block
+    except KeyboardInterrupt:
+        print 'exiting'
     # close serial
     ser.flush()
     ser.close()
