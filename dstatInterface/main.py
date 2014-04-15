@@ -49,6 +49,12 @@ class AnalogPlot:
             self.i += 1
             return
         plt.setp(self.line,xdata=analogData.ax, ydata=analogData.ay)
+        ax = plt.gca()
+
+        # recompute the ax.dataLim
+        ax.relim()
+        # update ax.viewLim using the new dataLim
+        ax.autoscale_view()
         plt.draw()
         self.i=0
 
