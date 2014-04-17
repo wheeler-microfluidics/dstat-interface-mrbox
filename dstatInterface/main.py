@@ -1,11 +1,4 @@
-################################################################################
-# showdata.py
-#
-# Display analog data from Arduino using Python (matplotlib)
-#
-# electronut.in
-#
-################################################################################
+#!/usr/bin/env python
 
 import sys, serial, io
 import numpy as np

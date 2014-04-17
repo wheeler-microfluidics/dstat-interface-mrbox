@@ -8,12 +8,16 @@
 
 /* Begin PBXFileReference section */
 		5FDC0DFD18FDAD79003F857A /* main.py */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.script.python; path = main.py; sourceTree = "<group>"; };
+		5FDC1E4218FF9572007AD04D /* glade1.py */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.script.python; path = glade1.py; sourceTree = "<group>"; };
+		5FDC1E4318FF9A95007AD04D /* test1.glade */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xml; path = test1.glade; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXGroup section */
 		5FDC0DF218FDACDA003F857A = {
 			isa = PBXGroup;
 			children = (
+				5FDC1E4318FF9A95007AD04D /* test1.glade */,
+				5FDC1E4218FF9572007AD04D /* glade1.py */,
 				5FDC0DFD18FDAD79003F857A /* main.py */,
 			);
 			sourceTree = "<group>";
@@ -170,6 +174,7 @@
 				5FDC0DFC18FDACDA003F857A /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
 	};
