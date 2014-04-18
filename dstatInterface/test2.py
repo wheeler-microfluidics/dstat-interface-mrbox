@@ -45,63 +45,31 @@ class Buglump:
     def on_pop_status_activate(self, menuitem, data=None): #removes top message from stack
         self.status_count -= 1
         self.statusbar.pop(self.context_id)
-
+    
     def on_clear_status_activate(self, menuitem, data=None): #clears status stack
         self.statusbar.remove_all(self.context_id)
         self.status_count = 0
-#        while (self.status_count > 0):
-#            self.statusbar.pop(self.context_id)
-#            self.status_count -= 1
-
-    def on_sfm_button_clicked(self, button, data=None):
-        # create an instance of the entry objects
-        # so we can get and set the text values
-        self.entry1 = self.builder.get_object("entry1")
-        self.entry2 = self.builder.get_object("entry2")
-        self.result1 = self.builder.get_object("result1")
-
-        # get the text from the GtkEntry widget and convert
-        # it to a float value so we can calculate the result
-        self.sfm = float(self.entry1.get_text())
-        self.diameter = float(self.entry2.get_text())
-
-        # calculate the result convert to an int to round the number
-        # then convert to a string to set the text in our label
-        # notice the math.pi constant is used in the calculation
-        self.rpm = str(int(self.sfm * ((12/math.pi)/self.diameter)))
-
-        # debugging print
-        print "calculate rpm clicked"
-
-        # set the result label with our results
-        self.result1.set_text(self.rpm)
-
-    def on_gtk_new_activate(self, menuitem, data=None):
-        # debugging message
-        print 'File New selected'
+    #        while (self.status_count > 0):
+    #            self.statusbar.pop(self.context_id)
+    #            self.status_count -= 1
+    
+    def on_expcombobox_changed(self, widget, data=None):
+        # get the index of the changed row
+        self.index = widget.get_active()
         
-        # create a label for the tab and using get_n_pages() to find out how
-        # many pages there is so the next page has a sequential number.
-        self.label1 = gtk.Label('Page ' + str(self.notebook.get_n_pages() + 1))
+        # get the model
+        self.model = widget.get_model()
         
-        # create a label to put into the page
-        self.label2 = gtk.Label('Hello World')
-        # If you don't show the contents of the tab it won't show up
-        self.label2.show()
+        # retrieve the item from column 1
+        self.item = self.model[self.index][1]
         
-        # append a page with label5 as the contents and label5 as the tab
-        self.notebook.append_page(self.label2, self.label1)
-
-    def on_notebook1_switch_page(self,  notebook, page, page_num, data=None):
-        self.tab = notebook.get_nth_page(page_num)
-        self.label = notebook.get_tab_label(self.tab).get_label()
-        self.message_id = self.statusbar.push(0, self.label)
-
-
-
+        # debugging print statements
+        print "ComboBox Active Text is", self.item
+        print "ComboBox Active Index is", self.index
+    
     # This is our init part where we connect the signals
     def __init__(self):
-        self.gladefile = "test1.glade" # store the file name
+        self.gladefile = "dstatInterface.glade" # store the file name
         self.builder = gtk.Builder() # create an instance of the gtk.Builder
         self.builder.add_from_file(self.gladefile) # add the xml file to the Builder
         
@@ -110,14 +78,23 @@ class Buglump:
         # you use this line to connect the signals.
         self.builder.connect_signals(self)
         
+        #expcombobox
+        self.expcombobox = self.builder.get_object("expcombobox")
+        self.cell = gtk.CellRendererText()
+        self.expcombobox.pack_start(self.cell, True) #pack CellRenderer into beginning of combobox cell
+        self.expcombobox.add_attribute(self.cell, 'text', 1) # text in column 1
+        self.expcombobox.set_active(0) #set initial value
+
+        
+        
         #get widgets
         self.window = self.builder.get_object("window1")
         self.aboutdialog = self.builder.get_object("aboutdialog1")
         self.statusbar = self.builder.get_object("statusbar")
-        self.notebook = self.builder.get_object("notebook1")
+
         
         self.window.show() # this shows the 'window1' object
-
+        
         self.context_id = self.statusbar.get_context_id("status") #register and get statusbar context_id for description "status"
         self.status_count = 0 #count of messages pushed
 
