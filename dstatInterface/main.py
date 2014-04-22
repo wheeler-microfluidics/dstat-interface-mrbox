@@ -12,15 +12,20 @@ class AnalogData:
     def __init__(self):
         self.ax = []
         self.ay = []
+        self.first = 1
     
     # add data
     def add(self, data):
+        if self.first == 1:
+            self.first = 0
+            return
         assert(len(data) == 2)
         self.ax.append(data[0])
         self.ay.append(data[1])
 
     # clear data
     def clear(self):
+        self.first = 1
         self.ax = []
         self.ay = []
 
@@ -82,11 +87,12 @@ def main():
             
             while True:
                 for line in ser:
+                    print line
                     if line.lstrip().startswith("no"):
                         ser.flushInput()
                         break
                     if not (line.isspace() or line.lstrip().startswith('#')):
-                        print line
+                        #print line
                         data = [float(val) for val in line.split()]
                         if(len(data) == 2):
                             digiData.add(data)

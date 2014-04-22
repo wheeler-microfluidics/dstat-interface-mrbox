@@ -38,7 +38,7 @@ def lsv_exp(adc_buffer, adc_rate, adc_pga, gain, start, stop, slope):
     print s
 #    print ("L ", adc_buffer, adc_rate, adc_pga, gain, start, stop, slope)
 
-def cv_exp(adc_buffer, adc_rate, adc_pga, gain, start, v1, v2, scans, slope):
+def cv_exp(adc_buffer, adc_rate, adc_pga, gain, v1, v2, start, scans, slope):
     s = "A "
     s += (adc_buffer)
     s += " "
@@ -48,11 +48,11 @@ def cv_exp(adc_buffer, adc_rate, adc_pga, gain, start, v1, v2, scans, slope):
     s += " G "
     s += (gain)
     s += " C "
-    s += str(start)
-    s += " "
     s += str(v1)
     s += " "
     s += str(v2)
+    s += " "
+    s += str(start)
     s += " "
     s += str(scans)
     s += " "

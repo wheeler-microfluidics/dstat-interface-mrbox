@@ -146,9 +146,9 @@ class main:
         
         if selection == 0: #CA
             if self.adc_pot.buffer_toggle.get_active(): #True if box checked
-                adc_buffer = "0x2"
+                adc_buffer = "2"
             else:
-                adc_buffer = "0x0"
+                adc_buffer = "0"
             
             self.srate_model = self.adc_pot.srate_combobox.get_model()
             self.pga_model = self.adc_pot.pga_combobox.get_model()
@@ -170,9 +170,9 @@ class main:
     
         elif selection == 1: #LSV
             if self.adc_pot.buffer_toggle.get_active(): #True if box checked
-                adc_buffer = "0x2"
+                adc_buffer = "2"
             else:
-                adc_buffer = "0x0"
+                adc_buffer = "0"
             
             self.srate_model = self.adc_pot.srate_combobox.get_model()
             self.pga_model = self.adc_pot.pga_combobox.get_model()
@@ -207,9 +207,9 @@ class main:
         
         elif selection == 2: #CV
             if self.adc_pot.buffer_toggle.get_active(): #True if box checked
-                adc_buffer = "0x2"
+                adc_buffer = "2"
             else:
-                adc_buffer = "0x0"
+                adc_buffer = "0"
         
             #get liststores for comboboxes
             self.srate_model = self.adc_pot.srate_combobox.get_model()
@@ -242,7 +242,7 @@ class main:
                 if v1 == v2:
                     raise InputError(start,"Vertex 1 cannot equal Vertex 2.")
                 
-                comm.cv_exp(adc_buffer, adc_rate, adc_pga, gain, start, v1, v2, scans, slope)
+                comm.cv_exp(adc_buffer, adc_rate, adc_pga, gain, v1, v2, start, scans, slope)
             
             except ValueError:
                 self.statusbar.push(self.error_context_id, "Experiment parameters must be integers.")
@@ -251,9 +251,9 @@ class main:
     
         elif selection == 3: #SWV
             if self.adc_pot.buffer_toggle.get_active(): #True if box checked
-                adc_buffer = "0x2"
+                adc_buffer = "2"
             else:
-                adc_buffer = "0x0"
+                adc_buffer = "0"
             
             #get liststores for comboboxes
             self.srate_model = self.adc_pot.srate_combobox.get_model()

@@ -67,37 +67,37 @@
       <row>
         <col id="0">0</col>
         <col id="1" translatable="yes">1x</col>
-        <col id="2" translatable="yes">0x0</col>
+        <col id="2" translatable="yes">0</col>
       </row>
       <row>
         <col id="0">1</col>
         <col id="1" translatable="yes">2x</col>
-        <col id="2" translatable="yes">0x1</col>
+        <col id="2" translatable="yes">1</col>
       </row>
       <row>
         <col id="0">2</col>
         <col id="1" translatable="yes">4x</col>
-        <col id="2" translatable="yes">0x2</col>
+        <col id="2" translatable="yes">2</col>
       </row>
       <row>
         <col id="0">3</col>
         <col id="1" translatable="yes">8x</col>
-        <col id="2" translatable="yes">0x3</col>
+        <col id="2" translatable="yes">3</col>
       </row>
       <row>
         <col id="0">4</col>
         <col id="1" translatable="yes">16x</col>
-        <col id="2" translatable="yes">0x4</col>
+        <col id="2" translatable="yes">4</col>
       </row>
       <row>
         <col id="0">5</col>
         <col id="1" translatable="yes">32x</col>
-        <col id="2" translatable="yes">0x5</col>
+        <col id="2" translatable="yes">5</col>
       </row>
       <row>
         <col id="0">6</col>
         <col id="1" translatable="yes">64x</col>
-        <col id="2" translatable="yes">0x6</col>
+        <col id="2" translatable="yes">6</col>
       </row>
     </data>
   </object>
@@ -114,82 +114,82 @@
       <row>
         <col id="0">0</col>
         <col id="1" translatable="yes">2.5 Hz</col>
-        <col id="2" translatable="yes">0x03</col>
+        <col id="2" translatable="yes">03</col>
       </row>
       <row>
         <col id="0">1</col>
         <col id="1" translatable="yes">5 Hz</col>
-        <col id="2" translatable="yes">0x13</col>
+        <col id="2" translatable="yes">13</col>
       </row>
       <row>
         <col id="0">2</col>
         <col id="1" translatable="yes">10 Hz</col>
-        <col id="2" translatable="yes">0x23</col>
+        <col id="2" translatable="yes">23</col>
       </row>
       <row>
         <col id="0">3</col>
         <col id="1" translatable="yes">15 Hz</col>
-        <col id="2" translatable="yes">0x33</col>
+        <col id="2" translatable="yes">33</col>
       </row>
       <row>
         <col id="0">4</col>
         <col id="1" translatable="yes">25 Hz</col>
-        <col id="2" translatable="yes">0x43</col>
+        <col id="2" translatable="yes">43</col>
       </row>
       <row>
         <col id="0">5</col>
         <col id="1" translatable="yes">30 Hz</col>
-        <col id="2" translatable="yes">0x53</col>
+        <col id="2" translatable="yes">53</col>
       </row>
       <row>
         <col id="0">6</col>
         <col id="1" translatable="yes">50 Hz</col>
-        <col id="2" translatable="yes">0x63</col>
+        <col id="2" translatable="yes">63</col>
       </row>
       <row>
         <col id="0">7</col>
         <col id="1" translatable="yes">60 Hz</col>
-        <col id="2" translatable="yes">0x72</col>
+        <col id="2" translatable="yes">72</col>
       </row>
       <row>
         <col id="0">8</col>
         <col id="1" translatable="yes">100 Hz</col>
-        <col id="2" translatable="yes">0x82</col>
+        <col id="2" translatable="yes">82</col>
       </row>
       <row>
         <col id="0">9</col>
         <col id="1" translatable="yes">500 Hz</col>
-        <col id="2" translatable="yes">0x92</col>
+        <col id="2" translatable="yes">92</col>
       </row>
       <row>
         <col id="0">10</col>
         <col id="1" translatable="yes">1 kHz</col>
-        <col id="2" translatable="yes">0xA1</col>
+        <col id="2" translatable="yes">A1</col>
       </row>
       <row>
         <col id="0">11</col>
         <col id="1" translatable="yes">2 kHz</col>
-        <col id="2" translatable="yes">0xB0</col>
+        <col id="2" translatable="yes">B0</col>
       </row>
       <row>
         <col id="0">12</col>
         <col id="1" translatable="yes">3.75 kHz</col>
-        <col id="2" translatable="yes">0xC0</col>
+        <col id="2" translatable="yes">C0</col>
       </row>
       <row>
         <col id="0">13</col>
         <col id="1" translatable="yes">7.5 kHz</col>
-        <col id="2" translatable="yes">0xD0</col>
+        <col id="2" translatable="yes">D0</col>
       </row>
       <row>
         <col id="0">14</col>
         <col id="1" translatable="yes">15 kHz</col>
-        <col id="2" translatable="yes">0xE0</col>
+        <col id="2" translatable="yes">E0</col>
       </row>
       <row>
         <col id="0">15</col>
         <col id="1" translatable="yes">30 kHz</col>
-        <col id="2" translatable="yes">0xF0</col>
+        <col id="2" translatable="yes">F0</col>
       </row>
     </data>
   </object>
