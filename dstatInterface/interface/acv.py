@@ -2,14 +2,14 @@
 
 import gtk
 
-class cv:
+class acv:
     def __init__(self):
         self.builder = gtk.Builder()
-        self.builder.add_from_file('interface/cv.glade')
+        self.builder.add_from_file('interface/acv.glade')
         self.builder.connect_signals(self)
 
         self.start_entry = self.builder.get_object('start_entry')
-        self.v1_entry = self.builder.get_object('v1_entry')
-        self.v2_entry = self.builder.get_object('v2_entry')
+        self.stop_entry = self.builder.get_object('stop_entry')
         self.slope_entry = self.builder.get_object('slope_entry')
-        self.scans_entry = self.builder.get_object('scans_entry')
+        self.amplitude_entry = self.builder.get_object('amplitude_entry')
+        self.freq_entry = self.builder.get_object('freq_entry')

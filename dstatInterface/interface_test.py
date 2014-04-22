@@ -16,6 +16,9 @@ import interface.adc_pot as adc_pot
 import interface.chronoamp as chronoamp
 import interface.lsv as lsv
 import interface.cv as cv
+import interface.swv as swv
+import interface.acv as acv
+import interface.pd as pd
 import dstat_comm as comm
 
 class Error(Exception):
@@ -49,6 +52,9 @@ class main:
         self.chronoamp = chronoamp.chronoamp()
         self.lsv = lsv.lsv()
         self.cv = cv.cv()
+        self.swv = swv.swv()
+        self.acv = acv.acv()
+        self.pd = pd.pd()
         
         self.error_context_id = self.statusbar.get_context_id("error")
         
@@ -60,6 +66,12 @@ class main:
         self.lsv_container.reparent(self.exp_section)
         self.cv_container = self.cv.builder.get_object('scrolledwindow1')
         self.cv_container.reparent(self.exp_section)
+        self.swv_container = self.swv.builder.get_object('scrolledwindow1')
+        self.swv_container.reparent(self.exp_section)
+        self.acv_container = self.acv.builder.get_object('scrolledwindow1')
+        self.acv_container.reparent(self.exp_section)
+        self.pd_container = self.pd.builder.get_object('scrolledwindow1')
+        self.pd_container.reparent(self.exp_section)
         
         #fill adc_pot_box
         self.adc_pot_box = self.builder.get_object('gain_adc_box')
@@ -71,18 +83,29 @@ class main:
         self.expcombobox.pack_start(self.cell, True)
         self.expcombobox.add_attribute(self.cell, 'text', 1)
         self.expcombobox.set_active(0)
+        
+        self.spinner = self.builder.get_object('spinner')
 
         self.mainwindow = self.builder.get_object('window1')
         self.mainwindow.set_title("Dstat Interface 0.1")
         self.mainwindow.show_all()
-#        self.chronoamp_container.hide()
+        
+        #hide unused experiment controls
+        #self.chronoamp_container.hide()
         self.lsv_container.hide()
         self.cv_container.hide()
+        self.swv_container.hide()
+        self.acv_container.hide()
+        self.pd_container.hide()
+
 
     def exp_param_show(self, selection):
         self.chronoamp_container.hide()
         self.lsv_container.hide()
         self.cv_container.hide()
+        self.swv_container.hide()
+        self.acv_container.hide()
+        self.pd_container.hide()
         
         self.statusbar.remove_all(self.error_context_id)
 
@@ -92,6 +115,12 @@ class main:
             self.lsv_container.show()
         elif selection == 2:
             self.cv_container.show()
+        elif selection == 3:
+            self.swv_container.show()
+        elif selection == 4:
+            self.acv_container.show()
+        elif selection == 5:
+            self.pd_container.show()
         else:
             self.statusbar.push(self.error_context_id, "Experiment not yet implemented")
 
@@ -116,7 +145,29 @@ class main:
         selection = self.expcombobox.get_active()
         
         if selection == 0: #CA
-            pass
+            if self.adc_pot.buffer_toggle.get_active(): #True if box checked
+                adc_buffer = "0x2"
+            else:
+                adc_buffer = "0x0"
+            
+            self.srate_model = self.adc_pot.srate_combobox.get_model()
+            self.pga_model = self.adc_pot.pga_combobox.get_model()
+            self.gain_model = self.adc_pot.gain_combobox.get_model()
+            
+            adc_rate = self.srate_model.get_value(self.adc_pot.srate_combobox.get_active_iter(), 2) #third column
+            adc_pga = self.pga_model.get_value(self.adc_pot.pga_combobox.get_active_iter(), 2)
+            gain = self.gain_model.get_value(self.adc_pot.gain_combobox.get_active_iter(), 2)
+            try:
+                potential = [int(r[0]) for r in self.chronoamp.model]
+                time = [int(r[1]) for r in self.chronoamp.model]
+            except ValueError:
+                self.statusbar.push(self.error_context_id, "Experiment parameters must be integers.")
+            except InputError as e:
+                self.statusbar.push(self.error_context_id, e.msg)
+    
+            comm.chronoamp(adc_buffer, adc_rate, adc_pga, gain, potential, time)
+    
+    
         elif selection == 1: #LSV
             if self.adc_pot.buffer_toggle.get_active(): #True if box checked
                 adc_buffer = "0x2"
@@ -155,9 +206,95 @@ class main:
                 self.statusbar.push(self.error_context_id, e.msg)
         
         elif selection == 2: #CV
-            pass
+            if self.adc_pot.buffer_toggle.get_active(): #True if box checked
+                adc_buffer = "0x2"
+            else:
+                adc_buffer = "0x0"
+        
+            #get liststores for comboboxes
+            self.srate_model = self.adc_pot.srate_combobox.get_model()
+            self.pga_model = self.adc_pot.pga_combobox.get_model()
+            self.gain_model = self.adc_pot.gain_combobox.get_model()
+            
+            adc_rate = self.srate_model.get_value(self.adc_pot.srate_combobox.get_active_iter(), 2) #third column
+            adc_pga = self.pga_model.get_value(self.adc_pot.pga_combobox.get_active_iter(), 2)
+            gain = self.gain_model.get_value(self.adc_pot.gain_combobox.get_active_iter(), 2)
+            
+            try:
+                self.statusbar.remove_all(self.error_context_id) #clear statusbar
+                start = int(self.cv.start_entry.get_text())
+                slope = int(self.cv.slope_entry.get_text())
+                v1 = int(self.cv.v1_entry.get_text())
+                v2 = int(self.cv.v2_entry.get_text())
+                scans = int(self.cv.scans_entry.get_text())
+                
+                #check parameters are within hardware limits
+                if (start > 1499 or start < -1500):
+                    raise InputError(start,"Start parameter exceeds hardware limits.")
+                if (slope > 2000 or slope < 1):
+                    raise InputError(slope,"Slope parameter exceeds hardware limits.")
+                if (v1 > 1499 or v1 < -1500):
+                    raise InputError(v1,"Vertex 1 parameter exceeds hardware limits.")
+                if (v2 > 1499 or v2 < -1500):
+                    raise InputError(v2,"Vertex 2 parameter exceeds hardware limits.")
+                if (scans < 1 or scans > 255):
+                    raise InputError(scans, "Scans parameter outside limits.")
+                if v1 == v2:
+                    raise InputError(start,"Vertex 1 cannot equal Vertex 2.")
+                
+                comm.cv_exp(adc_buffer, adc_rate, adc_pga, gain, start, v1, v2, scans, slope)
+            
+            except ValueError:
+                self.statusbar.push(self.error_context_id, "Experiment parameters must be integers.")
+            except InputError as e:
+                self.statusbar.push(self.error_context_id, e.msg)
+    
+        elif selection == 3: #SWV
+            if self.adc_pot.buffer_toggle.get_active(): #True if box checked
+                adc_buffer = "0x2"
+            else:
+                adc_buffer = "0x0"
+            
+            #get liststores for comboboxes
+            self.srate_model = self.adc_pot.srate_combobox.get_model()
+            self.pga_model = self.adc_pot.pga_combobox.get_model()
+            self.gain_model = self.adc_pot.gain_combobox.get_model()
+            
+            adc_rate = self.srate_model.get_value(self.adc_pot.srate_combobox.get_active_iter(), 2) #third column
+            adc_pga = self.pga_model.get_value(self.adc_pot.pga_combobox.get_active_iter(), 2)
+            gain = self.gain_model.get_value(self.adc_pot.gain_combobox.get_active_iter(), 2)
+            
+            try:
+                self.statusbar.remove_all(self.error_context_id) #clear statusbar
+                start = int(self.swv.start_entry.get_text())
+                stop = int(self.swv.stop_entry.get_text())
+                step = int(self.swv.step_entry.get_text())
+                pulse = int(self.swv.pulse_entry.get_text())
+                freq = int(self.swv.freq_entry.get_text())
+                
+                #check parameters are within hardware limits (doesn't check if pulse will go out of bounds, but instrument checks this (I think))
+                if (start > 1499 or start < -1500):
+                    raise InputError(start,"Start parameter exceeds hardware limits.")
+                if (step > 200 or step < 1):
+                    raise InputError(step,"Step height parameter exceeds hardware limits.")
+                if (stop > 1499 or stop < -1500):
+                    raise InputError(stop,"Stop parameter exceeds hardware limits.")
+                if (pulse > 150 or pulse < 1):
+                    raise InputError(pulse,"Pulse height parameter exceeds hardware limits.")
+                if (freq < 1 or freq > 1000):
+                    raise InputError(freq, "Frequency parameter outside limits.")
+                if start == stop:
+                    raise InputError(start,"Start cannot equal Stop.")
+                
+                comm.swv_exp(adc_buffer, adc_rate, adc_pga, gain, start, stop, step, pulse, freq)
+            
+            except ValueError:
+                self.statusbar.push(self.error_context_id, "Experiment parameters must be integers.")
+            except InputError as e:
+                    self.statusbar.push(self.error_context_id, e.msg)
+        
         else:
-            pass
+            self.statusbar.push(self.error_context_id, "Experiment not yet implemented.")
 
 if __name__ == "__main__":
     main = main()
