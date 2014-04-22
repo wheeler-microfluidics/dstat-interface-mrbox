@@ -2,9 +2,13 @@
 
 import sys, serial, io
 import numpy as np
+import matplotlib
+from matplotlib.backends.backend_gtkcairo import FigureCanvasGTKCairo as FigureCanvas
+import gtk
 from time import sleep
 from collections import deque
 from matplotlib import pyplot as plt
+
 
 # class that holds analog data for N samples
 class AnalogData:
@@ -39,6 +43,7 @@ class AnalogPlot:
         # set plot to animated
         plt.ion() #interactive mode on
         plt.autoscale(True,True,True)
+        
         self.line = plt.plot(analogData.ax,analogData.ay)
     
     # update plot

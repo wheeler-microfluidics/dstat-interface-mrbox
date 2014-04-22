@@ -21,6 +21,8 @@ import interface.acv as acv
 import interface.pd as pd
 import dstat_comm as comm
 
+import mpltest
+
 class Error(Exception):
     pass
 
@@ -36,6 +38,10 @@ class InputError(Error):
         self.expr = expr
         self.msg = msg
 
+class testData:
+    def __init__(self):
+        self.x = [1,2,3,4,5]
+        self.y = [1,2,3,4,5]
 
 class main:
     def __init__(self):
@@ -56,7 +62,14 @@ class main:
         self.acv = acv.acv()
         self.pd = pd.pd()
         
+        self.data = testData()
+        
+        self.plotbox = mpltest.plotbox(self.data)
+        
         self.error_context_id = self.statusbar.get_context_id("error")
+        
+        self.plotwindow = self.builder.get_object('plotbox')
+        self.plotbox.canvas.reparent(self.plotwindow)
         
         #fill exp_section
         self.exp_section = self.builder.get_object('exp_section_box')

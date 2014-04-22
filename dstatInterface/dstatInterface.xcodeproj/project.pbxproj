@@ -7,10 +7,11 @@
 	objects = {
 
 /* Begin PBXFileReference section */
+		5F87883C19072E86007B53E0 /* mpltest.py */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.script.python; path = mpltest.py; sourceTree = "<group>"; };
 		5FCB541B190591CD00CEB148 /* interface */ = {isa = PBXFileReference; lastKnownFileType = folder; path = interface; sourceTree = "<group>"; };
 		5FCB541D1905923800CEB148 /* interface_test.py */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.script.python; path = interface_test.py; sourceTree = "<group>"; };
 		5FCB54231905B6EE00CEB148 /* dstat_comm.py */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.script.python; path = dstat_comm.py; sourceTree = "<group>"; };
-		5FDC0DFD18FDAD79003F857A /* main.py */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.script.python; path = main.py; sourceTree = "<group>"; };
+		5FDC0DFD18FDAD79003F857A /* mpl.py */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.script.python; path = mpl.py; sourceTree = "<group>"; };
 		5FDC1E4218FF9572007AD04D /* glade1.py */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.script.python; path = glade1.py; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -18,10 +19,11 @@
 		5FDC0DF218FDACDA003F857A = {
 			isa = PBXGroup;
 			children = (
+				5F87883C19072E86007B53E0 /* mpltest.py */,
 				5FCB541D1905923800CEB148 /* interface_test.py */,
 				5FCB54231905B6EE00CEB148 /* dstat_comm.py */,
 				5FCB541B190591CD00CEB148 /* interface */,
-				5FDC0DFD18FDAD79003F857A /* main.py */,
+				5FDC0DFD18FDAD79003F857A /* mpl.py */,
 				5FDC1E4218FF9572007AD04D /* glade1.py */,
 			);
 			sourceTree = "<group>";
