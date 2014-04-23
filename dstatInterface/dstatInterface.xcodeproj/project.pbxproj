@@ -38,6 +38,7 @@
 			buildPhases = (
 			);
 			buildToolPath = /usr/local/bin/python;
+			buildWorkingDirectory = "/Users/mdryden/src/dstat-interface2/dstatInterface";
 			dependencies = (
 			);
 			name = dstatInterface;

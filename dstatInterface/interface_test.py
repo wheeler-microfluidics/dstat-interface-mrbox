@@ -20,6 +20,7 @@ import interface.swv as swv
 import interface.acv as acv
 import interface.pd as pd
 import dstat_comm as comm
+from serial import SerialException
 
 import mpltest
 
@@ -37,16 +38,6 @@ class InputError(Error):
     def __init__(self, expr, msg):
         self.expr = expr
         self.msg = msg
-
-class testData:
-    def __init__(self):
-        self.x = [1,2,3,4,5]
-        self.y = [1,2,3,4,5]
-
-class testLabels:
-    def __init__(self):
-        self.x = "Potential (DAC)"
-        self.y = "Current (ADC)"
 
 class main:
     
@@ -68,14 +59,9 @@ class main:
         self.acv = acv.acv()
         self.pd = pd.pd()
         
-        self.data = testData()
-        self.labels = testLabels()
-        
-        
         self.error_context_id = self.statusbar.get_context_id("error")
         
-        self.plotbox = mpltest.plotbox(self.data)
-        self.plotbox.changetype(self.labels)
+        self.plotbox = mpltest.plotbox()
         self.plotwindow = self.builder.get_object('plotbox')
         self.plotbox.vbox.reparent(self.plotwindow)
         
@@ -197,15 +183,27 @@ class main:
             adc_rate = self.srate_model.get_value(self.adc_pot.srate_combobox.get_active_iter(), 2) #third column
             adc_pga = self.pga_model.get_value(self.adc_pot.pga_combobox.get_active_iter(), 2)
             gain = self.gain_model.get_value(self.adc_pot.gain_combobox.get_active_iter(), 2)
+            
             try:
                 potential = [int(r[0]) for r in self.chronoamp.model]
                 time = [int(r[1]) for r in self.chronoamp.model]
+            
+                if not potential:
+                    raise InputError(potential,"Step table is empty")
+            
+                self.current_exp = comm.chronoamp(adc_buffer, adc_rate, adc_pga, gain, potential, time)
+                self.current_exp.run(self.serial_liststore.get_value(self.serial_combobox.get_active_iter(), 0), self.plotbox)
+            
             except ValueError:
                 self.statusbar.push(self.error_context_id, "Experiment parameters must be integers.")
+            
             except InputError as e:
                 self.statusbar.push(self.error_context_id, e.msg)
+            
+            except SerialException:
+                self.statusbar.push(self.error_context_id, "Could not establish serial connection.")
     
-            comm.chronoamp(adc_buffer, adc_rate, adc_pga, gain, potential, time)
+
     
     
         elif selection == 1: #LSV
