@@ -3,7 +3,6 @@
 import sys, serial, io
 import numpy as np
 import matplotlib
-from matplotlib.backends.backend_gtkcairo import FigureCanvasGTKCairo as FigureCanvas
 import gtk
 from time import sleep
 from collections import deque

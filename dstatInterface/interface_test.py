@@ -49,6 +49,7 @@ class testLabels:
         self.y = "Current (ADC)"
 
 class main:
+    
     def __init__(self):
         self.builder = gtk.Builder()
         self.builder.add_from_file('interface/dstatinterface.glade')
@@ -70,11 +71,11 @@ class main:
         self.data = testData()
         self.labels = testLabels()
         
-        self.plotbox = mpltest.plotbox(self.data)
-        self.plotbox.changetype(self.labels)
         
         self.error_context_id = self.statusbar.get_context_id("error")
         
+        self.plotbox = mpltest.plotbox(self.data)
+        self.plotbox.changetype(self.labels)
         self.plotwindow = self.builder.get_object('plotbox')
         self.plotbox.vbox.reparent(self.plotwindow)
         
@@ -98,6 +99,19 @@ class main:
         self.adc_pot_container = self.adc_pot.builder.get_object('vbox1')
         self.adc_pot_container.reparent(self.adc_pot_box)
         
+        #fill serial
+        self.serial_combobox = self.builder.get_object('serial_combobox')
+        self.serial_combobox.pack_start(self.cell, True)
+        self.serial_combobox.add_attribute(self.cell, 'text', 0)
+        
+        self.serial_liststore = self.builder.get_object('serial_liststore')
+        self.serial_devices = comm.SerialDevices()
+        
+        for i in self.serial_devices.ports:
+            self.serial_liststore.append([i])
+        
+        self.serial_combobox.set_active(0)
+        
         #initialize experiment selection combobox
         self.expcombobox = self.builder.get_object('expcombobox')
         self.expcombobox.pack_start(self.cell, True)
@@ -110,14 +124,13 @@ class main:
         self.mainwindow.set_title("Dstat Interface 0.1")
         self.mainwindow.show_all()
         
-        #hide unused experiment controls
+        ##hide unused experiment controls
         #self.chronoamp_container.hide()
         self.lsv_container.hide()
         self.cv_container.hide()
         self.swv_container.hide()
         self.acv_container.hide()
         self.pd_container.hide()
-
 
     def exp_param_show(self, selection):
         self.chronoamp_container.hide()
@@ -160,7 +173,14 @@ class main:
 
     def on_expcombobox_changed(self, data=None):
         self.exp_param_show(self.expcombobox.get_active())
-    
+
+    def on_serial_refresh_clicked(self, data=None):
+        self.serial_devices.refresh()
+        self.serial_liststore.clear()
+        
+        for i in self.serial_devices.ports:
+            self.serial_liststore.append([i])
+
     def on_pot_start_clicked(self, data=None):
         selection = self.expcombobox.get_active()
         
