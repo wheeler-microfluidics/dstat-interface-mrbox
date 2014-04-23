@@ -43,6 +43,11 @@ class testData:
         self.x = [1,2,3,4,5]
         self.y = [1,2,3,4,5]
 
+class testLabels:
+    def __init__(self):
+        self.x = "Potential (DAC)"
+        self.y = "Current (ADC)"
+
 class main:
     def __init__(self):
         self.builder = gtk.Builder()
@@ -63,13 +68,15 @@ class main:
         self.pd = pd.pd()
         
         self.data = testData()
+        self.labels = testLabels()
         
         self.plotbox = mpltest.plotbox(self.data)
+        self.plotbox.changetype(self.labels)
         
         self.error_context_id = self.statusbar.get_context_id("error")
         
         self.plotwindow = self.builder.get_object('plotbox')
-        self.plotbox.canvas.reparent(self.plotwindow)
+        self.plotbox.vbox.reparent(self.plotwindow)
         
         #fill exp_section
         self.exp_section = self.builder.get_object('exp_section_box')
