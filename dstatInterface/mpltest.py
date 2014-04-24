@@ -6,7 +6,7 @@
 import gtk
 from matplotlib.figure import Figure
 from matplotlib import pyplot as plt
-from numpy import arange, sin, pi
+import numpy as np
 
 from matplotlib.backends.backend_gtkcairo import FigureCanvasGTKCairo as FigureCanvas
 from matplotlib.backends.backend_gtkcairo import NavigationToolbar2Cairo as NavigationToolbar
@@ -18,6 +18,8 @@ class plotbox:
         self.axe1 = self.figure.add_subplot(111)
 
         self.line1, = self.axe1.plot([0,1], [0,1])
+        
+        self.axe1.ticklabel_format(style='sci', scilimits=(0,0), useOffset=False)
     
         self.canvas = FigureCanvas(self.figure)
         self.win = gtk.Window()

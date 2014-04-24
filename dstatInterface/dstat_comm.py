@@ -2,6 +2,7 @@
 
 import serial, io, time
 from serial.tools import list_ports
+import numpy as np
 
 # class that holds analog data for N samples
 
@@ -111,7 +112,7 @@ class Experiment:
 
                             plotbox_instance.update(self)
 
-                            if self.updatecounter == 10:
+                            if self.updatecounter == 5:
                                 plotbox_instance.redraw()
                                 self.updatecounter = 0
 
@@ -124,6 +125,13 @@ class Experiment:
             i.pop(0)
             i.pop(0)
         
+        #conversion to Amperes
+        self.dataarray = np.array(self.data[1:])
+        self.dataarray = self.dataarray/8388607/self.gain*1.5
+
+        for i in range(self.datalength-1):
+            self.data[i+1] = list(self.dataarray[i])
+
         plotbox_instance.update(self)
         plotbox_instance.redraw()
 
@@ -135,7 +143,7 @@ class chronoamp(Experiment):
         self.init(adc_buffer, adc_rate, adc_pga, gain)
         self.datatype = "linearData"
         self.xlabel = "Time (s)"
-        self.ylabel = "Current (ADC Index)"
+        self.ylabel = "Current (A)"
         self.data = [[],[]]
         self.datalength = 2
         self.xmin = 0
