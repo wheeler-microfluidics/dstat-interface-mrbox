@@ -1,9 +1,16 @@
 #!/usr/bin/env python
 
-import serial, io
+import serial, io, time
 from serial.tools import list_ports
 
 # class that holds analog data for N samples
+
+class delayedSerial(serial.Serial):
+    def write(self, data):
+        for i in data:
+            serial.Serial.write(self, i)
+            time.sleep(.001)
+
 class linearData:
     # constr
     def __init__(self):
@@ -46,22 +53,23 @@ class Experiment:
         self._gaintable = [1e2, 3e2, 3e3, 3e4, 3e5, 3e6, 3e7, 5e8]
         self.gain = self._gaintable[int(gain)]
         
-        self.commands = []
+        self.commands = ["A","G"]
         self.xlabel = ""
         self.ylabel = ""
     
-        self.commands += "A "
+#        self.commands += "A"
         self.commands[0] += (adc_buffer)
         self.commands[0] += " "
         self.commands[0] += (adc_rate)
         self.commands[0] += " "
         self.commands[0] += (adc_pga)
-        self.commands[1] = "G"
+        self.commands[0] += " "
+#        self.commands[1] += "G"
         self.commands[1] += (gain)
+        self.commands[1] += " "
 
     def run(self, strPort, plotbox_instance):
-        self.ser = serial.Serial(strPort, 1024000,timeout=2)
-        self.sio = io.TextIOWrapper(io.BufferedRWPair(self.ser,self.ser,buffer_size=1), newline = '\n', line_buffering = True)
+        self.ser = delayedSerial(strPort, 1024000, timeout=3)
         self.ser.write("ck")
     
         plotbox_instance.changetype(self)
@@ -70,16 +78,28 @@ class Experiment:
         
         self.updatecounter = 0
         
-        while True:
-            for c in self.commands:
-                self.ser.write(c)
-                print c
+        for i in self.commands:
+            self.ser.flush()
+            self.ser.write("!")
+            while True:
                 for line in self.ser:
-                    if not line.isspace():
-                        print line
+                    if line.lstrip().startswith('C'):
+                        self.ser.flushInput()
+                        break
+            
+                break
+        
+            self.ser.flushInput()
+            self.ser.write(i)
+            print i
+            
+            while True:
+                for line in self.ser:
+                    print line
                     if line.lstrip().startswith("no"):
                         self.ser.flushInput()
                         break
+                    
                     if not (line.isspace() or line.lstrip().startswith('#')):
 #                        print line
                         self.inputdata = [float(val) for val in line.split()]
@@ -88,24 +108,25 @@ class Experiment:
 
                             for i in range(self.datalength):
                                 self.data[i].append(self.inputdata[i])
-                            
+
                             plotbox_instance.update(self)
-                            
-                            if self.updatecounter == 5:
+
+                            if self.updatecounter == 10:
                                 plotbox_instance.redraw()
                                 self.updatecounter = 0
+
                             else:
                                 self.updatecounter +=1
+                                    
+                break
+
+        for i in self.data:
+            i.pop(0)
+            i.pop(0)
         
-            for i in self.data:
-                i.pop(0)
-                i.pop(0)
-            
-            plotbox_instance.update(self)
-            plotbox_instance.redraw()
-            
-            break
-    
+        plotbox_instance.update(self)
+        plotbox_instance.redraw()
+
         self.ser.close()
 
 

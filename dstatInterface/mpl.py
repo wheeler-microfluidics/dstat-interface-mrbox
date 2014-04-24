@@ -69,7 +69,7 @@ def main():
 
     #strPort = '/dev/tty.usbserial-A7006Yqh'
     #strPort = sys.argv[1];
-    strPort = '/dev/tty.usbmodem12...E1'
+    strPort = '/dev/cu.usbmodem12...E1'
 
     # open serial port
     ser = serial.Serial(strPort, 1024000,timeout=2)
