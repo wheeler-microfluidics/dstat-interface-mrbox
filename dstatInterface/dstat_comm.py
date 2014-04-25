@@ -67,53 +67,6 @@ class Experiment:
         self.commands[1] += (gain)
         self.commands[1] += " "
 
-    def data_handler(self, plotbox_instance):
-        while True:
-            for line in self.ser:
-                print line
-                if line.lstrip().startswith("no"):
-                    self.ser.flushInput()
-                    break
-                
-                if not (line.isspace() or line.lstrip().startswith('#')):
-                    #                        print line
-                    self.inputdata = [float(val) for val in line.split()]
-                    if(len(self.inputdata) == self.datalength):
-                        #                            print self.inputdata
-                        
-                        for i in range(self.datalength):
-                            self.data[i].append(self.inputdata[i])
-                        
-                        plotbox_instance.update(self)
-                        
-                        if self.updatecounter == 5: #how often to redraw (pick as function of sample rate?)
-                            plotbox_instance.redraw()
-                            self.updatecounter = 0
-                        
-                        else:
-                            self.updatecounter +=1
-            break
-
-    def data_postprocessing(self):
-        #remove first two data points - usually bad
-        for i in self.data:
-            i.pop(0)
-            i.pop(0)
-                
-        #conversion to Amperes
-        self.dataarray = np.array(self.data[1:])
-        self.dataarray = self.dataarray/8388607/self.gain*1.5
-        
-        for i in range(self.datalength-1):
-            self.data[i+1] = list(self.dataarray[i])
-
-        #conversion to millivolts
-        self.dataarray = np.array(self.data[0])
-        self.dataarray = (self.dataarray-32768)*3000./65536
-            
-        self.data[0] = list(self.dataarray)
-
-
     def run(self, strPort, plotbox_instance):
         self.ser = delayedSerial(strPort, 1024000, timeout=3)
         self.ser.write("ck")
@@ -140,13 +93,58 @@ class Experiment:
             print i
             
             self.data_handler(plotbox_instance) #Will be overridden by experiment classes to deal with more complicated data
-
+    
         self.data_postprocessing()
-
+        
         plotbox_instance.update(self)
         plotbox_instance.redraw()
 
         self.ser.close()
+
+    def data_handler(self, plotbox_instance):
+        while True:
+            for line in self.ser:
+                print line
+                if line.lstrip().startswith("no"):
+                    self.ser.flushInput()
+                    break
+                
+                if not (line.isspace() or line.lstrip().startswith('#')):
+                
+                    self.inputdata = [float(val) for val in line.split()]
+                    if(len(self.inputdata) == self.datalength):
+                        self.data[0].append((self.inputdata[0]-32768)*3000./65536)
+                        for i in range(1, self.datalength):
+                            self.data[i].append(self.inputdata[i]/8388607/self.gain*1.5)
+                        
+                        plotbox_instance.update(self)
+                        
+                        if self.updatecounter == 5: #how often to redraw (pick as function of sample rate?)
+                            plotbox_instance.redraw()
+                            self.updatecounter = 0
+                        
+                        else:
+                            self.updatecounter +=1
+            break
+    
+    def data_postprocessing(self):
+        #remove first two data points - usually bad
+        for i in self.data:
+            i.pop(0)
+            i.pop(0)
+        
+#        #conversion to Amperes
+#        self.dataarray = np.array(self.data[1:])
+#        self.dataarray = self.dataarray/8388607/self.gain*1.5
+#        
+#        for i in range(self.datalength-1):
+#            self.data[i+1] = list(self.dataarray[i])
+#        
+#        #conversion to millivolts
+#        self.dataarray = np.array(self.data[0])
+#        self.dataarray = (self.dataarray-32768)*3000./65536
+#        
+#        self.data[0] = list(self.dataarray)
 
 
 class chronoamp(Experiment):
