@@ -132,20 +132,6 @@ class Experiment:
         for i in self.data:
             i.pop(0)
             i.pop(0)
-        
-#        #conversion to Amperes
-#        self.dataarray = np.array(self.data[1:])
-#        self.dataarray = self.dataarray/8388607/self.gain*1.5
-#        
-#        for i in range(self.datalength-1):
-#            self.data[i+1] = list(self.dataarray[i])
-#        
-#        #conversion to millivolts
-#        self.dataarray = np.array(self.data[0])
-#        self.dataarray = (self.dataarray-32768)*3000./65536
-#        
-#        self.data[0] = list(self.dataarray)
-
 
 class chronoamp(Experiment):
     def __init__(self, adc_buffer, adc_rate, adc_pga, gain, potential, time):
@@ -171,17 +157,31 @@ class chronoamp(Experiment):
             self.commands[2] += str(i)
             self.commands[2] += " "
             
-    def data_postprocessing(self): #overrides default method - leaves x axis alone
-        for i in self.data:
-            i.pop(0)
-            i.pop(0)
+    def data_handler(self, plotbox_instance): #overrides inherited method to not convert x axis
+        while True:
+            for line in self.ser:
+                print line
+                if line.lstrip().startswith("no"):
+                    self.ser.flushInput()
+                    break
                 
-        #conversion to Amperes
-        self.dataarray = np.array(self.data[1:])
-        self.dataarray = self.dataarray/8388607/self.gain*1.5
-        
-        for i in range(self.datalength-1):
-            self.data[i+1] = list(self.dataarray[i])
+                if not (line.isspace() or line.lstrip().startswith('#')):
+                    
+                    self.inputdata = [float(val) for val in line.split()]
+                    if(len(self.inputdata) == self.datalength):
+                        self.data[0].append(self.inputdata[0])
+                        for i in range(1, self.datalength):
+                            self.data[i].append(self.inputdata[i]/8388607/self.gain*1.5)
+                        
+                        plotbox_instance.update(self)
+                        
+                        if self.updatecounter == 5: #how often to redraw (pick as function of sample rate?)
+                            plotbox_instance.redraw()
+                            self.updatecounter = 0
+                            
+                        else:
+                            self.updatecounter +=1
+            break
 
 class lsv_exp(Experiment):
     def __init__(self, adc_buffer, adc_rate, adc_pga, gain, start, stop, slope):
@@ -204,24 +204,6 @@ class lsv_exp(Experiment):
         self.commands[2] += " "
         self.commands[2] += str(slope)
         self.commands[2] += " "
-
-#def lsv_exp(adc_buffer, adc_rate, adc_pga, gain, start, stop, slope):
-#    s = "A "
-#    s += (adc_buffer)
-#    s += " "
-#    s += (adc_rate)
-#    s += " "
-#    s += (adc_pga)
-#    s += " G "
-#    s += (gain)
-#    s += " L "
-#    s += str(start)
-#    s += " "
-#    s += str(stop)
-#    s += " "
-#    s += str(slope)
-#    print s
-##    print ("L ", adc_buffer, adc_rate, adc_pga, gain, start, stop, slope)
 
 class cv_exp(Experiment):
     def __init__(self, adc_buffer, adc_rate, adc_pga, gain, v1, v2, start, scans, slope):
@@ -275,26 +257,6 @@ class cv_exp(Experiment):
             
             break
 
-#def cv_exp(adc_buffer, adc_rate, adc_pga, gain, v1, v2, start, scans, slope):
-#    s = "A "
-#    s += (adc_buffer)
-#    s += " "
-#    s += (adc_rate)
-#    s += " "
-#    s += (adc_pga)
-#    s += " G "
-#    s += (gain)
-#    s += " C "
-#    s += str(v1)
-#    s += " "
-#    s += str(v2)
-#    s += " "
-#    s += str(start)
-#    s += " "
-#    s += str(scans)
-#    s += " "
-#    s += str(slope)
-#    print s
 
 class swv_exp(Experiment):
     def __init__(self, adc_buffer, adc_rate, adc_pga, gain, start, stop, step, pulse, freq):
@@ -322,23 +284,4 @@ class swv_exp(Experiment):
         self.commands[2] += str(freq)
         self.commands[2] += " "
 
-#def swv_exp(adc_buffer, adc_rate, adc_pga, gain, start, stop, step, pulse, freq):
-#    s = "A "
-#    s += (adc_buffer)
-#    s += " "
-#    s += (adc_rate)
-#    s += " "
-#    s += (adc_pga)
-#    s += " G "
-#    s += (gain)
-#    s += " S "
-#    s += str(start)
-#    s += " "
-#    s += str(stop)
-#    s += " "
-#    s += str(step)
-#    s += " "
-#    s += str(pulse)
-#    s += " "
-#    s += str(freq)
-#    print s
+
