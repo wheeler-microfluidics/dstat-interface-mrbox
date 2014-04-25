@@ -43,6 +43,6 @@ class plotbox:
 
     def redraw(self):
         self.axe1.relim()
-        self.axe1.autoscale_view(False, False, True)
+        self.axe1.autoscale(True, axis = 'y')
         self.figure.canvas.draw()
         
