@@ -51,6 +51,7 @@ class main:
         self.statusbar = self.builder.get_object('statusbar')
         self.window = self.builder.get_object('window1')
         self.aboutdialog = self.builder.get_object('aboutdialog1')
+        self.databuffer = self.builder.get_object('databuffer1')
         self.adc_pot = adc_pot.adc_pot()
         self.chronoamp = chronoamp.chronoamp()
         self.lsv = lsv.lsv()
@@ -192,7 +193,7 @@ class main:
                     raise InputError(potential,"Step table is empty")
             
                 self.current_exp = comm.chronoamp(adc_buffer, adc_rate, adc_pga, gain, potential, time)
-                self.current_exp.run(self.serial_liststore.get_value(self.serial_combobox.get_active_iter(), 0), self.plotbox)
+                self.current_exp.run(self.serial_liststore.get_value(self.serial_combobox.get_active_iter(), 0), self.plotbox, self.databuffer)
             
             except ValueError:
                 self.statusbar.push(self.error_context_id, "Experiment parameters must be integers.")
@@ -235,7 +236,7 @@ class main:
                     raise InputError(start,"Start cannot equal Stop.")
             
                 self.current_exp = comm.lsv_exp(adc_buffer, adc_rate, adc_pga, gain, start, stop, slope)
-                self.current_exp.run(self.serial_liststore.get_value(self.serial_combobox.get_active_iter(), 0), self.plotbox)
+                self.current_exp.run(self.serial_liststore.get_value(self.serial_combobox.get_active_iter(), 0), self.plotbox, self.databuffer)
                 
             except ValueError:
                 self.statusbar.push(self.error_context_id, "Experiment parameters must be integers.")

@@ -67,16 +67,15 @@ class Experiment:
         self.commands[1] += (gain)
         self.commands[1] += " "
 
-    def data_handler(self, plotbox_instance):
+    def data_handler(self, plotbox_instance, databuffer_instance):
         while True:
             for line in self.ser:
-                print line
                 if line.lstrip().startswith("no"):
                     self.ser.flushInput()
                     break
                 
                 if not (line.isspace() or line.lstrip().startswith('#')):
-                    #                        print line
+                    databuffer_instance.insert_at_cursor(line)
                     self.inputdata = [float(val) for val in line.split()]
                     if(len(self.inputdata) == self.datalength):
                         #                            print self.inputdata
@@ -114,7 +113,7 @@ class Experiment:
         self.data[0] = list(self.dataarray)
 
 
-    def run(self, strPort, plotbox_instance):
+    def run(self, strPort, plotbox_instance, databuffer_instance):
         self.ser = delayedSerial(strPort, 1024000, timeout=3)
         self.ser.write("ck")
     
@@ -123,8 +122,11 @@ class Experiment:
         self.ser.flushInput()
         
         self.updatecounter = 0
+        databuffer_instance.set_text("")
+        databuffer_instance.place_cursor(databuffer_instance.get_start_iter())
         
         for i in self.commands:
+            databuffer_instance.insert_at_cursor(i)
             self.ser.flush()
             self.ser.write("!")
             while True:
@@ -139,7 +141,7 @@ class Experiment:
             self.ser.write(i)
             print i
             
-            self.data_handler(plotbox_instance) #Will be overridden by experiment classes to deal with more complicated data
+            self.data_handler(plotbox_instance, databuffer_instance) #Will be overridden by experiment classes to deal with more complicated data
 
         self.data_postprocessing()
 
