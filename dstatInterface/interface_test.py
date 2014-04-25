@@ -203,8 +203,6 @@ class main:
             except SerialException:
                 self.statusbar.push(self.error_context_id, "Could not establish serial connection.")
     
-
-    
     
         elif selection == 1: #LSV
             if self.adc_pot.buffer_toggle.get_active(): #True if box checked
@@ -235,8 +233,9 @@ class main:
                     raise InputError(slope,"Slope parameter exceeds hardware limits.")
                 if start == stop:
                     raise InputError(start,"Start cannot equal Stop.")
-                
-                comm.lsv_exp(adc_buffer, adc_rate, adc_pga, gain, start, stop, slope)
+            
+                self.current_exp = comm.lsv_exp(adc_buffer, adc_rate, adc_pga, gain, start, stop, slope)
+                self.current_exp.run(self.serial_liststore.get_value(self.serial_combobox.get_active_iter(), 0), self.plotbox)
                 
             except ValueError:
                 self.statusbar.push(self.error_context_id, "Experiment parameters must be integers.")
