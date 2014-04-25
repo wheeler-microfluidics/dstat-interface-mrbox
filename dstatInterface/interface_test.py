@@ -64,6 +64,8 @@ class main:
         self.plotbox = mpltest.plotbox()
         self.plotwindow = self.builder.get_object('plotbox')
         self.plotbox.vbox.reparent(self.plotwindow)
+        self.plotint_checkbox = self.builder.get_object('plotinteractive_checkbutton')
+        self.updatelimit_adj = self.builder.get_object('updatesamples_adj')
         
         #fill exp_section
         self.exp_section = self.builder.get_object('exp_section_box')
@@ -183,6 +185,8 @@ class main:
             adc_rate = self.srate_model.get_value(self.adc_pot.srate_combobox.get_active_iter(), 2) #third column
             adc_pga = self.pga_model.get_value(self.adc_pot.pga_combobox.get_active_iter(), 2)
             gain = self.gain_model.get_value(self.adc_pot.gain_combobox.get_active_iter(), 2)
+            update = self.plotint_checkbox.get_active()
+            updatelimit = int(self.updatelimit_adj.get_value())
             
             try:
                 potential = [int(r[0]) for r in self.chronoamp.model]
@@ -191,7 +195,7 @@ class main:
                 if not potential:
                     raise InputError(potential,"Step table is empty")
             
-                self.current_exp = comm.chronoamp(adc_buffer, adc_rate, adc_pga, gain, potential, time)
+                self.current_exp = comm.chronoamp(adc_buffer, adc_rate, adc_pga, gain, potential, time, update, updatelimit)
                 self.current_exp.run(self.serial_liststore.get_value(self.serial_combobox.get_active_iter(), 0), self.plotbox)
             
             except ValueError:
@@ -217,6 +221,8 @@ class main:
             adc_rate = self.srate_model.get_value(self.adc_pot.srate_combobox.get_active_iter(), 2) #third column
             adc_pga = self.pga_model.get_value(self.adc_pot.pga_combobox.get_active_iter(), 2)
             gain = self.gain_model.get_value(self.adc_pot.gain_combobox.get_active_iter(), 2)
+            update = self.plotint_checkbox.get_active()
+            updatelimit = int(self.updatelimit_adj.get_value())
             
             try:
                 self.statusbar.remove_all(self.error_context_id)
@@ -234,7 +240,7 @@ class main:
                 if start == stop:
                     raise InputError(start,"Start cannot equal Stop.")
             
-                self.current_exp = comm.lsv_exp(adc_buffer, adc_rate, adc_pga, gain, start, stop, slope)
+                self.current_exp = comm.lsv_exp(adc_buffer, adc_rate, adc_pga, gain, start, stop, slope, update, updatelimit)
                 self.current_exp.run(self.serial_liststore.get_value(self.serial_combobox.get_active_iter(), 0), self.plotbox)
                 
             except ValueError:
@@ -256,6 +262,8 @@ class main:
             adc_rate = self.srate_model.get_value(self.adc_pot.srate_combobox.get_active_iter(), 2) #third column
             adc_pga = self.pga_model.get_value(self.adc_pot.pga_combobox.get_active_iter(), 2)
             gain = self.gain_model.get_value(self.adc_pot.gain_combobox.get_active_iter(), 2)
+            update = self.plotint_checkbox.get_active()
+            updatelimit = int(self.updatelimit_adj.get_value())
             
             try:
                 self.statusbar.remove_all(self.error_context_id) #clear statusbar
@@ -279,7 +287,7 @@ class main:
                 if v1 == v2:
                     raise InputError(start,"Vertex 1 cannot equal Vertex 2.")
                 
-                comm.cv_exp(adc_buffer, adc_rate, adc_pga, gain, v1, v2, start, scans, slope)
+                comm.cv_exp(adc_buffer, adc_rate, adc_pga, gain, v1, v2, start, scans, slope, update, updatelimit)
             
             except ValueError:
                 self.statusbar.push(self.error_context_id, "Experiment parameters must be integers.")
@@ -300,7 +308,9 @@ class main:
             adc_rate = self.srate_model.get_value(self.adc_pot.srate_combobox.get_active_iter(), 2) #third column
             adc_pga = self.pga_model.get_value(self.adc_pot.pga_combobox.get_active_iter(), 2)
             gain = self.gain_model.get_value(self.adc_pot.gain_combobox.get_active_iter(), 2)
-            
+            update = self.plotint_checkbox.get_active()
+            updatelimit = int(self.updatelimit_adj.get_value())
+
             try:
                 self.statusbar.remove_all(self.error_context_id) #clear statusbar
                 start = int(self.swv.start_entry.get_text())
@@ -323,7 +333,7 @@ class main:
                 if start == stop:
                     raise InputError(start,"Start cannot equal Stop.")
                 
-                comm.swv_exp(adc_buffer, adc_rate, adc_pga, gain, start, stop, step, pulse, freq)
+                comm.swv_exp(adc_buffer, adc_rate, adc_pga, gain, start, stop, step, pulse, freq, update, updatelimit)
             
             except ValueError:
                 self.statusbar.push(self.error_context_id, "Experiment parameters must be integers.")

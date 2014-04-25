@@ -44,26 +44,26 @@ class Experiment:
     def __init__(self):
         pass
     
-    def init(self, adc_buffer, adc_rate, adc_pga, gain):
+    def init(self, adc_buffer, adc_rate, adc_pga, gain, update, updatelimit):
         self.datatype = ""
         self.datalength = 2
         self.data = []
         
-        self._gaintable = [1e2, 3e2, 3e3, 3e4, 3e5, 3e6, 3e7, 5e8]
-        self.gain = self._gaintable[int(gain)]
-        
-        self.commands = ["A","G"]
+        self.__gaintable = [1e2, 3e2, 3e3, 3e4, 3e5, 3e6, 3e7, 5e8]
+        self.gain = self.__gaintable[int(gain)]
+        self.updatelimit = updatelimit
+        self.update = update
+
         self.xlabel = ""
         self.ylabel = ""
+        self.commands = ["A","G"]
     
-#        self.commands += "A"
         self.commands[0] += (adc_buffer)
         self.commands[0] += " "
         self.commands[0] += (adc_rate)
         self.commands[0] += " "
         self.commands[0] += (adc_pga)
         self.commands[0] += " "
-#        self.commands[1] += "G"
         self.commands[1] += (gain)
         self.commands[1] += " "
 
@@ -119,12 +119,13 @@ class Experiment:
                         
                         plotbox_instance.update(self)
                         
-                        if self.updatecounter == 5: #how often to redraw (pick as function of sample rate?)
-                            plotbox_instance.redraw()
-                            self.updatecounter = 0
-                        
-                        else:
-                            self.updatecounter +=1
+                        if self.update:
+                            if self.updatecounter == self.updatelimit:
+                                plotbox_instance.redraw()
+                                self.updatecounter = 0
+                            
+                            else:
+                                self.updatecounter +=1
             break
     
     def data_postprocessing(self):
@@ -134,8 +135,8 @@ class Experiment:
             i.pop(0)
 
 class chronoamp(Experiment):
-    def __init__(self, adc_buffer, adc_rate, adc_pga, gain, potential, time):
-        self.init(adc_buffer, adc_rate, adc_pga, gain)
+    def __init__(self, adc_buffer, adc_rate, adc_pga, gain, potential, time, update, updatelimit):
+        self.init(adc_buffer, adc_rate, adc_pga, gain, update, updatelimit)
         self.datatype = "linearData"
         self.xlabel = "Time (s)"
         self.ylabel = "Current (A)"
@@ -175,17 +176,18 @@ class chronoamp(Experiment):
                         
                         plotbox_instance.update(self)
                         
-                        if self.updatecounter == 5: #how often to redraw (pick as function of sample rate?)
-                            plotbox_instance.redraw()
-                            self.updatecounter = 0
-                            
-                        else:
-                            self.updatecounter +=1
+                        if self.update:
+                            if self.updatecounter == self.updatelimit:
+                                plotbox_instance.redraw()
+                                self.updatecounter = 0
+                                
+                            else:
+                                self.updatecounter +=1
             break
 
 class lsv_exp(Experiment):
-    def __init__(self, adc_buffer, adc_rate, adc_pga, gain, start, stop, slope):
-        self.init(adc_buffer, adc_rate, adc_pga, gain)
+    def __init__(self, adc_buffer, adc_rate, adc_pga, gain, start, stop, slope, update, updatelimit):
+        self.init(adc_buffer, adc_rate, adc_pga, gain, update, updatelimit)
         self.datatype = "linearData"
         self.xlabel = "Voltage (mV)"
         self.ylabel = "Current (A)"
@@ -206,8 +208,8 @@ class lsv_exp(Experiment):
         self.commands[2] += " "
 
 class cv_exp(Experiment):
-    def __init__(self, adc_buffer, adc_rate, adc_pga, gain, v1, v2, start, scans, slope):
-        self.init(adc_buffer, adc_rate, adc_pga, gain)
+    def __init__(self, adc_buffer, adc_rate, adc_pga, gain, v1, v2, start, scans, slope, update, updatelimit):
+        self.init(adc_buffer, adc_rate, adc_pga, gain, update, updatelimit)
         self.datatype = "CVData"
         self.xlabel = "Voltage (DAC units)"
         self.ylabel = "Current (A)"
@@ -259,8 +261,8 @@ class cv_exp(Experiment):
 
 
 class swv_exp(Experiment):
-    def __init__(self, adc_buffer, adc_rate, adc_pga, gain, start, stop, step, pulse, freq):
-        self.init(adc_buffer, adc_rate, adc_pga, gain)
+    def __init__(self, adc_buffer, adc_rate, adc_pga, gain, start, stop, step, pulse, freq, update, updatelimit):
+        self.init(adc_buffer, adc_rate, adc_pga, gain, update, updatelimit)
         self.datatype = "SWVData"
         self.xlabel = "Voltage (DAC units)"
         self.ylabel = "Current (A)"
