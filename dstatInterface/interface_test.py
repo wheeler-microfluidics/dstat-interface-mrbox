@@ -149,14 +149,13 @@ class main:
         print "quit with cancel"
         gtk.main_quit()
 
-    # This is the same as above but for our menu item.
     def on_gtk_quit_activate(self, menuitem, data=None):
         print "quit from menu"
         gtk.main_quit()
 
     def on_gtk_about_activate(self, menuitem, data=None):
         print "help about selected"
-        self.response = self.aboutdialog.run() #waits for user to click close - could test response with if
+        self.response = self.aboutdialog.run() #waits for user to click close
         self.aboutdialog.hide()
 
     def on_expcombobox_changed(self, data=None):
@@ -171,60 +170,31 @@ class main:
 
     def on_pot_start_clicked(self, data=None):
         selection = self.expcombobox.get_active()
+        if self.adc_pot.buffer_toggle.get_active(): #True if box checked
+            adc_buffer = "2"
+        else:
+            adc_buffer = "0"
+        self.srate_model = self.adc_pot.srate_combobox.get_model()
+        self.pga_model = self.adc_pot.pga_combobox.get_model()
+        self.gain_model = self.adc_pot.gain_combobox.get_model()
         
-        if selection == 0: #CA
-            if self.adc_pot.buffer_toggle.get_active(): #True if box checked
-                adc_buffer = "2"
-            else:
-                adc_buffer = "0"
-            
-            self.srate_model = self.adc_pot.srate_combobox.get_model()
-            self.pga_model = self.adc_pot.pga_combobox.get_model()
-            self.gain_model = self.adc_pot.gain_combobox.get_model()
-            
-            adc_rate = self.srate_model.get_value(self.adc_pot.srate_combobox.get_active_iter(), 2) #third column
-            adc_pga = self.pga_model.get_value(self.adc_pot.pga_combobox.get_active_iter(), 2)
-            gain = self.gain_model.get_value(self.adc_pot.gain_combobox.get_active_iter(), 2)
-            update = self.plotint_checkbox.get_active()
-            updatelimit = int(self.updatelimit_adj.get_value())
-            
-            try:
+        adc_rate = self.srate_model.get_value(self.adc_pot.srate_combobox.get_active_iter(), 2) #third column
+        adc_pga = self.pga_model.get_value(self.adc_pot.pga_combobox.get_active_iter(), 2)
+        gain = self.gain_model.get_value(self.adc_pot.gain_combobox.get_active_iter(), 2)
+        update = self.plotint_checkbox.get_active()
+        updatelimit = int(self.updatelimit_adj.get_value())
+        
+        try:
+            if selection == 0: #CA
                 potential = [int(r[0]) for r in self.chronoamp.model]
                 time = [int(r[1]) for r in self.chronoamp.model]
             
                 if not potential:
                     raise InputError(potential,"Step table is empty")
-            
+                
                 self.current_exp = comm.chronoamp(adc_buffer, adc_rate, adc_pga, gain, potential, time, update, updatelimit)
                 self.current_exp.run(self.serial_liststore.get_value(self.serial_combobox.get_active_iter(), 0), self.plotbox)
-            
-            except ValueError:
-                self.statusbar.push(self.error_context_id, "Experiment parameters must be integers.")
-            
-            except InputError as e:
-                self.statusbar.push(self.error_context_id, e.msg)
-            
-            except SerialException:
-                self.statusbar.push(self.error_context_id, "Could not establish serial connection.")
-    
-    
-        elif selection == 1: #LSV
-            if self.adc_pot.buffer_toggle.get_active(): #True if box checked
-                adc_buffer = "2"
-            else:
-                adc_buffer = "0"
-            
-            self.srate_model = self.adc_pot.srate_combobox.get_model()
-            self.pga_model = self.adc_pot.pga_combobox.get_model()
-            self.gain_model = self.adc_pot.gain_combobox.get_model()
-            
-            adc_rate = self.srate_model.get_value(self.adc_pot.srate_combobox.get_active_iter(), 2) #third column
-            adc_pga = self.pga_model.get_value(self.adc_pot.pga_combobox.get_active_iter(), 2)
-            gain = self.gain_model.get_value(self.adc_pot.gain_combobox.get_active_iter(), 2)
-            update = self.plotint_checkbox.get_active()
-            updatelimit = int(self.updatelimit_adj.get_value())
-            
-            try:
+            elif selection == 1: #LSV
                 self.statusbar.remove_all(self.error_context_id)
                 start = int(self.lsv.start_entry.get_text())
                 stop = int(self.lsv.stop_entry.get_text())
@@ -242,30 +212,8 @@ class main:
             
                 self.current_exp = comm.lsv_exp(adc_buffer, adc_rate, adc_pga, gain, start, stop, slope, update, updatelimit)
                 self.current_exp.run(self.serial_liststore.get_value(self.serial_combobox.get_active_iter(), 0), self.plotbox)
-                
-            except ValueError:
-                self.statusbar.push(self.error_context_id, "Experiment parameters must be integers.")
-            except InputError as e:
-                self.statusbar.push(self.error_context_id, e.msg)
-        
-        elif selection == 2: #CV
-            if self.adc_pot.buffer_toggle.get_active(): #True if box checked
-                adc_buffer = "2"
-            else:
-                adc_buffer = "0"
-        
-            #get liststores for comboboxes
-            self.srate_model = self.adc_pot.srate_combobox.get_model()
-            self.pga_model = self.adc_pot.pga_combobox.get_model()
-            self.gain_model = self.adc_pot.gain_combobox.get_model()
             
-            adc_rate = self.srate_model.get_value(self.adc_pot.srate_combobox.get_active_iter(), 2) #third column
-            adc_pga = self.pga_model.get_value(self.adc_pot.pga_combobox.get_active_iter(), 2)
-            gain = self.gain_model.get_value(self.adc_pot.gain_combobox.get_active_iter(), 2)
-            update = self.plotint_checkbox.get_active()
-            updatelimit = int(self.updatelimit_adj.get_value())
-            
-            try:
+            elif selection == 2: #CV
                 self.statusbar.remove_all(self.error_context_id) #clear statusbar
                 start = int(self.cv.start_entry.get_text())
                 slope = int(self.cv.slope_entry.get_text())
@@ -288,30 +236,8 @@ class main:
                     raise InputError(start,"Vertex 1 cannot equal Vertex 2.")
                 
                 comm.cv_exp(adc_buffer, adc_rate, adc_pga, gain, v1, v2, start, scans, slope, update, updatelimit)
-            
-            except ValueError:
-                self.statusbar.push(self.error_context_id, "Experiment parameters must be integers.")
-            except InputError as e:
-                self.statusbar.push(self.error_context_id, e.msg)
-    
-        elif selection == 3: #SWV
-            if self.adc_pot.buffer_toggle.get_active(): #True if box checked
-                adc_buffer = "2"
-            else:
-                adc_buffer = "0"
-            
-            #get liststores for comboboxes
-            self.srate_model = self.adc_pot.srate_combobox.get_model()
-            self.pga_model = self.adc_pot.pga_combobox.get_model()
-            self.gain_model = self.adc_pot.gain_combobox.get_model()
-            
-            adc_rate = self.srate_model.get_value(self.adc_pot.srate_combobox.get_active_iter(), 2) #third column
-            adc_pga = self.pga_model.get_value(self.adc_pot.pga_combobox.get_active_iter(), 2)
-            gain = self.gain_model.get_value(self.adc_pot.gain_combobox.get_active_iter(), 2)
-            update = self.plotint_checkbox.get_active()
-            updatelimit = int(self.updatelimit_adj.get_value())
-
-            try:
+        
+            elif selection == 3: #SWV
                 self.statusbar.remove_all(self.error_context_id) #clear statusbar
                 start = int(self.swv.start_entry.get_text())
                 stop = int(self.swv.stop_entry.get_text())
@@ -334,14 +260,18 @@ class main:
                     raise InputError(start,"Start cannot equal Stop.")
                 
                 comm.swv_exp(adc_buffer, adc_rate, adc_pga, gain, start, stop, step, pulse, freq, update, updatelimit)
-            
-            except ValueError:
-                self.statusbar.push(self.error_context_id, "Experiment parameters must be integers.")
-            except InputError as e:
-                    self.statusbar.push(self.error_context_id, e.msg)
+                    
+            else:
+                self.statusbar.push(self.error_context_id, "Experiment not yet implemented.")
+                
+        except ValueError:
+            self.statusbar.push(self.error_context_id, "Experiment parameters must be integers.")
         
-        else:
-            self.statusbar.push(self.error_context_id, "Experiment not yet implemented.")
+        except InputError as e:
+            self.statusbar.push(self.error_context_id, e.msg)
+        
+        except SerialException:
+            self.statusbar.push(self.error_context_id, "Could not establish serial connection.")
 
 if __name__ == "__main__":
     main = main()
