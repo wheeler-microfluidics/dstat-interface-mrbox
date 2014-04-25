@@ -92,9 +92,26 @@ class Experiment:
                         
                         else:
                             self.updatecounter +=1
-            
             break
 
+    def data_postprocessing(self):
+        #remove first two data points - usually bad
+        for i in self.data:
+            i.pop(0)
+            i.pop(0)
+                
+        #conversion to Amperes
+        self.dataarray = np.array(self.data[1:])
+        self.dataarray = self.dataarray/8388607/self.gain*1.5
+        
+        for i in range(self.datalength-1):
+            self.data[i+1] = list(self.dataarray[i])
+
+        #conversion to millivolts
+        self.dataarray = np.array(self.data[0])
+        self.dataarray = (self.dataarray-32768)*3000./65536
+            
+        self.data[0] = list(self.dataarray)
 
 
     def run(self, strPort, plotbox_instance):
@@ -124,16 +141,7 @@ class Experiment:
             
             self.data_handler(plotbox_instance) #Will be overridden by experiment classes to deal with more complicated data
 
-        for i in self.data:
-            i.pop(0)
-            i.pop(0)
-        
-        #conversion to Amperes
-        self.dataarray = np.array(self.data[1:])
-        self.dataarray = self.dataarray/8388607/self.gain*1.5
-
-        for i in range(self.datalength-1):
-            self.data[i+1] = list(self.dataarray[i])
+        self.data_postprocessing()
 
         plotbox_instance.update(self)
         plotbox_instance.redraw()
@@ -164,12 +172,24 @@ class chronoamp(Experiment):
         for i in time:
             self.commands[2] += str(i)
             self.commands[2] += " "
+            
+    def data_postprocessing(self): #overrides default method - leaves x axis alone
+        for i in self.data:
+            i.pop(0)
+            i.pop(0)
+                
+        #conversion to Amperes
+        self.dataarray = np.array(self.data[1:])
+        self.dataarray = self.dataarray/8388607/self.gain*1.5
+        
+        for i in range(self.datalength-1):
+            self.data[i+1] = list(self.dataarray[i])
 
 class lsv_exp(Experiment):
     def __init__(self, adc_buffer, adc_rate, adc_pga, gain, start, stop, slope):
         self.init(adc_buffer, adc_rate, adc_pga, gain)
         self.datatype = "linearData"
-        self.xlabel = "Voltage (DAC units)"
+        self.xlabel = "Voltage (mV)"
         self.ylabel = "Current (A)"
         self.data = [[],[]]
         self.datalength = 2

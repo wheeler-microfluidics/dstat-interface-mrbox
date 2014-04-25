@@ -19,8 +19,8 @@ class plotbox:
 
         self.line1, = self.axe1.plot([0,1], [0,1])
         
-        self.axe1.ticklabel_format(style='sci', scilimits=(0,0), useOffset=False)
-    
+        self.axe1.ticklabel_format(style='sci', scilimits=(0,3), useOffset=False, axis='y')
+
         self.canvas = FigureCanvas(self.figure)
         self.win = gtk.Window()
         self.vbox = gtk.VBox()
