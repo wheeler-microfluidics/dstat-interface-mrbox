@@ -67,7 +67,7 @@ class Experiment:
         self.commands[1] += (gain)
         self.commands[1] += " "
 
-    def run(self, strPort, plotbox_instance):
+    def run(self, strPort, plotbox_instance, databuffer_instance):
         self.ser = delayedSerial(strPort, 1024000, timeout=3)
         self.ser.write("ck")
     
@@ -76,8 +76,11 @@ class Experiment:
         self.ser.flushInput()
         
         self.updatecounter = 0
+        databuffer_instance.set_text("")
+        databuffer_instance.place_cursor(databuffer_instance.get_start_iter())
         
         for i in self.commands:
+            databuffer_instance.insert_at_cursor(i)
             self.ser.flush()
             self.ser.write("!")
             while True:
@@ -92,8 +95,8 @@ class Experiment:
             self.ser.write(i)
             print i
             
-            self.data_handler(plotbox_instance) #Will be overridden by experiment classes to deal with more complicated data
-    
+            self.data_handler(plotbox_instance, databuffer_instance) #Will be overridden by experiment classes to deal with more complicated data
+
         self.data_postprocessing()
         
         plotbox_instance.update(self)
@@ -101,7 +104,7 @@ class Experiment:
 
         self.ser.close()
 
-    def data_handler(self, plotbox_instance):
+    def data_handler(self, plotbox_instance, databuffer_instance):
         while True:
             for line in self.ser:
                 print line
@@ -110,7 +113,7 @@ class Experiment:
                     break
                 
                 if not (line.isspace() or line.lstrip().startswith('#')):
-                
+                    databuffer_instance.insert_at_cursor(line)
                     self.inputdata = [float(val) for val in line.split()]
                     if(len(self.inputdata) == self.datalength):
                         self.data[0].append((self.inputdata[0]-32768)*3000./65536)
@@ -158,7 +161,7 @@ class chronoamp(Experiment):
             self.commands[2] += str(i)
             self.commands[2] += " "
             
-    def data_handler(self, plotbox_instance): #overrides inherited method to not convert x axis
+    def data_handler(self, plotbox_instance, databuffer_instance): #overrides inherited method to not convert x axis
         while True:
             for line in self.ser:
                 print line
@@ -167,7 +170,7 @@ class chronoamp(Experiment):
                     break
                 
                 if not (line.isspace() or line.lstrip().startswith('#')):
-                    
+                    databuffer_instance.insert_at_cursor(line)
                     self.inputdata = [float(val) for val in line.split()]
                     if(len(self.inputdata) == self.datalength):
                         self.data[0].append(self.inputdata[0])
