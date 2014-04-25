@@ -67,7 +67,7 @@ class Experiment:
         self.commands[1] += (gain)
         self.commands[1] += " "
 
-    def data_handler(self):
+    def data_handler(self, plotbox_instance):
         while True:
             for line in self.ser:
                 print line
@@ -122,7 +122,7 @@ class Experiment:
             self.ser.write(i)
             print i
             
-            self.data_handler() #Will be overridden by experiment classes to deal with more complicated data
+            self.data_handler(plotbox_instance) #Will be overridden by experiment classes to deal with more complicated data
 
         for i in self.data:
             i.pop(0)
