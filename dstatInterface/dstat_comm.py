@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-import serial, io, time
+import serial, io, time, struct
 from serial.tools import list_ports
 import numpy as np
 
@@ -164,28 +164,27 @@ class chronoamp(Experiment):
     def data_handler(self, plotbox_instance, databuffer_instance): #overrides inherited method to not convert x axis
         while True:
             for line in self.ser:
-                print line
+                if line.startswith('B'):
+                    inputdata = self.ser.read(size=8) #2*uint16 + int32
+                    seconds, milliseconds, current = struct.unpack('<hhl', inputdata)
+                    
+                    self.data[0].append(seconds+milliseconds/1000.)
+                    self.data[1].append(current)
+
+                    plotbox_instance.update(self)
+                    
+                    if self.update:
+                        if self.updatecounter == self.updatelimit:
+                            plotbox_instance.redraw()
+                            self.updatecounter = 0
+                            
+                        else:
+                            self.updatecounter +=1
+        
                 if line.lstrip().startswith("no"):
                     self.ser.flushInput()
                     break
-                
-                if not (line.isspace() or line.lstrip().startswith('#')):
-                    databuffer_instance.insert_at_cursor(line)
-                    self.inputdata = [float(val) for val in line.split()]
-                    if(len(self.inputdata) == self.datalength):
-                        self.data[0].append(self.inputdata[0])
-                        for i in range(1, self.datalength):
-                            self.data[i].append(self.inputdata[i]/8388607/self.gain*1.5)
-                        
-                        plotbox_instance.update(self)
-                        
-                        if self.update:
-                            if self.updatecounter == self.updatelimit:
-                                plotbox_instance.redraw()
-                                self.updatecounter = 0
-                                
-                            else:
-                                self.updatecounter +=1
+            
             break
 
 class lsv_exp(Experiment):
