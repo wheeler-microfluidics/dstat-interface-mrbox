@@ -107,32 +107,31 @@ class Experiment:
     def data_handler(self, plotbox_instance, databuffer_instance):
         while True:
             for line in self.ser:
-                print line
+                if line.startswith('B'):
+                    inputdata = self.ser.read(size=6) #uint16 + int32
+                    voltage, current = struct.unpack('<Hl', inputdata)
+                    
+                    self.data[0].append((voltage-32768)*3000./65536)
+                    self.data[1].append(current*(1.5/self.gain/8388607))
+                    
+                    plotbox_instance.update(self)
+                    
+                    if self.update:
+                        if self.updatecounter == self.updatelimit:
+                            plotbox_instance.redraw()
+                            self.updatecounter = 0
+                        
+                        else:
+                            self.updatecounter +=1
+                
                 if line.lstrip().startswith("no"):
                     self.ser.flushInput()
                     break
-                
-                if not (line.isspace() or line.lstrip().startswith('#')):
-                    databuffer_instance.insert_at_cursor(line)
-                    self.inputdata = [float(val) for val in line.split()]
-                    if(len(self.inputdata) == self.datalength):
-                        self.data[0].append((self.inputdata[0]-32768)*3000./65536)
-                        for i in range(1, self.datalength):
-                            self.data[i].append(self.inputdata[i]/8388607/self.gain*1.5)
-                        
-                        plotbox_instance.update(self)
-                        
-                        if self.update:
-                            if self.updatecounter == self.updatelimit:
-                                plotbox_instance.redraw()
-                                self.updatecounter = 0
-                            
-                            else:
-                                self.updatecounter +=1
+            
             break
     
     def data_postprocessing(self):
-        #remove first two data points - usually bad
+        #remove first two data points - usually bad // Do this when calling for display updates
         for i in self.data:
             i.pop(0)
             i.pop(0)
@@ -166,7 +165,7 @@ class chronoamp(Experiment):
             for line in self.ser:
                 if line.startswith('B'):
                     inputdata = self.ser.read(size=8) #2*uint16 + int32
-                    seconds, milliseconds, current = struct.unpack('<hhl', inputdata)
+                    seconds, milliseconds, current = struct.unpack('<HHl', inputdata)
                     
                     self.data[0].append(seconds+milliseconds/1000.)
                     self.data[1].append(current*(1.5/self.gain/8388607))
