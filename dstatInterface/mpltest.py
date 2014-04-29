@@ -8,8 +8,10 @@ from matplotlib.figure import Figure
 from matplotlib import pyplot as plt
 import numpy as np
 
-from matplotlib.backends.backend_gtkcairo import FigureCanvasGTKCairo as FigureCanvas
-from matplotlib.backends.backend_gtkcairo import NavigationToolbar2Cairo as NavigationToolbar
+#from matplotlib.backends.backend_gtkcairo import FigureCanvasGTKCairo as FigureCanvas
+#from matplotlib.backends.backend_gtkcairo import NavigationToolbar2Cairo as NavigationToolbar
+from matplotlib.backends.backend_gtkagg import FigureCanvasGTKAgg as FigureCanvas
+from matplotlib.backends.backend_gtkagg import NavigationToolbar2GTKAgg as NavigationToolbar
 
 class plotbox:
     def __init__(self):

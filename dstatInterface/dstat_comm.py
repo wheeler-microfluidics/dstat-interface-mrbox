@@ -169,7 +169,7 @@ class chronoamp(Experiment):
                     seconds, milliseconds, current = struct.unpack('<hhl', inputdata)
                     
                     self.data[0].append(seconds+milliseconds/1000.)
-                    self.data[1].append(current)
+                    self.data[1].append(current*(1.5/self.gain/8388607))
 
                     plotbox_instance.update(self)
                     
