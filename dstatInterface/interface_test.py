@@ -63,11 +63,10 @@ class main:
         
         self.error_context_id = self.statusbar.get_context_id("error")
         
-        self.plotbox = mpltest.plotbox()
         self.plotwindow = self.builder.get_object('plotbox')
-        self.plotbox.vbox.reparent(self.plotwindow)
         self.plotint_checkbox = self.builder.get_object('plotinteractive_checkbutton')
         self.updatelimit_adj = self.builder.get_object('updatesamples_adj')
+        self.plot = mpltest.plotbox(self.plotwindow)
         
         #fill exp_section
         self.exp_section = self.builder.get_object('exp_section_box')
@@ -194,8 +193,8 @@ class main:
                 if not potential:
                     raise InputError(potential,"Step table is empty")
                 
-                self.current_exp = comm.chronoamp(adc_buffer, adc_rate, adc_pga, gain, potential, time, update, updatelimit)
-                self.current_exp.run(self.serial_liststore.get_value(self.serial_combobox.get_active_iter(), 0), self.plotbox, self.rawbuffer)
+                self.current_exp = comm.chronoamp(adc_buffer, adc_rate, adc_pga, gain, potential, time, update, updatelimit, self.plot)
+                self.current_exp.run(self.serial_liststore.get_value(self.serial_combobox.get_active_iter(), 0), self.plot, self.rawbuffer)
             elif selection == 1: #LSV
                 self.statusbar.remove_all(self.error_context_id)
                 start = int(self.lsv.start_entry.get_text())
@@ -212,8 +211,8 @@ class main:
                 if start == stop:
                     raise InputError(start,"Start cannot equal Stop.")
             
-                self.current_exp = comm.lsv_exp(adc_buffer, adc_rate, adc_pga, gain, start, stop, slope, update, updatelimit)
-                self.current_exp.run(self.serial_liststore.get_value(self.serial_combobox.get_active_iter(), 0), self.plotbox, self.rawbuffer)
+                self.current_exp = comm.lsv_exp(adc_buffer, adc_rate, adc_pga, gain, start, stop, slope, update, updatelimit, self.plot)
+                self.current_exp.run(self.serial_liststore.get_value(self.serial_combobox.get_active_iter(), 0), self.plot, self.rawbuffer)
             
             elif selection == 2: #CV
                 self.statusbar.remove_all(self.error_context_id) #clear statusbar

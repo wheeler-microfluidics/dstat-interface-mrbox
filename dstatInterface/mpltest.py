@@ -14,12 +14,12 @@ from matplotlib.backends.backend_gtkagg import FigureCanvasGTKAgg as FigureCanva
 from matplotlib.backends.backend_gtkagg import NavigationToolbar2GTKAgg as NavigationToolbar
 
 class plotbox:
-    def __init__(self):
+    def __init__(self, plotwindow_instance):
         self.figure = Figure()
         self.figure.subplots_adjust(left=0.07, bottom=0.07, right=0.96, top=0.96)
         self.axe1 = self.figure.add_subplot(111)
-
-        self.line1, = self.axe1.plot([0,1], [0,1])
+        
+        self.lines = self.axe1.plot([0,1], [0,1])
         
         self.axe1.ticklabel_format(style='sci', scilimits=(0,3), useOffset=False, axis='y')
 
@@ -30,11 +30,19 @@ class plotbox:
         self.vbox.pack_start(self.canvas)
         self.toolbar = NavigationToolbar(self.canvas, self.win)
         self.vbox.pack_start(self.toolbar, False, False)
-
-    def update(self, Experiment):
-        self.line1.set_ydata(Experiment.data[1])
-        self.line1.set_xdata(Experiment.data[0])
-#        self.figure.canvas.draw()
+        self.vbox.reparent(plotwindow_instance)
+    
+    def clearall(self):
+        for i in self.lines:
+            i.remove()
+        self.lines = self.axe1.plot([0,1], [0,1])
+    
+    def addline(self):
+        self.lines.append(self.axe1.plot([0,1], [0,1]))
+    
+    def updateline(self, Experiment, line_number):
+        self.lines[line_number].set_ydata(Experiment.data[1+line_number*2][1:])
+        self.lines[line_number].set_xdata(Experiment.data[line_number*2][1:])
 
     def changetype(self, Experiment):
         self.axe1.set_xlabel(Experiment.xlabel)
