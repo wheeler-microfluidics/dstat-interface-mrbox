@@ -278,9 +278,9 @@ class main:
         self.databuffer.set_text("")
         self.databuffer.place_cursor(self.databuffer.get_start_iter())
 
-        for i in range(len(self.current_exp.data[0])):
-            for j in self.current_exp.data:
-                self.databuffer.insert_at_cursor(str(j[i])+ "\t")
+        for i in zip(*self.current_exp.data):
+            for j in i:
+                self.databuffer.insert_at_cursor(str(j)+ "\t")
             self.databuffer.insert_at_cursor("\n")
 
 if __name__ == "__main__":
