@@ -236,7 +236,8 @@ class main:
                 if v1 == v2:
                     raise InputError(start,"Vertex 1 cannot equal Vertex 2.")
                 
-                comm.cv_exp(adc_buffer, adc_rate, adc_pga, gain, v1, v2, start, scans, slope, update, updatelimit)
+                self.current_exp = comm.cv_exp(adc_buffer, adc_rate, adc_pga, gain, v1, v2, start, scans, slope, update, updatelimit, self.plot)
+                self.current_exp.run(self.serial_liststore.get_value(self.serial_combobox.get_active_iter(), 0), self.plot, self.rawbuffer)
         
             elif selection == 3: #SWV
                 self.statusbar.remove_all(self.error_context_id) #clear statusbar

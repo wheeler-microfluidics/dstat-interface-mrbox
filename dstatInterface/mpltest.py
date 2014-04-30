@@ -37,8 +37,12 @@ class plotbox:
             i.remove()
         self.lines = self.axe1.plot([0,1], [0,1])
     
+    def clearline(self, line_number):
+        self.lines[line_number].remove()
+        self.lines.pop(line_number)
+    
     def addline(self):
-        self.lines.append(self.axe1.plot([0,1], [0,1]))
+        self.lines.append(self.axe1.plot([0,1], [0,1])[0])
     
     def updateline(self, Experiment, line_number):
         self.lines[line_number].set_ydata(Experiment.data[1+line_number*2][1:])

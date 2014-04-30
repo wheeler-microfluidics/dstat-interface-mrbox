@@ -123,7 +123,7 @@ class Experiment:
                         else:
                             self.updatecounter +=1
                 
-                if line.lstrip().startswith("no"):
+                elif line.lstrip().startswith("no"):
                     self.ser.flushInput()
                     break
             
@@ -181,7 +181,7 @@ class chronoamp(Experiment):
                         else:
                             self.updatecounter +=1
         
-                if line.lstrip().startswith("no"):
+                elif line.lstrip().startswith("no"):
                     self.ser.flushInput()
                     break
             
@@ -210,17 +210,19 @@ class lsv_exp(Experiment):
 
 class cv_exp(Experiment):
     def __init__(self, adc_buffer, adc_rate, adc_pga, gain, v1, v2, start, scans, slope, update, updatelimit, plot_instance):
-        self.init(adc_buffer, adc_rate, adc_pga, gain, update, updatelimit, plot_instance)
+ 
         self.datatype = "CVData"
         self.xlabel = "Voltage (DAC units)"
         self.ylabel = "Current (A)"
         self.data = [[],[]] #Will have to alter data_handler to add new lists as needed
-        self.datalength = 2 #2 * scans #x and y for each scan
+        self.datalength = 2 * scans #x and y for each scan
         self.xmin = 0
         self.xmax = 0
         
         self.xmin = v1
         self.xmax = v2
+        
+        self.init(adc_buffer, adc_rate, adc_pga, gain, update, updatelimit, plot_instance)
         
         self.commands += "C"
         self.commands[2] += str(v1)
@@ -234,32 +236,49 @@ class cv_exp(Experiment):
         self.commands[2] += str(slope)
         self.commands[2] += " "
     
-    def data_handler(self): #Placeholder - need to handle multiple scans
+    def data_handler(self, plot_instance, databuffer_instance):
+        scan = 0
+        
         while True:
             for line in self.ser:
-                print line
-                if line.lstrip().startswith("no"):
-                    self.ser.flushInput()
-                    break
-                
-                if not (line.isspace() or line.lstrip().startswith('#')):
-                    self.inputdata = [float(val) for val in line.split()]
-                    if(len(self.inputdata) == self.datalength):
-                        
-                        for i in range(self.datalength):
-                            self.data[i].append(self.inputdata[i])
-                        
-                        plot_instance.updateline(self, 0)
-                        
-                        if self.updatecounter == 5:
+                if line.startswith('B'):
+                    inputdata = self.ser.read(size=6) #uint16 + int32
+                    voltage, current = struct.unpack('<Hl', inputdata)
+                    
+                    self.data[2*scan].append((voltage-32768)*3000./65536)
+                    self.data[2*scan+1].append(current*(1.5/self.gain/8388607))
+                    
+                    plot_instance.updateline(self, scan)
+                    
+                    if self.update:
+                        if self.updatecounter == self.updatelimit:
                             plot_instance.redraw()
                             self.updatecounter = 0
                         
                         else:
                             self.updatecounter +=1
-            
+                
+                elif line.lstrip().startswith("no"):
+                    self.ser.flushInput()
+                    break
+                
+                elif line.lstrip().startswith('S'):
+                    plot_instance.redraw()
+                    plot_instance.addline()
+                    self.data.append([])
+                    self.data.append([])
+                    scan += 1
+                
+                elif line.lstrip().startswith('D'):
+                    self.data.pop()
+                    self.data.pop() #instrument signals with S after each cycle, so last one will be blank, D singals end of experiment
+                    plot_instance.clearline(scan)
+                    plot_instance.redraw()
+                    
             break
 
+    def data_postprocessing(self):
+        self.data
 
 class swv_exp(Experiment):
     def __init__(self, adc_buffer, adc_rate, adc_pga, gain, start, stop, step, pulse, freq, update, updatelimit, plot_instance):
