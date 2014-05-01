@@ -45,10 +45,6 @@ class Experiment:
         pass
     
     def init(self, adc_buffer, adc_rate, adc_pga, gain, update, updatelimit, plot_instance):
-        self.datatype = ""
-        self.datalength = 2
-        self.data = [[],[]]
-        
         self.__gaintable = [1e2, 3e2, 3e3, 3e4, 3e5, 3e6, 3e7, 5e8]
         self.gain = self.__gaintable[int(gain)]
         self.updatelimit = updatelimit
@@ -282,17 +278,19 @@ class cv_exp(Experiment):
 
 class swv_exp(Experiment):
     def __init__(self, adc_buffer, adc_rate, adc_pga, gain, start, stop, step, pulse, freq, update, updatelimit, plot_instance):
-        self.init(adc_buffer, adc_rate, adc_pga, gain, update, updatelimit)
+
         self.datatype = "SWVData"
         self.xlabel = "Voltage (DAC units)"
         self.ylabel = "Current (A)"
         self.data = [[],[],[],[]] #one extra for difference
-        self.datalength = 3
+        self.datalength = 4
         self.xmin = 0
         self.xmax = 0
         
         self.xmin = start
         self.xmax = stop
+        
+        self.init(adc_buffer, adc_rate, adc_pga, gain, update, updatelimit, plot_instance)
         
         self.commands += "S"
         self.commands[2] += str(start)
@@ -305,5 +303,32 @@ class swv_exp(Experiment):
         self.commands[2] += " "
         self.commands[2] += str(freq)
         self.commands[2] += " "
+    
+    def data_handler(self, plot_instance, databuffer_instance):
+        while True:
+            for line in self.ser:
+                if line.startswith('B'):
+                    inputdata = self.ser.read(size=10) #uint16 + 2*int32
+                    voltage, forward, reverse = struct.unpack('<Hll', inputdata)
 
+                    self.data[0].append((voltage-32768)*3000./65536)
+                    self.data[1].append((forward-reverse)*(1.5/self.gain/8388607))
+                    self.data[2].append(forward*(1.5/self.gain/8388607))
+                    self.data[3].append(reverse*(1.5/self.gain/8388607))
+                    
+                    plot_instance.updateline(self, 0) #displays only difference current, but forward and reverse stored
+                    
+                    if self.update:
+                        if self.updatecounter == self.updatelimit:
+                            plot_instance.redraw()
+                            self.updatecounter = 0
+                        
+                        else:
+                            self.updatecounter +=1
+                
+                elif line.lstrip().startswith("no"):
+                    self.ser.flushInput()
+                    break
+            
+            break
 

@@ -261,7 +261,8 @@ class main:
                 if start == stop:
                     raise InputError(start,"Start cannot equal Stop.")
                 
-                comm.swv_exp(adc_buffer, adc_rate, adc_pga, gain, start, stop, step, pulse, freq, update, updatelimit)
+                self.current_exp = comm.swv_exp(adc_buffer, adc_rate, adc_pga, gain, start, stop, step, pulse, freq, update, updatelimit, self.plot)
+                self.current_exp.run(self.serial_liststore.get_value(self.serial_combobox.get_active_iter(), 0), self.plot, self.rawbuffer)
                     
             else:
                 self.statusbar.push(self.error_context_id, "Experiment not yet implemented.")

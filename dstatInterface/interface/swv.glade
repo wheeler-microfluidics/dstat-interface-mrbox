@@ -424,6 +424,20 @@
                     <property name="position">1</property>
                   </packing>
                 </child>
+                <child>
+                  <object class="GtkLabel" id="label13">
+                    <property name="visible">True</property>
+                    <property name="can_focus">False</property>
+                    <property name="label" translatable="yes">Note: The ADC converts continuously during SWV measurements and has priority over DAC changes. ADC sample rate should be significantly larger than SWV frequency for accurate timing.</property>
+                    <property name="justify">center</property>
+                    <property name="wrap">True</property>
+                  </object>
+                  <packing>
+                    <property name="expand">True</property>
+                    <property name="fill">True</property>
+                    <property name="position">2</property>
+                  </packing>
+                </child>
               </object>
             </child>
           </object>
