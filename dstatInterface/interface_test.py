@@ -171,100 +171,103 @@ class main:
 
     def on_pot_start_clicked(self, data=None):
         selection = self.expcombobox.get_active()
-        if self.adc_pot.buffer_toggle.get_active(): #True if box checked
-            adc_buffer = "2"
-        else:
-            adc_buffer = "0"
-        self.srate_model = self.adc_pot.srate_combobox.get_model()
-        self.pga_model = self.adc_pot.pga_combobox.get_model()
-        self.gain_model = self.adc_pot.gain_combobox.get_model()
+        parameters = {}
+        view_parameters = {}
         
-        adc_rate = self.srate_model.get_value(self.adc_pot.srate_combobox.get_active_iter(), 2) #third column
-        adc_pga = self.pga_model.get_value(self.adc_pot.pga_combobox.get_active_iter(), 2)
-        gain = self.gain_model.get_value(self.adc_pot.gain_combobox.get_active_iter(), 2)
-        update = self.plotint_checkbox.get_active()
-        updatelimit = int(self.updatelimit_adj.get_value())
+        if self.adc_pot.buffer_toggle.get_active(): #True if box checked
+            parameters['adc_buffer'] = "2"
+        else:
+            parameters['adc_buffer'] = "0"
+        
+        srate_model = self.adc_pot.srate_combobox.get_model()
+        pga_model = self.adc_pot.pga_combobox.get_model()
+        gain_model = self.adc_pot.gain_combobox.get_model()
+        
+        parameters['adc_rate'] = srate_model.get_value(self.adc_pot.srate_combobox.get_active_iter(), 2) #third column
+        parameters['adc_pga'] = pga_model.get_value(self.adc_pot.pga_combobox.get_active_iter(), 2)
+        parameters['gain'] = gain_model.get_value(self.adc_pot.gain_combobox.get_active_iter(), 2)
+        
+        view_parameters['update'] = self.plotint_checkbox.get_active()
+        view_parameters['updatelimit'] = int(self.updatelimit_adj.get_value())
         
         self.spinner.start()
+        self.statusbar.remove_all(self.error_context_id)
         
         try:
             if selection == 0: #CA
-                potential = [int(r[0]) for r in self.chronoamp.model]
-                time = [int(r[1]) for r in self.chronoamp.model]
+                parameters['potential'] = [int(r[0]) for r in self.chronoamp.model]
+                parameters['time'] = [int(r[1]) for r in self.chronoamp.model]
             
-                if not potential:
-                    raise InputError(potential,"Step table is empty")
+                if not parameters['potential']:
+                    raise InputError(parameters['potential'],"Step table is empty")
                 
-                self.current_exp = comm.chronoamp(adc_buffer, adc_rate, adc_pga, gain, potential, time, update, updatelimit, self.plot)
-                self.current_exp.run(self.serial_liststore.get_value(self.serial_combobox.get_active_iter(), 0), self.plot, self.rawbuffer)
+                self.current_exp = comm.chronoamp(parameters, view_parameters, self.plot, self.rawbuffer)
+                self.current_exp.run(self.serial_liststore.get_value(self.serial_combobox.get_active_iter(), 0))
             elif selection == 1: #LSV
-                self.statusbar.remove_all(self.error_context_id)
-                start = int(self.lsv.start_entry.get_text())
-                stop = int(self.lsv.stop_entry.get_text())
-                slope = int(self.lsv.slope_entry.get_text())
+                parameters['start'] = int(self.lsv.start_entry.get_text())
+                parameters['stop'] = int(self.lsv.stop_entry.get_text())
+                parameters['slope'] = int(self.lsv.slope_entry.get_text())
                 
                 #check parameters are within hardware limits
-                if (start > 1499 or start < -1500):
-                    raise InputError(start,"Start parameter exceeds hardware limits.")
-                if (stop > 1499 or stop < -1500):
-                    raise InputError(stop,"Stop parameter exceeds hardware limits.")
-                if (slope > 2000 or slope < 1):
-                    raise InputError(slope,"Slope parameter exceeds hardware limits.")
-                if start == stop:
-                    raise InputError(start,"Start cannot equal Stop.")
+                if (parameters['start'] > 1499 or parameters['start'] < -1500):
+                    raise InputError(parameters['start'],"Start parameter exceeds hardware limits.")
+                if (parameters['stop'] > 1499 or parameters['stop'] < -1500):
+                    raise InputError(parameters['stop'],"Stop parameter exceeds hardware limits.")
+                if (parameters['slope'] > 2000 or parameters['slope'] < 1):
+                    raise InputError(parameters['slope'],"Slope parameter exceeds hardware limits.")
+                if parameters['start'] == parameters['stop']:
+                    raise InputError(parameters['start'],"Start cannot equal Stop.")
             
-                self.current_exp = comm.lsv_exp(adc_buffer, adc_rate, adc_pga, gain, start, stop, slope, update, updatelimit, self.plot)
-                self.current_exp.run(self.serial_liststore.get_value(self.serial_combobox.get_active_iter(), 0), self.plot, self.rawbuffer)
+                self.current_exp = comm.lsv_exp(parameters, view_parameters, self.plot, self.rawbuffer)
+                self.current_exp.run(self.serial_liststore.get_value(self.serial_combobox.get_active_iter(), 0))
             
             elif selection == 2: #CV
-                self.statusbar.remove_all(self.error_context_id) #clear statusbar
-                start = int(self.cv.start_entry.get_text())
-                slope = int(self.cv.slope_entry.get_text())
-                v1 = int(self.cv.v1_entry.get_text())
-                v2 = int(self.cv.v2_entry.get_text())
-                scans = int(self.cv.scans_entry.get_text())
+                parameters['start'] = int(self.cv.start_entry.get_text())
+                parameters['slope'] = int(self.cv.slope_entry.get_text())
+                parameters['v1'] = int(self.cv.v1_entry.get_text())
+                parameters['v2'] = int(self.cv.v2_entry.get_text())
+                parameters['scans'] = int(self.cv.scans_entry.get_text())
                 
                 #check parameters are within hardware limits
-                if (start > 1499 or start < -1500):
-                    raise InputError(start,"Start parameter exceeds hardware limits.")
-                if (slope > 2000 or slope < 1):
-                    raise InputError(slope,"Slope parameter exceeds hardware limits.")
-                if (v1 > 1499 or v1 < -1500):
-                    raise InputError(v1,"Vertex 1 parameter exceeds hardware limits.")
-                if (v2 > 1499 or v2 < -1500):
-                    raise InputError(v2,"Vertex 2 parameter exceeds hardware limits.")
-                if (scans < 1 or scans > 255):
-                    raise InputError(scans, "Scans parameter outside limits.")
-                if v1 == v2:
-                    raise InputError(start,"Vertex 1 cannot equal Vertex 2.")
+                if (parameters['start'] > 1499 or parameters['start'] < -1500):
+                    raise InputError(parameters['start'],"Start parameter exceeds hardware limits.")
+                if (parameters['slope'] > 2000 or parameters['slope'] < 1):
+                    raise InputError(parameters['slope'],"Slope parameter exceeds hardware limits.")
+                if (parameters['v1'] > 1499 or parameters['v1'] < -1500):
+                    raise InputError(parameters['v1'],"Vertex 1 parameter exceeds hardware limits.")
+                if (parameters['v2'] > 1499 or parameters['v2'] < -1500):
+                    raise InputError(parameters['v2'],"Vertex 2 parameter exceeds hardware limits.")
+                if (parameters['scans'] < 1 or parameters['scans'] > 255):
+                    raise InputError(parameters['scans'], "Scans parameter outside limits.")
+                if parameters['v1'] == parameters['v2']:
+                    raise InputError(parameters['v1'],"Vertex 1 cannot equal Vertex 2.")
                 
-                self.current_exp = comm.cv_exp(adc_buffer, adc_rate, adc_pga, gain, v1, v2, start, scans, slope, update, updatelimit, self.plot)
-                self.current_exp.run(self.serial_liststore.get_value(self.serial_combobox.get_active_iter(), 0), self.plot, self.rawbuffer)
+                self.current_exp = comm.cv_exp(parameters, view_parameters, self.plot, self.rawbuffer)
+                self.current_exp.run(self.serial_liststore.get_value(self.serial_combobox.get_active_iter(), 0))
         
             elif selection == 3: #SWV
-                self.statusbar.remove_all(self.error_context_id) #clear statusbar
-                start = int(self.swv.start_entry.get_text())
-                stop = int(self.swv.stop_entry.get_text())
-                step = int(self.swv.step_entry.get_text())
-                pulse = int(self.swv.pulse_entry.get_text())
-                freq = int(self.swv.freq_entry.get_text())
+                parameters['start'] = int(self.swv.start_entry.get_text())
+                parameters['stop'] = int(self.swv.stop_entry.get_text())
+                parameters['step'] = int(self.swv.step_entry.get_text())
+                parameters['pulse'] = int(self.swv.pulse_entry.get_text())
+                parameters['freq'] = int(self.swv.freq_entry.get_text())
                 
                 #check parameters are within hardware limits (doesn't check if pulse will go out of bounds, but instrument checks this (I think))
-                if (start > 1499 or start < -1500):
-                    raise InputError(start,"Start parameter exceeds hardware limits.")
-                if (step > 200 or step < 1):
-                    raise InputError(step,"Step height parameter exceeds hardware limits.")
-                if (stop > 1499 or stop < -1500):
-                    raise InputError(stop,"Stop parameter exceeds hardware limits.")
-                if (pulse > 150 or pulse < 1):
-                    raise InputError(pulse,"Pulse height parameter exceeds hardware limits.")
-                if (freq < 1 or freq > 1000):
-                    raise InputError(freq, "Frequency parameter outside limits.")
-                if start == stop:
-                    raise InputError(start,"Start cannot equal Stop.")
+                if (parameters['start'] > 1499 or parameters['start'] < -1500):
+                    raise InputError(parameters['start'],"Start parameter exceeds hardware limits.")
+                if (parameters['step'] > 200 or parameters['step'] < 1):
+                    raise InputError(parameters['step'],"Step height parameter exceeds hardware limits.")
+                if (parameters['stop'] > 1499 or parameters['stop'] < -1500):
+                    raise InputError(parameters['stop'],"Stop parameter exceeds hardware limits.")
+                if (parameters['pulse'] > 150 or parameters['pulse'] < 1):
+                    raise InputError(parameters['pulse'],"Pulse height parameter exceeds hardware limits.")
+                if (parameters['freq'] < 1 or parameters['freq'] > 1000):
+                    raise InputError(parameters['freq'], "Frequency parameter outside limits.")
+                if parameters['start'] == parameters['stop']:
+                    raise InputError(parameters['start'],"Start cannot equal Stop.")
                 
-                self.current_exp = comm.swv_exp(adc_buffer, adc_rate, adc_pga, gain, start, stop, step, pulse, freq, update, updatelimit, self.plot)
-                self.current_exp.run(self.serial_liststore.get_value(self.serial_combobox.get_active_iter(), 0), self.plot, self.rawbuffer)
+                self.current_exp = comm.swv_exp(parameters, view_parameters, self.plot, self.rawbuffer)
+                self.current_exp.run(self.serial_liststore.get_value(self.serial_combobox.get_active_iter(), 0))
                     
             else:
                 self.statusbar.push(self.error_context_id, "Experiment not yet implemented.")
@@ -280,6 +283,10 @@ class main:
         except SerialException:
             self.spinner.stop()
             self.statusbar.push(self.error_context_id, "Could not establish serial connection.")
+            
+        except AssertionError as e:
+            self.spinner.stop()
+            self.statusbar.push(self.error_context_id, str(e))
 
         self.databuffer.set_text("")
         self.databuffer.place_cursor(self.databuffer.get_start_iter())
