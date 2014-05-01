@@ -185,6 +185,8 @@ class main:
         update = self.plotint_checkbox.get_active()
         updatelimit = int(self.updatelimit_adj.get_value())
         
+        self.spinner.start()
+        
         try:
             if selection == 0: #CA
                 potential = [int(r[0]) for r in self.chronoamp.model]
@@ -268,12 +270,15 @@ class main:
                 self.statusbar.push(self.error_context_id, "Experiment not yet implemented.")
                 
         except ValueError:
+            self.spinner.stop()
             self.statusbar.push(self.error_context_id, "Experiment parameters must be integers.")
         
         except InputError as e:
+            self.spinner.stop()
             self.statusbar.push(self.error_context_id, e.msg)
         
         except SerialException:
+            self.spinner.stop()
             self.statusbar.push(self.error_context_id, "Could not establish serial connection.")
 
         self.databuffer.set_text("")
@@ -283,6 +288,8 @@ class main:
             for j in i:
                 self.databuffer.insert_at_cursor(str(j)+ "\t")
             self.databuffer.insert_at_cursor("\n")
+
+        self.spinner.stop()
 
 if __name__ == "__main__":
     main = main()
