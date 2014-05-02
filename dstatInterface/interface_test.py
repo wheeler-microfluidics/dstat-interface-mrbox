@@ -19,6 +19,7 @@ import interface.cv as cv
 import interface.swv as swv
 import interface.acv as acv
 import interface.pd as pd
+import interface.save as save
 import dstat_comm as comm
 from serial import SerialException
 
@@ -283,11 +284,11 @@ class main:
         except SerialException:
             self.spinner.stop()
             self.statusbar.push(self.error_context_id, "Could not establish serial connection.")
-            
+
         except AssertionError as e:
             self.spinner.stop()
             self.statusbar.push(self.error_context_id, str(e))
-
+        
         self.databuffer.set_text("")
         self.databuffer.place_cursor(self.databuffer.get_start_iter())
 
@@ -295,8 +296,12 @@ class main:
             for j in i:
                 self.databuffer.insert_at_cursor(str(j)+ "\t")
             self.databuffer.insert_at_cursor("\n")
-
         self.spinner.stop()
+
+    def on_file_save_npy_activate(self, menuitem, data=None):
+        if self.current_exp:
+            self.save = save.npSave(self.current_exp)
+
 
 if __name__ == "__main__":
     main = main()

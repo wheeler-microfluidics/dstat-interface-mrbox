@@ -128,10 +128,6 @@ class Experiment:
     
     def data_postprocessing(self):
         pass
-        #remove first two data points - usually bad // Do this when calling for display updates
-#        for i in self.data:
-#            i.pop(0)
-#            i.pop(0)
 
 class chronoamp(Experiment):
     def __init__(self, parameters, view_parameters, plot_instance, databuffer_instance):

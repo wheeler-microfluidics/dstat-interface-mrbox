@@ -76,6 +76,11 @@
     <property name="yalign">0.47999998927116394</property>
     <property name="stock">gtk-missing-image</property>
   </object>
+  <object class="GtkImage" id="image2">
+    <property name="visible">True</property>
+    <property name="can_focus">False</property>
+    <property name="stock">gtk-save-as</property>
+  </object>
   <object class="GtkListStore" id="serial_liststore">
     <columns>
       <!-- column-name serial -->
@@ -132,12 +137,13 @@
                       </object>
                     </child>
                     <child>
-                      <object class="GtkImageMenuItem" id="gtk-save">
-                        <property name="label">gtk-save</property>
+                      <object class="GtkImageMenuItem" id="file_save_npy">
+                        <property name="label">Save data as NPY</property>
                         <property name="visible">True</property>
                         <property name="can_focus">False</property>
-                        <property name="use_underline">True</property>
-                        <property name="use_stock">True</property>
+                        <property name="image">image2</property>
+                        <property name="use_stock">False</property>
+                        <signal name="activate" handler="on_file_save_npy_activate" swapped="no"/>
                       </object>
                     </child>
                     <child>
