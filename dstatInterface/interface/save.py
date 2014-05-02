@@ -8,14 +8,26 @@ class npSave:
         self.exp = current_exp
         self.fcd = gtk.FileChooserDialog("Save...", None, gtk.FILE_CHOOSER_ACTION_SAVE, (gtk.STOCK_CANCEL, gtk.RESPONSE_CANCEL, gtk.STOCK_SAVE, gtk.RESPONSE_OK))
         
+        self.filters = [gtk.FileFilter()]
+        self.filters[0].set_name("NumPy binary (.npy)")
+        self.filters[0].add_pattern("*.npy")
+        self.filters.append(gtk.FileFilter())
+        self.filters[1].set_name("Whitespace separated text (.txt)")
+        self.filters[1].add_pattern("*.txt")
+        
         self.fcd.set_do_overwrite_confirmation(True)
+        for i in self.filters:
+            self.fcd.add_filter(i)
                      
         self.response = self.fcd.run()
         
         if self.response == gtk.RESPONSE_OK:
             self.path = self.fcd.get_filename()
             print "Selected filepath: %s" % self.path
-            self.npy()
+            filter_selection = self.fcd.get_filter().get_name()
+            
+            if filter_selection.endswith("(.npy)"):
+                self.npy()
             self.fcd.destroy()
     
     def npy(self):
