@@ -66,7 +66,7 @@ class Experiment:
         self.plot.changetype(self)
 
     def run(self, strPort):
-        self.ser = delayedSerial(strPort, 1024000, timeout=3)
+        self.ser = delayedSerial(strPort, 1024000, timeout=5)
         self.ser.write("ck")
         
         self.ser.flushInput()
