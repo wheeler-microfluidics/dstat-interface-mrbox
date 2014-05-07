@@ -298,7 +298,7 @@ class main:
             self.databuffer.insert_at_cursor("\n")
         self.spinner.stop()
 
-    def on_file_save_npy_activate(self, menuitem, data=None):
+    def on_file_save_exp_activate(self, menuitem, data=None):
         if self.current_exp:
             self.save = save.npSave(self.current_exp)
 
