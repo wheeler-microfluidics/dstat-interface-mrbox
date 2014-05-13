@@ -36,7 +36,11 @@ class linearData:
 
 class SerialDevices:
     def __init__(self):
-        self.ports, _, _ = zip(*list_ports.comports())
+        try:
+            self.ports, _, _ = zip(*list_ports.comports())
+        except ValueError:
+            self.ports = []
+            print "No serial ports found"
     
     def refresh(self):
         self.ports, _, _ = zip(*list_ports.comports())
