@@ -1,3 +1,6 @@
 Breakpoints_v2.xcbkptlist
 *.xcuserstate
 *.pyc
+*~
+/dstatInterface/dist/
+/dstatInterface/build/
