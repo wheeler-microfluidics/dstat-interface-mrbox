@@ -8,8 +8,15 @@ except:
     pass
 try:
     import gtk
+    import gobject
 except:
     print('GTK not available')
+    sys.exit(1)
+
+try:
+    import gobject
+except:
+    print('gobject not available')
     sys.exit(1)
 
 import interface.adc_pot as adc_pot
@@ -22,6 +29,7 @@ import interface.pd as pd
 import interface.save as save
 import dstat_comm as comm
 from serial import SerialException
+import multiprocessing
 
 import mpltest
 
@@ -304,5 +312,7 @@ class main:
 
 
 if __name__ == "__main__":
+    multiprocessing.freeze_support()
+    gobject.threads_init()
     main = main()
     gtk.main()

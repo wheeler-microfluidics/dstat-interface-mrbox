@@ -1,9 +1,11 @@
 #!/usr/bin/env python
 
-import serial, io, time, struct
+import serial, io, time, struct, sys, os
 from types import *
 from serial.tools import list_ports
 import numpy as np
+import multiprocessing as mp
+from Queue import Empty
 
 class delayedSerial(serial.Serial): #overrides normal serial write so that characters are output individually with a slight delay
     def write(self, data):
@@ -33,6 +35,44 @@ class linearData:
         self.ax = []
         self.ay = []
 
+class dataCapture(mp.Process):
+    def __init__(self, ser_instance, pipe):
+        mp.Process.__init__(self)
+        
+        self.serial = ser_instance
+        self.recv_p, self.send_p = pipe
+#        self.data_queue = mp.Queue()
+
+    def run(self):
+        sys.stdout.write('[%s] running ...  process id: %s\n'
+                         % (self.name, os.getpid()))
+                         
+#        self.recv_p.close()
+
+        while True:
+            for line in self.serial:
+                if line.startswith('B'):
+                    voltage, current = struct.unpack('<Hl', self.serial.read(size=6)) #uint16 + int32
+                    
+                    self.send_p.send([voltage, current])
+                
+                elif line.lstrip().startswith("no"):
+                    self.serial.flushInput()
+                    self.send_p.close()
+                    print "closed"
+                    break
+            
+            break
+
+
+class dataUpdate(mp.Process):
+    def __init__(self, ser_instance):
+        mp.Process.__init__(self)
+
+    def run(self):
+        sys.stdout.write('[%s] running ...  process id: %s\n'
+                         % (self.name, os.getpid()))
+    
 
 class SerialDevices:
     def __init__(self):
@@ -99,8 +139,33 @@ class Experiment:
         self.plot.redraw()
 
         self.ser.close()
-
+        
     def data_handler(self):
+        recv_p, send_p = mp.Pipe(duplex=False)
+    
+        capture_proc = dataCapture(self.ser, (recv_p, send_p))
+        capture_proc.start()
+        send_p.close() #pipe won't trip EOFError unless all connections are closed
+        #capture_proc.join()
+        
+        updatetime = 0
+        
+        while True:
+            try:
+                    data = recv_p.recv()
+                    self.data[0].append((data[0]-32768)*3000./65536)
+                    self.data[1].append(data[1]*(1.5/self.gain/8388607))
+                    if ((time.time() - updatetime) > .2):
+                        self.plot.updateline(self, 0)
+                        self.plot.redraw()
+                        updatetime = float(time.time())
+            
+            except EOFError:
+                print "empty"
+                break
+
+
+    """def data_handler(self):
         while True:
             for line in self.ser:
                 if line.startswith('B'):
@@ -124,7 +189,7 @@ class Experiment:
                     self.ser.flushInput()
                     break
             
-            break
+            break"""
     
     def data_postprocessing(self):
         pass
