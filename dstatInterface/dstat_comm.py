@@ -13,28 +13,6 @@ class delayedSerial(serial.Serial): #overrides normal serial write so that chara
             serial.Serial.write(self, i)
             time.sleep(.001)
 
-class linearData:
-    # constr
-    def __init__(self):
-        self.xdata = []
-        self.ydata = []
-        self.first = 1
-    
-    # add data
-    def add(self, data):
-        if self.first == 1:
-            self.first = 0
-            return
-        assert(len(data) == 2)
-        self.x.append(data[0])
-        self.y.append(data[1])
-    
-    # clear data
-    def clear(self):
-        self.first = 1
-        self.ax = []
-        self.ay = []
-
 class dataCapture(mp.Process):
     def __init__(self, ser_instance, pipe):
         mp.Process.__init__(self)
@@ -53,21 +31,11 @@ class dataCapture(mp.Process):
                 
                 elif line.lstrip().startswith("no"):
                     self.serial.flushInput()
-                    self.send_p.close()
+                    self.send_p.close() #causes EOF at other end of pipe
                     print "closed"
                     break
             
             break
-
-
-class dataUpdate(mp.Process):
-    def __init__(self, ser_instance):
-        mp.Process.__init__(self)
-
-    def run(self):
-        sys.stdout.write('[%s] running ...  process id: %s\n'
-                         % (self.name, os.getpid()))
-    
 
 class SerialDevices:
     def __init__(self):
