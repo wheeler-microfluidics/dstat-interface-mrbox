@@ -41,20 +41,15 @@ class dataCapture(mp.Process):
         
         self.serial = ser_instance
         self.recv_p, self.send_p = pipe
-#        self.data_queue = mp.Queue()
 
     def run(self):
         sys.stdout.write('[%s] running ...  process id: %s\n'
                          % (self.name, os.getpid()))
-                         
-#        self.recv_p.close()
 
         while True:
             for line in self.serial:
                 if line.startswith('B'):
-                    voltage, current = struct.unpack('<Hl', self.serial.read(size=6)) #uint16 + int32
-                    
-                    self.send_p.send([voltage, current])
+                    self.send_p.send(self.serial.read(size=6))#uint16 + int32
                 
                 elif line.lstrip().startswith("no"):
                     self.serial.flushInput()
@@ -152,9 +147,10 @@ class Experiment:
         
         while True:
             try:
-                    data = recv_p.recv()
-                    self.data[0].append((data[0]-32768)*3000./65536)
-                    self.data[1].append(data[1]*(1.5/self.gain/8388607))
+                    voltage, current = struct.unpack('<Hl', recv_p.recv()) #uint16 + int32
+
+                    self.data[0].append((voltage-32768)*3000./65536)
+                    self.data[1].append(current*(1.5/self.gain/8388607))
                     if ((time.time() - updatetime) > .2):
                         self.plot.updateline(self, 0)
                         self.plot.redraw()
