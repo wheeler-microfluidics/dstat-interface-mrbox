@@ -109,8 +109,7 @@ class Experiment:
         capture_proc = dataCapture(self.ser, (recv_p, send_p))
         capture_proc.start()
         send_p.close() #pipe won't trip EOFError unless all connections are closed
-        #capture_proc.join()
-        
+                
         updatetime = 0
         
         while True:
@@ -127,33 +126,6 @@ class Experiment:
             except EOFError:
                 print "empty"
                 break
-
-
-    """def data_handler(self):
-        while True:
-            for line in self.ser:
-                if line.startswith('B'):
-                    inputdata = self.ser.read(size=6) #uint16 + int32
-                    voltage, current = struct.unpack('<Hl', inputdata)
-                    
-                    self.data[0].append((voltage-32768)*3000./65536)
-                    self.data[1].append(current*(1.5/self.gain/8388607))
-                    
-                    self.plot.updateline(self, 0)
-                    
-                    if self.update:
-                        if self.updatecounter == self.updatelimit:
-                            self.plot.redraw()
-                            self.updatecounter = 0
-                        
-                        else:
-                            self.updatecounter +=1
-                
-                elif line.lstrip().startswith("no"):
-                    self.ser.flushInput()
-                    break
-            
-            break"""
     
     def data_postprocessing(self):
         pass
