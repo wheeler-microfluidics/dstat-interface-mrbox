@@ -49,6 +49,7 @@ class Experiment:
         pass
     
     def init(self):
+        self.data_extra = [] #must be defined even when not needed
         self.__gaintable = [1e2, 3e2, 3e3, 3e4, 3e5, 3e6, 3e7, 5e8]
         self.gain = self.__gaintable[int(self.parameters['gain'])]
         self.updatelimit = self.view_parameters['updatelimit']
@@ -290,13 +291,14 @@ class swv_exp(Experiment):
         self.datatype = "SWVData"
         self.xlabel = "Voltage (DAC units)"
         self.ylabel = "Current (A)"
-        self.data = [[],[],[],[]] #one extra for difference
-        self.datalength = 4
+        self.data = [[],[]] #only difference stored here
+        self.datalength = 2 * self.parameters['scans']
         
         self.xmin = self.parameters['start']
         self.xmax = self.parameters['stop']
         
         self.init()
+        self.data_extra = [[],[]] #forward/reverse stored here - needs to be after self.init to keep from being redefined
         
         self.commands += "S"
         self.commands[2] += str(self.parameters['start'])
@@ -309,20 +311,24 @@ class swv_exp(Experiment):
         self.commands[2] += " "
         self.commands[2] += str(self.parameters['freq'])
         self.commands[2] += " "
+        self.commands[2] += str(self.parameters['scans'])
+        self.commands[2] += " "
     
     def data_handler(self):
+        scan = 0
+    
         while True:
             for line in self.ser:
                 if line.startswith('B'):
                     inputdata = self.ser.read(size=10) #uint16 + 2*int32
                     voltage, forward, reverse = struct.unpack('<Hll', inputdata)
 
-                    self.data[0].append((voltage-32768)*3000./65536)
-                    self.data[1].append((forward-reverse)*(1.5/self.gain/8388607))
-                    self.data[2].append(forward*(1.5/self.gain/8388607))
-                    self.data[3].append(reverse*(1.5/self.gain/8388607))
+                    self.data[2*scan].append((voltage-32768)*3000./65536)
+                    self.data[2*scan+1].append((forward-reverse)*(1.5/self.gain/8388607))
+                    self.data_extra[2*scan].append(forward*(1.5/self.gain/8388607))
+                    self.data_extra[2*scan+1].append(reverse*(1.5/self.gain/8388607))
                     
-                    self.plot.updateline(self, 0) #displays only difference current, but forward and reverse stored
+                    self.plot.updateline(self, scan) #displays only difference current, but forward and reverse stored
                     
                     if self.update:
                         if self.updatecounter == self.updatelimit:
@@ -335,6 +341,23 @@ class swv_exp(Experiment):
                 elif line.lstrip().startswith("no"):
                     self.ser.flushInput()
                     break
+        
+                elif line.lstrip().startswith('S'):
+                    self.plot.redraw()
+                    self.plot.addline()
+                    self.data.append([])
+                    self.data.append([])
+                    self.data_extra.append([])
+                    self.data_extra.append([])
+                    scan += 1
+                
+                elif line.lstrip().startswith('D'):
+                    self.data.pop()
+                    self.data.pop() #instrument signals with S after each cycle, so last one will be blank, D singals end of experiment
+                    self.data_extra.pop()
+                    self.data_extra.pop()
+                    self.plot.clearline(scan)
+                    self.plot.redraw()
             
             break
 

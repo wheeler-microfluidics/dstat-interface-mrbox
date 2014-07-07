@@ -261,6 +261,13 @@ class main:
                 parameters['pulse'] = int(self.swv.pulse_entry.get_text())
                 parameters['freq'] = int(self.swv.freq_entry.get_text())
                 
+                if self.swv.cyclic_checkbutton.get_active():
+                    parameters['scans'] = int(self.swv.scans_entry.get_text())
+                    if parameters['scans'] < 1:
+                        raise InputError(parameters['scans'],"Must have at least one scan.")
+                else:
+                    parameters['scans'] = 0
+                
                 #check parameters are within hardware limits (doesn't check if pulse will go out of bounds, but instrument checks this (I think))
                 if (parameters['start'] > 1499 or parameters['start'] < -1500):
                     raise InputError(parameters['start'],"Start parameter exceeds hardware limits.")
@@ -299,11 +306,22 @@ class main:
         
         self.databuffer.set_text("")
         self.databuffer.place_cursor(self.databuffer.get_start_iter())
+        self.rawbuffer.set_text("")
+        self.rawbuffer.place_cursor(self.rawbuffer.get_start_iter())
 
-        for i in zip(*self.current_exp.data):
-            for j in i:
-                self.databuffer.insert_at_cursor(str(j)+ "\t")
-            self.databuffer.insert_at_cursor("\n")
+        for col in zip(*self.current_exp.data):
+            for row in col:
+                self.rawbuffer.insert_at_cursor(str(row)+ "\t")
+            self.rawbuffer.insert_at_cursor("\n")
+
+        
+        if self.current_exp.data_extra:
+            for col in zip(*self.current_exp.data_extra):
+                for row in col:
+                    self.databuffer.insert_at_cursor(str(row)+ "\t")
+                self.databuffer.insert_at_cursor("\n")
+        
+        
         self.spinner.stop()
 
     def on_file_save_exp_activate(self, menuitem, data=None):

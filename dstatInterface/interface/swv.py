@@ -13,3 +13,5 @@ class swv:
         self.step_entry = self.builder.get_object('step_entry')
         self.pulse_entry = self.builder.get_object('pulse_entry')
         self.freq_entry = self.builder.get_object('freq_entry')
+        self.cyclic_checkbutton = self.builder.get_object('cyclic_checkbutton')
+        self.scans_entry = self.builder.get_object('scans_entry')
