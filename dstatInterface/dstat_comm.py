@@ -289,7 +289,7 @@ class swv_exp(Experiment):
         self.databuffer = databuffer_instance
 
         self.datatype = "SWVData"
-        self.xlabel = "Voltage (DAC units)"
+        self.xlabel = "Voltage (mV)"
         self.ylabel = "Current (A)"
         self.data = [[],[]] #only difference stored here
         self.datalength = 2 * self.parameters['scans']
