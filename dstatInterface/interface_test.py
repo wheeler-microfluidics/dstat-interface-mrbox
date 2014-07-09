@@ -212,12 +212,25 @@ class main:
                 
                 self.current_exp = comm.chronoamp(parameters, view_parameters, self.plot, self.rawbuffer)
                 self.current_exp.run(self.serial_liststore.get_value(self.serial_combobox.get_active_iter(), 0))
+        
             elif selection == 1: #LSV
+                parameters['clean_mV'] = int(self.lsv.clean_mV.get_text())
+                parameters['clean_s'] = int(self.lsv.clean_s.get_text())
+                parameters['dep_mV'] = int(self.lsv.dep_mV.get_text())
+                parameters['dep_s'] = int(self.lsv.dep_s.get_text())
                 parameters['start'] = int(self.lsv.start_entry.get_text())
                 parameters['stop'] = int(self.lsv.stop_entry.get_text())
                 parameters['slope'] = int(self.lsv.slope_entry.get_text())
                 
                 #check parameters are within hardware limits
+                if (parameters['clean_mV'] > 1499 or parameters['clean_mV'] < -1500):
+                    raise InputError(parameters['clean_mV'],"Clean potential exceeds hardware limits.")
+                if (parameters['dep_mV'] > 1499 or parameters['dep_mV'] < -1500):
+                    raise InputError(parameters['dep_mV'],"Deposition potential exceeds hardware limits.")
+                if (parameters['clean_s'] < 0):
+                    raise InputError(parameters['clean_s'],"Clean time cannot be negative.")
+                if (parameters['dep_s'] < 0):
+                    raise InputError(parameters['dep_s'],"Deposition time cannot be negative.")
                 if (parameters['start'] > 1499 or parameters['start'] < -1500):
                     raise InputError(parameters['start'],"Start parameter exceeds hardware limits.")
                 if (parameters['stop'] > 1499 or parameters['stop'] < -1500):
@@ -231,6 +244,10 @@ class main:
                 self.current_exp.run(self.serial_liststore.get_value(self.serial_combobox.get_active_iter(), 0))
             
             elif selection == 2: #CV
+                parameters['clean_mV'] = int(self.cv.clean_mV.get_text())
+                parameters['clean_s'] = int(self.cv.clean_s.get_text())
+                parameters['dep_mV'] = int(self.cv.dep_mV.get_text())
+                parameters['dep_s'] = int(self.cv.dep_s.get_text())
                 parameters['start'] = int(self.cv.start_entry.get_text())
                 parameters['slope'] = int(self.cv.slope_entry.get_text())
                 parameters['v1'] = int(self.cv.v1_entry.get_text())
@@ -238,6 +255,14 @@ class main:
                 parameters['scans'] = int(self.cv.scans_entry.get_text())
                 
                 #check parameters are within hardware limits
+                if (parameters['clean_mV'] > 1499 or parameters['clean_mV'] < -1500):
+                    raise InputError(parameters['clean_mV'],"Clean potential exceeds hardware limits.")
+                if (parameters['dep_mV'] > 1499 or parameters['dep_mV'] < -1500):
+                    raise InputError(parameters['dep_mV'],"Deposition potential exceeds hardware limits.")
+                if (parameters['clean_s'] < 0):
+                    raise InputError(parameters['clean_s'],"Clean time cannot be negative.")
+                if (parameters['dep_s'] < 0):
+                    raise InputError(parameters['dep_s'],"Deposition time cannot be negative.")
                 if (parameters['start'] > 1499 or parameters['start'] < -1500):
                     raise InputError(parameters['start'],"Start parameter exceeds hardware limits.")
                 if (parameters['slope'] > 2000 or parameters['slope'] < 1):
@@ -255,6 +280,10 @@ class main:
                 self.current_exp.run(self.serial_liststore.get_value(self.serial_combobox.get_active_iter(), 0))
         
             elif selection == 3: #SWV
+                parameters['clean_mV'] = int(self.swv.clean_mV.get_text())
+                parameters['clean_s'] = int(self.swv.clean_s.get_text())
+                parameters['dep_mV'] = int(self.swv.dep_mV.get_text())
+                parameters['dep_s'] = int(self.swv.dep_s.get_text())
                 parameters['start'] = int(self.swv.start_entry.get_text())
                 parameters['stop'] = int(self.swv.stop_entry.get_text())
                 parameters['step'] = int(self.swv.step_entry.get_text())
@@ -269,6 +298,14 @@ class main:
                     parameters['scans'] = 0
                 
                 #check parameters are within hardware limits (doesn't check if pulse will go out of bounds, but instrument checks this (I think))
+                if (parameters['clean_mV'] > 1499 or parameters['clean_mV'] < -1500):
+                    raise InputError(parameters['clean_mV'],"Clean potential exceeds hardware limits.")
+                if (parameters['dep_mV'] > 1499 or parameters['dep_mV'] < -1500):
+                    raise InputError(parameters['dep_mV'],"Deposition potential exceeds hardware limits.")
+                if (parameters['clean_s'] < 0):
+                    raise InputError(parameters['clean_s'],"Clean time cannot be negative.")
+                if (parameters['dep_s'] < 0):
+                    raise InputError(parameters['dep_s'],"Deposition time cannot be negative.")
                 if (parameters['start'] > 1499 or parameters['start'] < -1500):
                     raise InputError(parameters['start'],"Start parameter exceeds hardware limits.")
                 if (parameters['step'] > 200 or parameters['step'] < 1):

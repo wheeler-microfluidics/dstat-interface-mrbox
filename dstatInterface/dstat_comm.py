@@ -204,6 +204,14 @@ class lsv_exp(Experiment):
         self.init() #need to call after xmin and xmax are set
         
         self.commands += "L"
+        self.commands[2] += str(self.parameters['clean_s'])
+        self.commands[2] += " "
+        self.commands[2] += str(self.parameters['dep_s'])
+        self.commands[2] += " "
+        self.commands[2] += str(int(self.parameters['clean_mV']*(65536./3000)+32768))
+        self.commands[2] += " "
+        self.commands[2] += str(int(self.parameters['dep_mV']*(65536./3000)+32768))
+        self.commands[2] += " "
         self.commands[2] += str(self.parameters['start'])
         self.commands[2] += " "
         self.commands[2] += str(self.parameters['stop'])
@@ -219,7 +227,7 @@ class cv_exp(Experiment):
         self.databuffer = databuffer_instance
  
         self.datatype = "CVData"
-        self.xlabel = "Voltage (DAC units)"
+        self.xlabel = "Voltage (mV)"
         self.ylabel = "Current (A)"
         self.data = [[],[]] #Will have to alter data_handler to add new lists as needed
         self.datalength = 2 * self.parameters['scans'] #x and y for each scan
@@ -229,6 +237,14 @@ class cv_exp(Experiment):
         self.init()
         
         self.commands += "C"
+        self.commands[2] += str(self.parameters['clean_s'])
+        self.commands[2] += " "
+        self.commands[2] += str(self.parameters['dep_s'])
+        self.commands[2] += " "
+        self.commands[2] += str(int(self.parameters['clean_mV']*(65536./3000)+32768))
+        self.commands[2] += " "
+        self.commands[2] += str(int(self.parameters['dep_mV']*(65536./3000)+32768))
+        self.commands[2] += " "
         self.commands[2] += str(self.parameters['v1'])
         self.commands[2] += " "
         self.commands[2] += str(self.parameters['v2'])
@@ -301,6 +317,14 @@ class swv_exp(Experiment):
         self.data_extra = [[],[]] #forward/reverse stored here - needs to be after self.init to keep from being redefined
         
         self.commands += "S"
+        self.commands[2] += str(self.parameters['clean_s'])
+        self.commands[2] += " "
+        self.commands[2] += str(self.parameters['dep_s'])
+        self.commands[2] += " "
+        self.commands[2] += str(int(self.parameters['clean_mV']*(65536./3000)+32768))
+        self.commands[2] += " "
+        self.commands[2] += str(int(self.parameters['dep_mV']*(65536./3000)+32768))
+        self.commands[2] += " "
         self.commands[2] += str(self.parameters['start'])
         self.commands[2] += " "
         self.commands[2] += str(self.parameters['stop'])
