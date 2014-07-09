@@ -4,6 +4,7 @@ a = Analysis(['interface_test.py'],
              hookspath=None,
              runtime_hooks=None)
 glade_tree = Tree('./interface', prefix = 'interface', excludes=['*.py','*.pyc'])
+drivers_tree = Tree('./drivers', prefix = 'drivers')
 pyz = PYZ(a.pure)
 exe = EXE(pyz,
           a.scripts,
@@ -14,6 +15,7 @@ exe = EXE(pyz,
           upx=True,
           console=True )
 coll = COLLECT(exe,
+               drivers_tree,
                glade_tree,
                a.binaries,
                a.zipfiles,
