@@ -45,8 +45,10 @@ class plotbox:
         self.lines.append(self.axe1.plot([0,1], [0,1])[0])
     
     def updateline(self, Experiment, line_number):
-        self.lines[line_number].set_ydata(Experiment.data[1+line_number*2][1:])
-        self.lines[line_number].set_xdata(Experiment.data[line_number*2][1:])
+        divisor = len(Experiment.data[1+line_number*2]) // 2000 + 1 #limits display to 2000 data points per line
+        
+        self.lines[line_number].set_ydata(Experiment.data[1+line_number*2][1::divisor])
+        self.lines[line_number].set_xdata(Experiment.data[line_number*2][1::divisor])
 
     def changetype(self, Experiment):
         self.axe1.set_xlabel(Experiment.xlabel)

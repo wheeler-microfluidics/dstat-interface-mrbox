@@ -41,11 +41,20 @@
       debugDocumentVersioning = "YES"
       allowLocationSimulation = "YES">
       <PathRunnable
-         FilePath = "/Library/Frameworks/Python.framework/Versions/2.7/bin/python2.7">
+         FilePath = "/usr/local/Cellar/python/2.7.6_1/Frameworks/Python.framework/Versions/2.7/bin/python2.7">
       </PathRunnable>
+      <MacroExpansion>
+         <BuildableReference
+            BuildableIdentifier = "primary"
+            BlueprintIdentifier = "5FDC0DF718FDACDA003F857A"
+            BuildableName = "dstatInterface"
+            BlueprintName = "dstatInterface"
+            ReferencedContainer = "container:dstatInterface.xcodeproj">
+         </BuildableReference>
+      </MacroExpansion>
       <CommandLineArguments>
          <CommandLineArgument
-            argument = "main.py"
+            argument = "interface_test.py"
             isEnabled = "YES">
          </CommandLineArgument>
       </CommandLineArguments>

@@ -13,12 +13,14 @@
 		5FCB54231905B6EE00CEB148 /* dstat_comm.py */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.script.python; path = dstat_comm.py; sourceTree = "<group>"; };
 		5FDC0DFD18FDAD79003F857A /* mpl.py */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.script.python; path = mpl.py; sourceTree = "<group>"; };
 		5FDC1E4218FF9572007AD04D /* glade1.py */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.script.python; path = glade1.py; sourceTree = "<group>"; };
+		5FF00FDC1942BD16004D38A8 /* setup.py */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.script.python; path = setup.py; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXGroup section */
 		5FDC0DF218FDACDA003F857A = {
 			isa = PBXGroup;
 			children = (
+				5FF00FDC1942BD16004D38A8 /* setup.py */,
 				5F87883C19072E86007B53E0 /* mpltest.py */,
 				5FCB541D1905923800CEB148 /* interface_test.py */,
 				5FCB54231905B6EE00CEB148 /* dstat_comm.py */,
@@ -33,7 +35,7 @@
 /* Begin PBXLegacyTarget section */
 		5FDC0DF718FDACDA003F857A /* dstatInterface */ = {
 			isa = PBXLegacyTarget;
-			buildArgumentsString = "$(ACTION)";
+			buildArgumentsString = "setup.py build_ext --inplace";
 			buildConfigurationList = 5FDC0DFA18FDACDA003F857A /* Build configuration list for PBXLegacyTarget "dstatInterface" */;
 			buildPhases = (
 			);
