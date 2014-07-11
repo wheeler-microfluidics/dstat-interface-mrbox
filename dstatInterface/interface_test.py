@@ -240,8 +240,20 @@ class main:
                 if parameters['start'] == parameters['stop']:
                     raise InputError(parameters['start'],"Start cannot equal Stop.")
             
-                self.current_exp = comm.lsv_exp(parameters, view_parameters, self.plot, self.rawbuffer)
-                self.current_exp.run(self.serial_liststore.get_value(self.serial_combobox.get_active_iter(), 0))
+
+#                self.current_exp.run(self.serial_liststore.get_value(self.serial_combobox.get_active_iter(), 0))
+                self.line = 0
+                self.recv_p, self.send_p = multiprocessing.Pipe(duplex=True)
+
+                self.current_exp = comm.lsv_exp(parameters, view_parameters, self.plot, self.rawbuffer, self.send_p)
+                
+                self.p = multiprocessing.Process(target=self.current_exp.run, args=(self.serial_liststore.get_value(self.serial_combobox.get_active_iter(), 0), ))
+                self.p.start()
+                
+                self.send_p.close()
+
+                self.plot_proc = gobject.timeout_add(200, self.experiment_running_plot)
+                gobject.idle_add(self.experiment_running)
             
             elif selection == 2: #CV
                 parameters['clean_mV'] = int(self.cv.clean_mV.get_text())
@@ -340,17 +352,38 @@ class main:
         except AssertionError as e:
             self.spinner.stop()
             self.statusbar.push(self.error_context_id, str(e))
+
+    def experiment_running(self):
+        try:
+            if self.recv_p.poll():
+                self.line, data = self.recv_p.recv()
+                print self.line, data
+                for i in range(len(data)):
+                    self.current_exp.data[self.line+i].append(data[i])
+            return True
+        except EOFError:
+            self.experiment_done()
+            return False
+            
+    def experiment_running_plot(self):
+        self.plot.updateline(self.current_exp, self.line)
+        self.plot.redraw()
+        return True
+
+    def experiment_done(self):
+        gobject.source_remove(self.plot_proc) #stop automatic plot update
+        self.experiment_running_plot() #make sure all data updated on plot
         
         self.databuffer.set_text("")
         self.databuffer.place_cursor(self.databuffer.get_start_iter())
         self.rawbuffer.set_text("")
         self.rawbuffer.place_cursor(self.rawbuffer.get_start_iter())
-
+        
         for col in zip(*self.current_exp.data):
             for row in col:
                 self.rawbuffer.insert_at_cursor(str(row)+ "\t")
             self.rawbuffer.insert_at_cursor("\n")
-
+        
         
         if self.current_exp.data_extra:
             for col in zip(*self.current_exp.data_extra):
@@ -360,7 +393,12 @@ class main:
         
         
         self.spinner.stop()
-
+    
+    def on_pot_stop_clicked(self, data=None):
+        if self.recv_p:
+            print "stop"
+            self.recv_p.send('a')
+    
     def on_file_save_exp_activate(self, menuitem, data=None):
         if self.current_exp:
             self.save = save.npSave(self.current_exp)

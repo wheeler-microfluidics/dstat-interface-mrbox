@@ -99,9 +99,10 @@ class Experiment:
 
         self.data_postprocessing()
         
-        self.plot.updateline(self, 0)
-        self.plot.redraw()
-
+#        self.plot.updateline(self, 0)
+#        self.plot.redraw()
+        print "pipe closed"
+        self.main_pipe.close()
         self.ser.close()
         
     def data_handler(self):
@@ -115,15 +116,21 @@ class Experiment:
         
         while True:
             try:
-                    voltage, current = struct.unpack('<Hl', recv_p.recv()) #uint16 + int32
+                if self.main_pipe.poll():
+                    if self.main_pipe.recv() == 'a':
+                        self.ser.write('a')
+                        return
+                
+                voltage, current = struct.unpack('<Hl', recv_p.recv()) #uint16 + int32
+                #(line, [data])
+                self.main_pipe.send((0, [(voltage-32768)*3000./65536, current*(1.5/self.gain/8388607)]))
+#                    self.data[0].append((voltage-32768)*3000./65536)
+#                    self.data[1].append(current*(1.5/self.gain/8388607))
+#                    if ((time.time() - updatetime) > .2):
+#                        self.plot.updateline(self, 0)
+#                        self.plot.redraw()
+#                        updatetime = float(time.time())
 
-                    self.data[0].append((voltage-32768)*3000./65536)
-                    self.data[1].append(current*(1.5/self.gain/8388607))
-                    if ((time.time() - updatetime) > .2):
-                        self.plot.updateline(self, 0)
-                        self.plot.redraw()
-                        updatetime = float(time.time())
-            
             except EOFError:
                 print "empty"
                 break
@@ -187,7 +194,8 @@ class chronoamp(Experiment):
             break
 
 class lsv_exp(Experiment):
-    def __init__(self, parameters, view_parameters, plot_instance, databuffer_instance):
+    def __init__(self, parameters, view_parameters, plot_instance, databuffer_instance, send_pipe):
+        self.main_pipe = send_pipe
         self.parameters = parameters
         self.view_parameters = view_parameters
         self.plot = plot_instance
