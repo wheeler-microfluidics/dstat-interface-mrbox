@@ -199,6 +199,10 @@ class main:
         view_parameters['update'] = self.plotint_checkbox.get_active()
         view_parameters['updatelimit'] = int(self.updatelimit_adj.get_value())
         
+        self.line = 0
+        self.lastline = 0
+        self.lastdataline = 0
+        
         self.spinner.start()
         self.statusbar.remove_all(self.error_context_id)
         
@@ -210,8 +214,16 @@ class main:
                 if not parameters['potential']:
                     raise InputError(parameters['potential'],"Step table is empty")
                 
-                self.current_exp = comm.chronoamp(parameters, view_parameters, self.plot, self.rawbuffer)
-                self.current_exp.run(self.serial_liststore.get_value(self.serial_combobox.get_active_iter(), 0))
+                self.recv_p, self.send_p = multiprocessing.Pipe(duplex=True)
+                self.current_exp = comm.chronoamp(parameters, view_parameters, self.plot, self.rawbuffer, self.send_p)
+                
+                self.p = multiprocessing.Process(target=self.current_exp.run, args=(self.serial_liststore.get_value(self.serial_combobox.get_active_iter(), 0), ))
+                self.p.start()
+                
+                self.send_p.close() #need to close this copy of connection object for EOF signal to work
+                
+                self.plot_proc = gobject.timeout_add(200, self.experiment_running_plot)
+                gobject.idle_add(self.experiment_running)
         
             elif selection == 1: #LSV
                 parameters['clean_mV'] = int(self.lsv.clean_mV.get_text())
@@ -239,12 +251,8 @@ class main:
                     raise InputError(parameters['slope'],"Slope parameter exceeds hardware limits.")
                 if parameters['start'] == parameters['stop']:
                     raise InputError(parameters['start'],"Start cannot equal Stop.")
-            
 
-#                self.current_exp.run(self.serial_liststore.get_value(self.serial_combobox.get_active_iter(), 0))
-                self.line = 0
                 self.recv_p, self.send_p = multiprocessing.Pipe(duplex=True)
-
                 self.current_exp = comm.lsv_exp(parameters, view_parameters, self.plot, self.rawbuffer, self.send_p)
                 
                 self.p = multiprocessing.Process(target=self.current_exp.run, args=(self.serial_liststore.get_value(self.serial_combobox.get_active_iter(), 0), ))
@@ -288,9 +296,17 @@ class main:
                 if parameters['v1'] == parameters['v2']:
                     raise InputError(parameters['v1'],"Vertex 1 cannot equal Vertex 2.")
                 
-                self.current_exp = comm.cv_exp(parameters, view_parameters, self.plot, self.rawbuffer)
-                self.current_exp.run(self.serial_liststore.get_value(self.serial_combobox.get_active_iter(), 0))
-        
+                self.recv_p, self.send_p = multiprocessing.Pipe(duplex=True)
+                self.current_exp = comm.cv_exp(parameters, view_parameters, self.plot, self.rawbuffer, self.send_p)
+                
+                self.p = multiprocessing.Process(target=self.current_exp.run, args=(self.serial_liststore.get_value(self.serial_combobox.get_active_iter(), 0), ))
+                self.p.start()
+                
+                self.send_p.close()
+                
+                self.plot_proc = gobject.timeout_add(200, self.experiment_running_plot)
+                gobject.idle_add(self.experiment_running)
+                
             elif selection == 3: #SWV
                 parameters['clean_mV'] = int(self.swv.clean_mV.get_text())
                 parameters['clean_s'] = int(self.swv.clean_s.get_text())
@@ -330,10 +346,18 @@ class main:
                     raise InputError(parameters['freq'], "Frequency parameter outside limits.")
                 if parameters['start'] == parameters['stop']:
                     raise InputError(parameters['start'],"Start cannot equal Stop.")
-                
-                self.current_exp = comm.swv_exp(parameters, view_parameters, self.plot, self.rawbuffer)
-                self.current_exp.run(self.serial_liststore.get_value(self.serial_combobox.get_active_iter(), 0))
                     
+                self.recv_p, self.send_p = multiprocessing.Pipe(duplex=True)
+                self.current_exp = comm.swv_exp(parameters, view_parameters, self.plot, self.rawbuffer, self.send_p)
+                
+                self.p = multiprocessing.Process(target=self.current_exp.run, args=(self.serial_liststore.get_value(self.serial_combobox.get_active_iter(), 0), ))
+                self.p.start()
+                
+                self.send_p.close()
+                
+                self.plot_proc = gobject.timeout_add(200, self.experiment_running_plot)
+                gobject.idle_add(self.experiment_running)
+                
             else:
                 self.statusbar.push(self.error_context_id, "Experiment not yet implemented.")
                 
@@ -358,14 +382,25 @@ class main:
             if self.recv_p.poll():
                 self.line, data = self.recv_p.recv()
                 print self.line, data
-                for i in range(len(data)):
-                    self.current_exp.data[self.line+i].append(data[i])
+                if self.line > self.lastdataline:
+                    self.current_exp.data += [[],[]]
+                    if len(data) > 2:
+                        self.current_exp.data_extra += [[],[]]
+                    self.lastdataline = self.line
+                for i in range(2):
+                    self.current_exp.data[2*self.line+i].append(data[i])
+                if len(data) > 2:
+                    self.current_exp.data_extra[2*self.line+i].append(data[i])
             return True
         except EOFError:
             self.experiment_done()
             return False
             
     def experiment_running_plot(self):
+        if self.line > self.lastline:
+            self.plot.addline()
+            self.plot.updateline(self.current_exp, self.lastline) #make sure all of last line is added
+            self.lastline = self.line
         self.plot.updateline(self.current_exp, self.line)
         self.plot.redraw()
         return True
