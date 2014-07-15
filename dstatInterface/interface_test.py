@@ -364,26 +364,32 @@ class main:
                 
             else:
                 self.statusbar.push(self.error_context_id, "Experiment not yet implemented.")
+                self.startbutton.set_sensitive(True)
+                self.stopbutton.set_sensitive(False)
                 
         except ValueError:
             self.spinner.stop()
             self.statusbar.push(self.error_context_id, "Experiment parameters must be integers.")
+            self.startbutton.set_sensitive(True)
+            self.stopbutton.set_sensitive(False)
         
         except InputError as e:
             self.spinner.stop()
             self.statusbar.push(self.error_context_id, e.msg)
+            self.startbutton.set_sensitive(True)
+            self.stopbutton.set_sensitive(False)
         
         except SerialException:
             self.spinner.stop()
             self.statusbar.push(self.error_context_id, "Could not establish serial connection.")
+            self.startbutton.set_sensitive(True)
+            self.stopbutton.set_sensitive(False)
 
         except AssertionError as e:
             self.spinner.stop()
             self.statusbar.push(self.error_context_id, str(e))
-
-        finally:
-            self.startbutton.set_sensitive(False)
-            self.stopbutton.set_sensitive(True)
+            self.startbutton.set_sensitive(True)
+            self.stopbutton.set_sensitive(False)
 
     def experiment_running(self):
         try:
@@ -436,7 +442,9 @@ class main:
         
         
         self.spinner.stop()
-    
+        self.startbutton.set_sensitive(True)
+        self.stopbutton.set_sensitive(False)
+
     def on_pot_stop_clicked(self, data=None):
         if self.recv_p:
             print "stop"
