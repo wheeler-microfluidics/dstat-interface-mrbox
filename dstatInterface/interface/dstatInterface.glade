@@ -372,6 +372,7 @@
                       <object class="GtkButton" id="pot_stop">
                         <property name="label">gtk-stop</property>
                         <property name="visible">True</property>
+                        <property name="sensitive">False</property>
                         <property name="can_focus">True</property>
                         <property name="receives_default">True</property>
                         <property name="use_stock">True</property>

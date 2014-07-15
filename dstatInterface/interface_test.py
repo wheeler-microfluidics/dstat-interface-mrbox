@@ -62,6 +62,8 @@ class main:
         self.aboutdialog = self.builder.get_object('aboutdialog1')
         self.rawbuffer = self.builder.get_object('databuffer1')
         self.databuffer = self.builder.get_object('databuffer2')
+        self.stopbutton = self.builder.get_object('pot_stop')
+        self.startbutton = self.builder.get_object('pot_start')
         self.adc_pot = adc_pot.adc_pot()
         self.chronoamp = chronoamp.chronoamp()
         self.lsv = lsv.lsv()
@@ -204,6 +206,8 @@ class main:
         self.lastdataline = 0
         
         self.spinner.start()
+        self.startbutton.set_sensitive(False)
+        self.stopbutton.set_sensitive(True)
         self.statusbar.remove_all(self.error_context_id)
         
         try:
@@ -376,6 +380,10 @@ class main:
         except AssertionError as e:
             self.spinner.stop()
             self.statusbar.push(self.error_context_id, str(e))
+
+        finally:
+            self.startbutton.set_sensitive(False)
+            self.stopbutton.set_sensitive(True)
 
     def experiment_running(self):
         try:
