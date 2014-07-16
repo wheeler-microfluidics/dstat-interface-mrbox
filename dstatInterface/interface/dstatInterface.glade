@@ -28,10 +28,14 @@
       </row>
       <row>
         <col id="0">4</col>
-        <col id="1" translatable="yes">AC Voltammetry</col>
+        <col id="1" translatable="yes">Differential Pulse Voltammetry</col>
       </row>
       <row>
         <col id="0">5</col>
+        <col id="1" translatable="yes">AC Voltammetry</col>
+      </row>
+      <row>
+        <col id="0">6</col>
         <col id="1" translatable="yes">Photodiode</col>
       </row>
     </data>

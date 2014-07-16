@@ -24,6 +24,7 @@ import interface.chronoamp as chronoamp
 import interface.lsv as lsv
 import interface.cv as cv
 import interface.swv as swv
+import interface.dpv as dpv
 import interface.acv as acv
 import interface.pd as pd
 import interface.save as save
@@ -69,6 +70,7 @@ class main:
         self.lsv = lsv.lsv()
         self.cv = cv.cv()
         self.swv = swv.swv()
+        self.dpv = dpv.dpv()
         self.acv = acv.acv()
         self.pd = pd.pd()
         
@@ -87,8 +89,10 @@ class main:
         self.lsv_container.reparent(self.exp_section)
         self.cv_container = self.cv.builder.get_object('scrolledwindow1')
         self.cv_container.reparent(self.exp_section)
-        self.swv_container = self.swv.builder.get_object('scrolledwindow1')
+        self.swv_container = self.dpv.builder.get_object('scrolledwindow1')
         self.swv_container.reparent(self.exp_section)
+        self.dpv_container = self.dpv.builder.get_object('scrolledwindow1')
+        self.dpv_container.reparent(self.exp_section)
         self.acv_container = self.acv.builder.get_object('scrolledwindow1')
         self.acv_container.reparent(self.exp_section)
         self.pd_container = self.pd.builder.get_object('scrolledwindow1')
@@ -137,6 +141,7 @@ class main:
         self.lsv_container.hide()
         self.cv_container.hide()
         self.swv_container.hide()
+        self.dpv_container.hide()
         self.acv_container.hide()
         self.pd_container.hide()
         
@@ -151,8 +156,10 @@ class main:
         elif selection == 3:
             self.swv_container.show()
         elif selection == 4:
-            self.acv_container.show()
+            self.dpv_container.show()
         elif selection == 5:
+            self.acv_container.show()
+        elif selection == 6:
             self.pd_container.show()
         else:
             self.statusbar.push(self.error_context_id, "Experiment not yet implemented")
@@ -361,7 +368,56 @@ class main:
                 
                 self.plot_proc = gobject.timeout_add(200, self.experiment_running_plot)
                 gobject.idle_add(self.experiment_running)
+        
+            elif selection == 4: #DPV
+                parameters['clean_mV'] = int(self.dpv.clean_mV.get_text())
+                parameters['clean_s'] = int(self.dpv.clean_s.get_text())
+                parameters['dep_mV'] = int(self.dpv.dep_mV.get_text())
+                parameters['dep_s'] = int(self.dpv.dep_s.get_text())
+                parameters['start'] = int(self.dpv.start_entry.get_text())
+                parameters['stop'] = int(self.dpv.stop_entry.get_text())
+                parameters['step'] = int(self.dpv.step_entry.get_text())
+                parameters['pulse'] = int(self.dpv.pulse_entry.get_text())
+                parameters['period'] = int(self.dpv.period_entry.get_text())
+                parameters['width'] = int(self.dpv.width_entry.get_text())
                 
+                #check parameters are within hardware limits (doesn't check if pulse will go out of bounds, but instrument checks this (I think))
+                if (parameters['clean_mV'] > 1499 or parameters['clean_mV'] < -1500):
+                    raise InputError(parameters['clean_mV'],"Clean potential exceeds hardware limits.")
+                if (parameters['dep_mV'] > 1499 or parameters['dep_mV'] < -1500):
+                    raise InputError(parameters['dep_mV'],"Deposition potential exceeds hardware limits.")
+                if (parameters['clean_s'] < 0):
+                    raise InputError(parameters['clean_s'],"Clean time cannot be negative.")
+                if (parameters['dep_s'] < 0):
+                    raise InputError(parameters['dep_s'],"Deposition time cannot be negative.")
+                if (parameters['start'] > 1499 or parameters['start'] < -1500):
+                    raise InputError(parameters['start'],"Start parameter exceeds hardware limits.")
+                if (parameters['step'] > 200 or parameters['step'] < 1):
+                    raise InputError(parameters['step'],"Step height parameter exceeds hardware limits.")
+                if (parameters['stop'] > 1499 or parameters['stop'] < -1500):
+                    raise InputError(parameters['stop'],"Stop parameter exceeds hardware limits.")
+                if (parameters['pulse'] > 150 or parameters['pulse'] < 1):
+                    raise InputError(parameters['pulse'],"Pulse height parameter exceeds hardware limits.")
+                if (parameters['period'] < 1 or parameters['period'] > 1000):
+                    raise InputError(parameters['period'], "Period parameter outside limits.")
+                if (parameters['width'] < 1 or parameters['width'] > 1000):
+                    raise InputError(parameters['width'], "Width parameter outside limits.")
+                if parameters['period'] <= parameters['width']:
+                    raise InputError(parameters['width'],"Width must be less than period.")
+                if parameters['start'] == parameters['stop']:
+                    raise InputError(parameters['start'],"Start cannot equal Stop.")
+                
+                self.recv_p, self.send_p = multiprocessing.Pipe(duplex=True)
+                self.current_exp = comm.dpv_exp(parameters, view_parameters, self.plot, self.rawbuffer, self.send_p)
+                
+                self.p = multiprocessing.Process(target=self.current_exp.run, args=(self.serial_liststore.get_value(self.serial_combobox.get_active_iter(), 0), ))
+                self.p.start()
+                
+                self.send_p.close()
+                
+                self.plot_proc = gobject.timeout_add(200, self.experiment_running_plot)
+                gobject.idle_add(self.experiment_running)
+            
             else:
                 self.statusbar.push(self.error_context_id, "Experiment not yet implemented.")
                 self.startbutton.set_sensitive(True)

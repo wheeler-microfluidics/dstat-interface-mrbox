@@ -344,3 +344,46 @@ class swv_exp(Experiment):
             except EOFError:
                 print "empty"
                 break
+
+class dpv_exp(swv_exp):
+    def __init__(self, parameters, view_parameters, plot_instance, databuffer_instance, main_pipe):
+        self.main_pipe = main_pipe
+        self.parameters = parameters
+        self.view_parameters = view_parameters
+        self.plot = plot_instance
+        self.databuffer = databuffer_instance
+        
+        self.datatype = "SWVData"
+        self.xlabel = "Voltage (mV)"
+        self.ylabel = "Current (A)"
+        self.data = [[],[]] #only difference stored here
+        self.datalength = 2
+        self.databytes = 10
+        
+        self.xmin = self.parameters['start']
+        self.xmax = self.parameters['stop']
+        
+        self.init()
+        self.data_extra = [[],[]] #forward/reverse stored here - needs to be after self.init to keep from being redefined
+        
+        self.commands += "D"
+        self.commands[2] += str(self.parameters['clean_s'])
+        self.commands[2] += " "
+        self.commands[2] += str(self.parameters['dep_s'])
+        self.commands[2] += " "
+        self.commands[2] += str(int(self.parameters['clean_mV']*(65536./3000)+32768))
+        self.commands[2] += " "
+        self.commands[2] += str(int(self.parameters['dep_mV']*(65536./3000)+32768))
+        self.commands[2] += " "
+        self.commands[2] += str(self.parameters['start'])
+        self.commands[2] += " "
+        self.commands[2] += str(self.parameters['stop'])
+        self.commands[2] += " "
+        self.commands[2] += str(self.parameters['step'])
+        self.commands[2] += " "
+        self.commands[2] += str(self.parameters['pulse'])
+        self.commands[2] += " "
+        self.commands[2] += str(self.parameters['period'])
+        self.commands[2] += " "
+        self.commands[2] += str(self.parameters['width'])
+        self.commands[2] += " "
