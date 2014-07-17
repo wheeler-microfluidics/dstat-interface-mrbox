@@ -24,6 +24,7 @@ import interface.chronoamp as chronoamp
 import interface.lsv as lsv
 import interface.cv as cv
 import interface.swv as swv
+import interface.dpv as dpv
 import interface.acv as acv
 import interface.pd as pd
 import interface.save as save
@@ -62,11 +63,14 @@ class main:
         self.aboutdialog = self.builder.get_object('aboutdialog1')
         self.rawbuffer = self.builder.get_object('databuffer1')
         self.databuffer = self.builder.get_object('databuffer2')
+        self.stopbutton = self.builder.get_object('pot_stop')
+        self.startbutton = self.builder.get_object('pot_start')
         self.adc_pot = adc_pot.adc_pot()
         self.chronoamp = chronoamp.chronoamp()
         self.lsv = lsv.lsv()
         self.cv = cv.cv()
         self.swv = swv.swv()
+        self.dpv = dpv.dpv()
         self.acv = acv.acv()
         self.pd = pd.pd()
         
@@ -85,8 +89,10 @@ class main:
         self.lsv_container.reparent(self.exp_section)
         self.cv_container = self.cv.builder.get_object('scrolledwindow1')
         self.cv_container.reparent(self.exp_section)
-        self.swv_container = self.swv.builder.get_object('scrolledwindow1')
+        self.swv_container = self.dpv.builder.get_object('scrolledwindow1')
         self.swv_container.reparent(self.exp_section)
+        self.dpv_container = self.dpv.builder.get_object('scrolledwindow1')
+        self.dpv_container.reparent(self.exp_section)
         self.acv_container = self.acv.builder.get_object('scrolledwindow1')
         self.acv_container.reparent(self.exp_section)
         self.pd_container = self.pd.builder.get_object('scrolledwindow1')
@@ -135,6 +141,7 @@ class main:
         self.lsv_container.hide()
         self.cv_container.hide()
         self.swv_container.hide()
+        self.dpv_container.hide()
         self.acv_container.hide()
         self.pd_container.hide()
         
@@ -149,8 +156,10 @@ class main:
         elif selection == 3:
             self.swv_container.show()
         elif selection == 4:
-            self.acv_container.show()
+            self.dpv_container.show()
         elif selection == 5:
+            self.acv_container.show()
+        elif selection == 6:
             self.pd_container.show()
         else:
             self.statusbar.push(self.error_context_id, "Experiment not yet implemented")
@@ -199,7 +208,13 @@ class main:
         view_parameters['update'] = self.plotint_checkbox.get_active()
         view_parameters['updatelimit'] = int(self.updatelimit_adj.get_value())
         
+        self.line = 0
+        self.lastline = 0
+        self.lastdataline = 0
+        
         self.spinner.start()
+        self.startbutton.set_sensitive(False)
+        self.stopbutton.set_sensitive(True)
         self.statusbar.remove_all(self.error_context_id)
         
         try:
@@ -210,8 +225,16 @@ class main:
                 if not parameters['potential']:
                     raise InputError(parameters['potential'],"Step table is empty")
                 
-                self.current_exp = comm.chronoamp(parameters, view_parameters, self.plot, self.rawbuffer)
-                self.current_exp.run(self.serial_liststore.get_value(self.serial_combobox.get_active_iter(), 0))
+                self.recv_p, self.send_p = multiprocessing.Pipe(duplex=True)
+                self.current_exp = comm.chronoamp(parameters, view_parameters, self.plot, self.rawbuffer, self.send_p)
+                
+                self.p = multiprocessing.Process(target=self.current_exp.run, args=(self.serial_liststore.get_value(self.serial_combobox.get_active_iter(), 0), ))
+                self.p.start()
+                
+                self.send_p.close() #need to close this copy of connection object for EOF signal to work
+                
+                self.plot_proc = gobject.timeout_add(200, self.experiment_running_plot)
+                gobject.idle_add(self.experiment_running)
         
             elif selection == 1: #LSV
                 parameters['clean_mV'] = int(self.lsv.clean_mV.get_text())
@@ -239,9 +262,17 @@ class main:
                     raise InputError(parameters['slope'],"Slope parameter exceeds hardware limits.")
                 if parameters['start'] == parameters['stop']:
                     raise InputError(parameters['start'],"Start cannot equal Stop.")
-            
-                self.current_exp = comm.lsv_exp(parameters, view_parameters, self.plot, self.rawbuffer)
-                self.current_exp.run(self.serial_liststore.get_value(self.serial_combobox.get_active_iter(), 0))
+
+                self.recv_p, self.send_p = multiprocessing.Pipe(duplex=True)
+                self.current_exp = comm.lsv_exp(parameters, view_parameters, self.plot, self.rawbuffer, self.send_p)
+                
+                self.p = multiprocessing.Process(target=self.current_exp.run, args=(self.serial_liststore.get_value(self.serial_combobox.get_active_iter(), 0), ))
+                self.p.start()
+                
+                self.send_p.close()
+
+                self.plot_proc = gobject.timeout_add(200, self.experiment_running_plot)
+                gobject.idle_add(self.experiment_running)
             
             elif selection == 2: #CV
                 parameters['clean_mV'] = int(self.cv.clean_mV.get_text())
@@ -276,9 +307,17 @@ class main:
                 if parameters['v1'] == parameters['v2']:
                     raise InputError(parameters['v1'],"Vertex 1 cannot equal Vertex 2.")
                 
-                self.current_exp = comm.cv_exp(parameters, view_parameters, self.plot, self.rawbuffer)
-                self.current_exp.run(self.serial_liststore.get_value(self.serial_combobox.get_active_iter(), 0))
-        
+                self.recv_p, self.send_p = multiprocessing.Pipe(duplex=True)
+                self.current_exp = comm.cv_exp(parameters, view_parameters, self.plot, self.rawbuffer, self.send_p)
+                
+                self.p = multiprocessing.Process(target=self.current_exp.run, args=(self.serial_liststore.get_value(self.serial_combobox.get_active_iter(), 0), ))
+                self.p.start()
+                
+                self.send_p.close()
+                
+                self.plot_proc = gobject.timeout_add(200, self.experiment_running_plot)
+                gobject.idle_add(self.experiment_running)
+                
             elif selection == 3: #SWV
                 parameters['clean_mV'] = int(self.swv.clean_mV.get_text())
                 parameters['clean_s'] = int(self.swv.clean_s.get_text())
@@ -318,39 +357,138 @@ class main:
                     raise InputError(parameters['freq'], "Frequency parameter outside limits.")
                 if parameters['start'] == parameters['stop']:
                     raise InputError(parameters['start'],"Start cannot equal Stop.")
-                
-                self.current_exp = comm.swv_exp(parameters, view_parameters, self.plot, self.rawbuffer)
-                self.current_exp.run(self.serial_liststore.get_value(self.serial_combobox.get_active_iter(), 0))
                     
+                self.recv_p, self.send_p = multiprocessing.Pipe(duplex=True)
+                self.current_exp = comm.swv_exp(parameters, view_parameters, self.plot, self.rawbuffer, self.send_p)
+                
+                self.p = multiprocessing.Process(target=self.current_exp.run, args=(self.serial_liststore.get_value(self.serial_combobox.get_active_iter(), 0), ))
+                self.p.start()
+                
+                self.send_p.close()
+                
+                self.plot_proc = gobject.timeout_add(200, self.experiment_running_plot)
+                gobject.idle_add(self.experiment_running)
+        
+            elif selection == 4: #DPV
+                parameters['clean_mV'] = int(self.dpv.clean_mV.get_text())
+                parameters['clean_s'] = int(self.dpv.clean_s.get_text())
+                parameters['dep_mV'] = int(self.dpv.dep_mV.get_text())
+                parameters['dep_s'] = int(self.dpv.dep_s.get_text())
+                parameters['start'] = int(self.dpv.start_entry.get_text())
+                parameters['stop'] = int(self.dpv.stop_entry.get_text())
+                parameters['step'] = int(self.dpv.step_entry.get_text())
+                parameters['pulse'] = int(self.dpv.pulse_entry.get_text())
+                parameters['period'] = int(self.dpv.period_entry.get_text())
+                parameters['width'] = int(self.dpv.width_entry.get_text())
+                
+                #check parameters are within hardware limits (doesn't check if pulse will go out of bounds, but instrument checks this (I think))
+                if (parameters['clean_mV'] > 1499 or parameters['clean_mV'] < -1500):
+                    raise InputError(parameters['clean_mV'],"Clean potential exceeds hardware limits.")
+                if (parameters['dep_mV'] > 1499 or parameters['dep_mV'] < -1500):
+                    raise InputError(parameters['dep_mV'],"Deposition potential exceeds hardware limits.")
+                if (parameters['clean_s'] < 0):
+                    raise InputError(parameters['clean_s'],"Clean time cannot be negative.")
+                if (parameters['dep_s'] < 0):
+                    raise InputError(parameters['dep_s'],"Deposition time cannot be negative.")
+                if (parameters['start'] > 1499 or parameters['start'] < -1500):
+                    raise InputError(parameters['start'],"Start parameter exceeds hardware limits.")
+                if (parameters['step'] > 200 or parameters['step'] < 1):
+                    raise InputError(parameters['step'],"Step height parameter exceeds hardware limits.")
+                if (parameters['stop'] > 1499 or parameters['stop'] < -1500):
+                    raise InputError(parameters['stop'],"Stop parameter exceeds hardware limits.")
+                if (parameters['pulse'] > 150 or parameters['pulse'] < 1):
+                    raise InputError(parameters['pulse'],"Pulse height parameter exceeds hardware limits.")
+                if (parameters['period'] < 1 or parameters['period'] > 1000):
+                    raise InputError(parameters['period'], "Period parameter outside limits.")
+                if (parameters['width'] < 1 or parameters['width'] > 1000):
+                    raise InputError(parameters['width'], "Width parameter outside limits.")
+                if parameters['period'] <= parameters['width']:
+                    raise InputError(parameters['width'],"Width must be less than period.")
+                if parameters['start'] == parameters['stop']:
+                    raise InputError(parameters['start'],"Start cannot equal Stop.")
+                
+                self.recv_p, self.send_p = multiprocessing.Pipe(duplex=True)
+                self.current_exp = comm.dpv_exp(parameters, view_parameters, self.plot, self.rawbuffer, self.send_p)
+                
+                self.p = multiprocessing.Process(target=self.current_exp.run, args=(self.serial_liststore.get_value(self.serial_combobox.get_active_iter(), 0), ))
+                self.p.start()
+                
+                self.send_p.close()
+                
+                self.plot_proc = gobject.timeout_add(200, self.experiment_running_plot)
+                gobject.idle_add(self.experiment_running)
+            
             else:
                 self.statusbar.push(self.error_context_id, "Experiment not yet implemented.")
+                self.startbutton.set_sensitive(True)
+                self.stopbutton.set_sensitive(False)
                 
         except ValueError:
             self.spinner.stop()
             self.statusbar.push(self.error_context_id, "Experiment parameters must be integers.")
+            self.startbutton.set_sensitive(True)
+            self.stopbutton.set_sensitive(False)
         
         except InputError as e:
             self.spinner.stop()
             self.statusbar.push(self.error_context_id, e.msg)
+            self.startbutton.set_sensitive(True)
+            self.stopbutton.set_sensitive(False)
         
         except SerialException:
             self.spinner.stop()
             self.statusbar.push(self.error_context_id, "Could not establish serial connection.")
+            self.startbutton.set_sensitive(True)
+            self.stopbutton.set_sensitive(False)
 
         except AssertionError as e:
             self.spinner.stop()
             self.statusbar.push(self.error_context_id, str(e))
+            self.startbutton.set_sensitive(True)
+            self.stopbutton.set_sensitive(False)
+
+    def experiment_running(self):
+        try:
+            if self.recv_p.poll():
+                self.line, data = self.recv_p.recv()
+                print self.line, data
+                if self.line > self.lastdataline:
+                    self.current_exp.data += [[],[]]
+                    if len(data) > 2:
+                        self.current_exp.data_extra += [[],[]]
+                    self.lastdataline = self.line
+                for i in range(2):
+                    self.current_exp.data[2*self.line+i].append(data[i])
+                if len(data) > 2:
+                    self.current_exp.data_extra[2*self.line+i].append(data[i])
+            return True
+        except EOFError:
+            self.experiment_done()
+            return False
+            
+    def experiment_running_plot(self):
+        if self.line > self.lastline:
+            self.plot.addline()
+            self.plot.updateline(self.current_exp, self.lastline) #make sure all of last line is added
+            self.lastline = self.line
+        self.plot.updateline(self.current_exp, self.line)
+        self.plot.redraw()
+        return True
+
+    def experiment_done(self):
+        gobject.source_remove(self.plot_proc) #stop automatic plot update
+        self.experiment_running_plot() #make sure all data updated on plot
         
         self.databuffer.set_text("")
         self.databuffer.place_cursor(self.databuffer.get_start_iter())
         self.rawbuffer.set_text("")
         self.rawbuffer.place_cursor(self.rawbuffer.get_start_iter())
-
+        
         for col in zip(*self.current_exp.data):
             for row in col:
                 self.rawbuffer.insert_at_cursor(str(row)+ "\t")
             self.rawbuffer.insert_at_cursor("\n")
-
+        
         
         if self.current_exp.data_extra:
             for col in zip(*self.current_exp.data_extra):
@@ -360,7 +498,14 @@ class main:
         
         
         self.spinner.stop()
+        self.startbutton.set_sensitive(True)
+        self.stopbutton.set_sensitive(False)
 
+    def on_pot_stop_clicked(self, data=None):
+        if self.recv_p:
+            print "stop"
+            self.recv_p.send('a')
+    
     def on_file_save_exp_activate(self, menuitem, data=None):
         if self.current_exp:
             self.save = save.npSave(self.current_exp)

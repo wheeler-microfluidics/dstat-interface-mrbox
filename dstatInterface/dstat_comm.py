@@ -14,27 +14,29 @@ class delayedSerial(serial.Serial): #overrides normal serial write so that chara
             time.sleep(.001)
 
 class dataCapture(mp.Process):
-    def __init__(self, ser_instance, pipe):
+    def __init__(self, ser_instance, pipe, size):
         mp.Process.__init__(self)
         
+        self.size = size
         self.serial = ser_instance
         self.recv_p, self.send_p = pipe
 
     def run(self):
-        sys.stdout.write('[%s] running ...  process id: %s\n'
-                         % (self.name, os.getpid()))
+        scan = 0
 
         while True:
             for line in self.serial:
                 if line.startswith('B'):
-                    self.send_p.send(self.serial.read(size=6))#uint16 + int32
+                    self.send_p.send((scan,self.serial.read(size=self.size)))
                 
                 elif line.lstrip().startswith("no"):
                     self.serial.flushInput()
                     self.send_p.close() #causes EOF at other end of pipe
                     print "closed"
                     break
-            
+                
+                elif line.lstrip().startswith('S'):
+                    scan += 1
             break
 
 class SerialDevices:
@@ -102,32 +104,28 @@ class Experiment:
             self.data_handler() #Will be overridden by experiment classes to deal with more complicated data
 
         self.data_postprocessing()
-        
-        self.plot.updateline(self, 0)
-        self.plot.redraw()
-
+        self.main_pipe.close()
         self.ser.close()
         
     def data_handler(self):
         recv_p, send_p = mp.Pipe(duplex=False)
     
-        capture_proc = dataCapture(self.ser, (recv_p, send_p))
+        capture_proc = dataCapture(self.ser, (recv_p, send_p), self.databytes)
         capture_proc.start()
         send_p.close() #pipe won't trip EOFError unless all connections are closed
-                
-        updatetime = 0
         
         while True:
             try:
-                    voltage, current = struct.unpack('<Hl', recv_p.recv()) #uint16 + int32
-
-                    self.data[0].append((voltage-32768)*3000./65536)
-                    self.data[1].append(current*(1.5/self.gain/8388607))
-                    if ((time.time() - updatetime) > .2):
-                        self.plot.updateline(self, 0)
-                        self.plot.redraw()
-                        updatetime = float(time.time())
+                if self.main_pipe.poll():
+                    if self.main_pipe.recv() == 'a':
+                        self.ser.write('a')
+                        return
             
+                scan, data = recv_p.recv()
+                voltage, current = struct.unpack('<Hl', data) #uint16 + int32
+                #(line, [data])
+                self.main_pipe.send((0, [(voltage-32768)*3000./65536, current*(1.5/self.gain/8388607)]))
+
             except EOFError:
                 print "empty"
                 break
@@ -136,7 +134,8 @@ class Experiment:
         pass
 
 class chronoamp(Experiment):
-    def __init__(self, parameters, view_parameters, plot_instance, databuffer_instance):
+    def __init__(self, parameters, view_parameters, plot_instance, databuffer_instance, main_pipe):
+        self.main_pipe = main_pipe
         self.parameters = parameters
         self.view_parameters = view_parameters
         self.plot = plot_instance
@@ -146,6 +145,7 @@ class chronoamp(Experiment):
         self.ylabel = "Current (A)"
         self.data = [[],[]]
         self.datalength = 2
+        self.databytes = 8
         self.xmin = 0
         self.xmax = 0
         
@@ -165,33 +165,30 @@ class chronoamp(Experiment):
             self.commands[2] += " "
             
     def data_handler(self): #overrides inherited method to not convert x axis
-        while True:
-            for line in self.ser:
-                if line.startswith('B'):
-                    inputdata = self.ser.read(size=8) #2*uint16 + int32
-                    seconds, milliseconds, current = struct.unpack('<HHl', inputdata)
-                    
-                    self.data[0].append(seconds+milliseconds/1000.)
-                    self.data[1].append(current*(1.5/self.gain/8388607))
-
-                    self.plot.updateline(self, 0)
-                    
-                    if self.update:
-                        if self.updatecounter == self.updatelimit:
-                            self.plot.redraw()
-                            self.updatecounter = 0
-                            
-                        else:
-                            self.updatecounter +=1
-        
-                elif line.lstrip().startswith("no"):
-                    self.ser.flushInput()
-                    break
+        recv_p, send_p = mp.Pipe(duplex=False)
             
-            break
+        capture_proc = dataCapture(self.ser, (recv_p, send_p), self.databytes)
+        capture_proc.start()
+        send_p.close() #pipe won't trip EOFError unless all connections are closed
+        
+        while True:
+            try:
+                if self.main_pipe.poll():
+                    if self.main_pipe.recv() == 'a':
+                        self.ser.write('a')
+                        return
+                scan, data = recv_p.recv()
+                seconds, milliseconds, current = struct.unpack('<HHl', data) #2*uint16 + int32
+               #(line, [data])
+                self.main_pipe.send((0, [seconds+milliseconds/1000., current*(1.5/self.gain/8388607)]))
+            
+            except EOFError:
+                print "empty"
+                break
 
 class lsv_exp(Experiment):
-    def __init__(self, parameters, view_parameters, plot_instance, databuffer_instance):
+    def __init__(self, parameters, view_parameters, plot_instance, databuffer_instance, send_pipe):
+        self.main_pipe = send_pipe
         self.parameters = parameters
         self.view_parameters = view_parameters
         self.plot = plot_instance
@@ -202,6 +199,7 @@ class lsv_exp(Experiment):
         self.ylabel = "Current (A)"
         self.data = [[],[]]
         self.datalength = 2
+        self.databytes = 6 #uint16 + int32
         self.xmin = self.parameters['start']
         self.xmax = self.parameters['stop']
         
@@ -224,7 +222,8 @@ class lsv_exp(Experiment):
         self.commands[2] += " "
 
 class cv_exp(Experiment):
-    def __init__(self, parameters, view_parameters, plot_instance, databuffer_instance):
+    def __init__(self, parameters, view_parameters, plot_instance, databuffer_instance, main_pipe):
+        self.main_pipe = main_pipe
         self.parameters = parameters
         self.view_parameters = view_parameters
         self.plot = plot_instance
@@ -235,6 +234,7 @@ class cv_exp(Experiment):
         self.ylabel = "Current (A)"
         self.data = [[],[]] #Will have to alter data_handler to add new lists as needed
         self.datalength = 2 * self.parameters['scans'] #x and y for each scan
+        self.databytes = 6 #uint16 + int32
         self.xmin = self.parameters['v1']
         self.xmax = self.parameters['v2']
         
@@ -261,48 +261,31 @@ class cv_exp(Experiment):
         self.commands[2] += " "
     
     def data_handler(self):
-        scan = 0
+        recv_p, send_p = mp.Pipe(duplex=False)
+            
+        capture_proc = dataCapture(self.ser, (recv_p, send_p), self.databytes)
+        capture_proc.start()
+        send_p.close() #pipe won't trip EOFError unless all connections are closed
         
         while True:
-            for line in self.ser:
-                if line.startswith('B'):
-                    inputdata = self.ser.read(size=6) #uint16 + int32
-                    voltage, current = struct.unpack('<Hl', inputdata)
-                    
-                    self.data[2*scan].append((voltage-32768)*3000./65536)
-                    self.data[2*scan+1].append(current*(1.5/self.gain/8388607))
-                    
-                    self.plot.updateline(self, scan)
-                    
-                    if self.update:
-                        if self.updatecounter == self.updatelimit:
-                            self.plot.redraw()
-                            self.updatecounter = 0
-                        
-                        else:
-                            self.updatecounter +=1
-                
-                elif line.lstrip().startswith("no"):
-                    self.ser.flushInput()
-                    break
-                
-                elif line.lstrip().startswith('S'):
-                    self.plot.redraw()
-                    self.plot.addline()
-                    self.data.append([])
-                    self.data.append([])
-                    scan += 1
-                
-                elif line.lstrip().startswith('D'):
-                    self.data.pop()
-                    self.data.pop() #instrument signals with S after each cycle, so last one will be blank, D singals end of experiment
-                    self.plot.clearline(scan)
-                    self.plot.redraw()
-                    
-            break
+            try:
+                if self.main_pipe.poll():
+                    if self.main_pipe.recv() == 'a':
+                        self.ser.write('a')
+                        return
+            
+                scan, data = recv_p.recv()
+                voltage, current = struct.unpack('<Hl', data) #uint16 + int32
+                #(line, [data])
+                self.main_pipe.send((scan, [(voltage-32768)*3000./65536, current*(1.5/self.gain/8388607)]))
+            
+            except EOFError:
+                print "empty"
+                break
 
 class swv_exp(Experiment):
-    def __init__(self, parameters, view_parameters, plot_instance, databuffer_instance):
+    def __init__(self, parameters, view_parameters, plot_instance, databuffer_instance, main_pipe):
+        self.main_pipe = main_pipe
         self.parameters = parameters
         self.view_parameters = view_parameters
         self.plot = plot_instance
@@ -313,6 +296,7 @@ class swv_exp(Experiment):
         self.ylabel = "Current (A)"
         self.data = [[],[]] #only difference stored here
         self.datalength = 2 * self.parameters['scans']
+        self.databytes = 10
         
         self.xmin = self.parameters['start']
         self.xmax = self.parameters['stop']
@@ -343,49 +327,67 @@ class swv_exp(Experiment):
         self.commands[2] += " "
     
     def data_handler(self):
-        scan = 0
-    
-        while True:
-            for line in self.ser:
-                if line.startswith('B'):
-                    inputdata = self.ser.read(size=10) #uint16 + 2*int32
-                    voltage, forward, reverse = struct.unpack('<Hll', inputdata)
-
-                    self.data[2*scan].append((voltage-32768)*3000./65536)
-                    self.data[2*scan+1].append((forward-reverse)*(1.5/self.gain/8388607))
-                    self.data_extra[2*scan].append(forward*(1.5/self.gain/8388607))
-                    self.data_extra[2*scan+1].append(reverse*(1.5/self.gain/8388607))
-                    
-                    self.plot.updateline(self, scan) #displays only difference current, but forward and reverse stored
-                    
-                    if self.update:
-                        if self.updatecounter == self.updatelimit:
-                            self.plot.redraw()
-                            self.updatecounter = 0
-                        
-                        else:
-                            self.updatecounter +=1
-                
-                elif line.lstrip().startswith("no"):
-                    self.ser.flushInput()
-                    break
+        recv_p, send_p = mp.Pipe(duplex=False)
         
-                elif line.lstrip().startswith('S'):
-                    self.plot.redraw()
-                    self.plot.addline()
-                    self.data.append([])
-                    self.data.append([])
-                    self.data_extra.append([])
-                    self.data_extra.append([])
-                    scan += 1
+        capture_proc = dataCapture(self.ser, (recv_p, send_p), self.databytes)
+        capture_proc.start()
+        send_p.close() #pipe won't trip EOFError unless all connections are closed
+        
+        while True:
+            try:
+                if self.main_pipe.poll():
+                    if self.main_pipe.recv() == 'a':
+                        self.ser.write('a')
+                        return
                 
-                elif line.lstrip().startswith('D'):
-                    self.data.pop()
-                    self.data.pop() #instrument signals with S after each cycle, so last one will be blank, D singals end of experiment
-                    self.data_extra.pop()
-                    self.data_extra.pop()
-                    self.plot.clearline(scan)
-                    self.plot.redraw()
+                scan, data = recv_p.recv()
+                voltage, forward, reverse = struct.unpack('<Hll', data) #uint16 + int32
+                #(line, [data])
+                self.main_pipe.send((scan, [(voltage-32768)*3000./65536, (forward-reverse)*(1.5/self.gain/8388607), forward*(1.5/self.gain/8388607), reverse*(1.5/self.gain/8388607)]))
             
-            break
+            except EOFError:
+                print "empty"
+                break
 
+class dpv_exp(swv_exp):
+    def __init__(self, parameters, view_parameters, plot_instance, databuffer_instance, main_pipe):
+        self.main_pipe = main_pipe
+        self.parameters = parameters
+        self.view_parameters = view_parameters
+        self.plot = plot_instance
+        self.databuffer = databuffer_instance
+        
+        self.datatype = "SWVData"
+        self.xlabel = "Voltage (mV)"
+        self.ylabel = "Current (A)"
+        self.data = [[],[]] #only difference stored here
+        self.datalength = 2
+        self.databytes = 10
+        
+        self.xmin = self.parameters['start']
+        self.xmax = self.parameters['stop']
+        
+        self.init()
+        self.data_extra = [[],[]] #forward/reverse stored here - needs to be after self.init to keep from being redefined
+        
+        self.commands += "D"
+        self.commands[2] += str(self.parameters['clean_s'])
+        self.commands[2] += " "
+        self.commands[2] += str(self.parameters['dep_s'])
+        self.commands[2] += " "
+        self.commands[2] += str(int(self.parameters['clean_mV']*(65536./3000)+32768))
+        self.commands[2] += " "
+        self.commands[2] += str(int(self.parameters['dep_mV']*(65536./3000)+32768))
+        self.commands[2] += " "
+        self.commands[2] += str(self.parameters['start'])
+        self.commands[2] += " "
+        self.commands[2] += str(self.parameters['stop'])
+        self.commands[2] += " "
+        self.commands[2] += str(self.parameters['step'])
+        self.commands[2] += " "
+        self.commands[2] += str(self.parameters['pulse'])
+        self.commands[2] += " "
+        self.commands[2] += str(self.parameters['period'])
+        self.commands[2] += " "
+        self.commands[2] += str(self.parameters['width'])
+        self.commands[2] += " "

@@ -61,4 +61,6 @@ class plotbox:
         self.axe1.relim()
         self.axe1.autoscale(True, axis = 'y')
         self.figure.canvas.draw()
+
+        return True
         

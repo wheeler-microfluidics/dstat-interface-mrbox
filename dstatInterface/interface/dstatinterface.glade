@@ -28,10 +28,14 @@
       </row>
       <row>
         <col id="0">4</col>
-        <col id="1" translatable="yes">AC Voltammetry</col>
+        <col id="1" translatable="yes">Differential Pulse Voltammetry</col>
       </row>
       <row>
         <col id="0">5</col>
+        <col id="1" translatable="yes">AC Voltammetry</col>
+      </row>
+      <row>
+        <col id="0">6</col>
         <col id="1" translatable="yes">Photodiode</col>
       </row>
     </data>
@@ -372,9 +376,11 @@
                       <object class="GtkButton" id="pot_stop">
                         <property name="label">gtk-stop</property>
                         <property name="visible">True</property>
+                        <property name="sensitive">False</property>
                         <property name="can_focus">True</property>
                         <property name="receives_default">True</property>
                         <property name="use_stock">True</property>
+                        <signal name="clicked" handler="on_pot_stop_clicked" swapped="no"/>
                       </object>
                       <packing>
                         <property name="expand">True</property>
