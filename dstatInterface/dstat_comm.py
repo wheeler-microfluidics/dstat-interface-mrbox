@@ -7,6 +7,13 @@ import numpy as np
 import multiprocessing as mp
 from Queue import Empty
 
+def call_it(instance, name, args=(), kwargs=None):
+    "indirect caller for instance methods and multiprocessing"
+    if kwargs is None:
+        kwargs = {}
+    return getattr(instance, name)(*args, **kwargs)
+
+
 class delayedSerial(serial.Serial): #overrides normal serial write so that characters are output individually with a slight delay
     def write(self, data):
         for i in data:
@@ -51,6 +58,9 @@ class SerialDevices:
         self.ports, _, _ = zip(*list_ports.comports())
 
 class Experiment:
+    def run_wrapper(self, *argv):
+        self.p = mp.Process(target=call_it, args=(self, 'run', argv))
+        self.p.start()
     def __init__(self): #will always be overriden, but self.parameters and self.viewparameters should be defined
         pass
     
@@ -71,22 +81,20 @@ class Experiment:
         self.commands[0] += " "
         self.commands[1] += (self.parameters['gain'])
         self.commands[1] += " "
-    
-        self.plot.clearall()
-        self.plot.changetype(self)
 
     def run(self, strPort):
+        print "run"
         self.ser = delayedSerial(strPort, 1024000, timeout=5)
         self.ser.write("ck")
         
         self.ser.flushInput()
         
         self.updatecounter = 0
-        self.databuffer.set_text("")
-        self.databuffer.place_cursor(self.databuffer.get_start_iter())
-        
+#        self.databuffer.set_text("")
+#        self.databuffer.place_cursor(self.databuffer.get_start_iter())
+
         for i in self.commands:
-            self.databuffer.insert_at_cursor(i)
+#            self.databuffer.insert_at_cursor(i)
             self.ser.flush()
             self.ser.write("!")
             while True:
@@ -134,12 +142,10 @@ class Experiment:
         pass
 
 class chronoamp(Experiment):
-    def __init__(self, parameters, view_parameters, plot_instance, databuffer_instance, main_pipe):
+    def __init__(self, parameters, view_parameters, main_pipe):
         self.main_pipe = main_pipe
         self.parameters = parameters
         self.view_parameters = view_parameters
-        self.plot = plot_instance
-        self.databuffer = databuffer_instance
         self.datatype = "linearData"
         self.xlabel = "Time (s)"
         self.ylabel = "Current (A)"

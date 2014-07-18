@@ -31,7 +31,10 @@ import interface.save as save
 import dstat_comm as comm
 from serial import SerialException
 import multiprocessing
+#import dill
+#import pathos.multiprocessing as mp
 
+import pudb
 import mpltest
 
 class Error(Exception):
@@ -226,198 +229,209 @@ class main:
                     raise InputError(parameters['potential'],"Step table is empty")
                 
                 self.recv_p, self.send_p = multiprocessing.Pipe(duplex=True)
-                self.current_exp = comm.chronoamp(parameters, view_parameters, self.plot, self.rawbuffer, self.send_p)
+                self.current_exp = comm.chronoamp(parameters, view_parameters, self.send_p)
                 
-                self.p = multiprocessing.Process(target=self.current_exp.run, args=(self.serial_liststore.get_value(self.serial_combobox.get_active_iter(), 0), ))
-                self.p.start()
+                self.plot.clearall()
+                self.plot.changetype(self.current_exp)
+                self.rawbuffer.set_text("")
+                self.rawbuffer.place_cursor(self.databuffer.get_start_iter())
                 
+                for i in self.current_exp.commands:
+                    self.rawbuffer.insert_at_cursor(i)
+                
+                self.current_exp.run_wrapper(self.serial_liststore.get_value(self.serial_combobox.get_active_iter(), 0))
+#                self.pool.apipe(self.current_exp, (self.serial_liststore.get_value(self.serial_combobox.get_active_iter(), 0)))
+
+#                self.p = multiprocessing.Process(target=comm.call_it, args=(self.current_exp, 'run', (self.serial_liststore.get_value(self.serial_combobox.get_active_iter(), 0), )))
+#                self.p.start()
+
                 self.send_p.close() #need to close this copy of connection object for EOF signal to work
                 
                 self.plot_proc = gobject.timeout_add(200, self.experiment_running_plot)
                 gobject.idle_add(self.experiment_running)
         
-            elif selection == 1: #LSV
-                parameters['clean_mV'] = int(self.lsv.clean_mV.get_text())
-                parameters['clean_s'] = int(self.lsv.clean_s.get_text())
-                parameters['dep_mV'] = int(self.lsv.dep_mV.get_text())
-                parameters['dep_s'] = int(self.lsv.dep_s.get_text())
-                parameters['start'] = int(self.lsv.start_entry.get_text())
-                parameters['stop'] = int(self.lsv.stop_entry.get_text())
-                parameters['slope'] = int(self.lsv.slope_entry.get_text())
-                
-                #check parameters are within hardware limits
-                if (parameters['clean_mV'] > 1499 or parameters['clean_mV'] < -1500):
-                    raise InputError(parameters['clean_mV'],"Clean potential exceeds hardware limits.")
-                if (parameters['dep_mV'] > 1499 or parameters['dep_mV'] < -1500):
-                    raise InputError(parameters['dep_mV'],"Deposition potential exceeds hardware limits.")
-                if (parameters['clean_s'] < 0):
-                    raise InputError(parameters['clean_s'],"Clean time cannot be negative.")
-                if (parameters['dep_s'] < 0):
-                    raise InputError(parameters['dep_s'],"Deposition time cannot be negative.")
-                if (parameters['start'] > 1499 or parameters['start'] < -1500):
-                    raise InputError(parameters['start'],"Start parameter exceeds hardware limits.")
-                if (parameters['stop'] > 1499 or parameters['stop'] < -1500):
-                    raise InputError(parameters['stop'],"Stop parameter exceeds hardware limits.")
-                if (parameters['slope'] > 2000 or parameters['slope'] < 1):
-                    raise InputError(parameters['slope'],"Slope parameter exceeds hardware limits.")
-                if parameters['start'] == parameters['stop']:
-                    raise InputError(parameters['start'],"Start cannot equal Stop.")
+#            elif selection == 1: #LSV
+#                parameters['clean_mV'] = int(self.lsv.clean_mV.get_text())
+#                parameters['clean_s'] = int(self.lsv.clean_s.get_text())
+#                parameters['dep_mV'] = int(self.lsv.dep_mV.get_text())
+#                parameters['dep_s'] = int(self.lsv.dep_s.get_text())
+#                parameters['start'] = int(self.lsv.start_entry.get_text())
+#                parameters['stop'] = int(self.lsv.stop_entry.get_text())
+#                parameters['slope'] = int(self.lsv.slope_entry.get_text())
+#                
+#                #check parameters are within hardware limits
+#                if (parameters['clean_mV'] > 1499 or parameters['clean_mV'] < -1500):
+#                    raise InputError(parameters['clean_mV'],"Clean potential exceeds hardware limits.")
+#                if (parameters['dep_mV'] > 1499 or parameters['dep_mV'] < -1500):
+#                    raise InputError(parameters['dep_mV'],"Deposition potential exceeds hardware limits.")
+#                if (parameters['clean_s'] < 0):
+#                    raise InputError(parameters['clean_s'],"Clean time cannot be negative.")
+#                if (parameters['dep_s'] < 0):
+#                    raise InputError(parameters['dep_s'],"Deposition time cannot be negative.")
+#                if (parameters['start'] > 1499 or parameters['start'] < -1500):
+#                    raise InputError(parameters['start'],"Start parameter exceeds hardware limits.")
+#                if (parameters['stop'] > 1499 or parameters['stop'] < -1500):
+#                    raise InputError(parameters['stop'],"Stop parameter exceeds hardware limits.")
+#                if (parameters['slope'] > 2000 or parameters['slope'] < 1):
+#                    raise InputError(parameters['slope'],"Slope parameter exceeds hardware limits.")
+#                if parameters['start'] == parameters['stop']:
+#                    raise InputError(parameters['start'],"Start cannot equal Stop.")
+#
+#                self.recv_p, self.send_p = multiprocessing.Pipe(duplex=True)
+#                self.current_exp = comm.lsv_exp(parameters, view_parameters, self.plot, self.rawbuffer, self.send_p)
+#                
+#                self.p = multiprocessing.Process(target=self.current_exp.run, args=(self.serial_liststore.get_value(self.serial_combobox.get_active_iter(), 0), ))
+#                self.p.start()
+#                
+#                self.send_p.close()
+#
+#                self.plot_proc = gobject.timeout_add(200, self.experiment_running_plot)
+#                gobject.idle_add(self.experiment_running)
+#            
+#            elif selection == 2: #CV
+#                parameters['clean_mV'] = int(self.cv.clean_mV.get_text())
+#                parameters['clean_s'] = int(self.cv.clean_s.get_text())
+#                parameters['dep_mV'] = int(self.cv.dep_mV.get_text())
+#                parameters['dep_s'] = int(self.cv.dep_s.get_text())
+#                parameters['start'] = int(self.cv.start_entry.get_text())
+#                parameters['slope'] = int(self.cv.slope_entry.get_text())
+#                parameters['v1'] = int(self.cv.v1_entry.get_text())
+#                parameters['v2'] = int(self.cv.v2_entry.get_text())
+#                parameters['scans'] = int(self.cv.scans_entry.get_text())
+#                
+#                #check parameters are within hardware limits
+#                if (parameters['clean_mV'] > 1499 or parameters['clean_mV'] < -1500):
+#                    raise InputError(parameters['clean_mV'],"Clean potential exceeds hardware limits.")
+#                if (parameters['dep_mV'] > 1499 or parameters['dep_mV'] < -1500):
+#                    raise InputError(parameters['dep_mV'],"Deposition potential exceeds hardware limits.")
+#                if (parameters['clean_s'] < 0):
+#                    raise InputError(parameters['clean_s'],"Clean time cannot be negative.")
+#                if (parameters['dep_s'] < 0):
+#                    raise InputError(parameters['dep_s'],"Deposition time cannot be negative.")
+#                if (parameters['start'] > 1499 or parameters['start'] < -1500):
+#                    raise InputError(parameters['start'],"Start parameter exceeds hardware limits.")
+#                if (parameters['slope'] > 2000 or parameters['slope'] < 1):
+#                    raise InputError(parameters['slope'],"Slope parameter exceeds hardware limits.")
+#                if (parameters['v1'] > 1499 or parameters['v1'] < -1500):
+#                    raise InputError(parameters['v1'],"Vertex 1 parameter exceeds hardware limits.")
+#                if (parameters['v2'] > 1499 or parameters['v2'] < -1500):
+#                    raise InputError(parameters['v2'],"Vertex 2 parameter exceeds hardware limits.")
+#                if (parameters['scans'] < 1 or parameters['scans'] > 255):
+#                    raise InputError(parameters['scans'], "Scans parameter outside limits.")
+#                if parameters['v1'] == parameters['v2']:
+#                    raise InputError(parameters['v1'],"Vertex 1 cannot equal Vertex 2.")
+#                
+#                self.recv_p, self.send_p = multiprocessing.Pipe(duplex=True)
+#                self.current_exp = comm.cv_exp(parameters, view_parameters, self.plot, self.rawbuffer, self.send_p)
+#                
+#                self.p = multiprocessing.Process(target=self.current_exp.run, args=(self.serial_liststore.get_value(self.serial_combobox.get_active_iter(), 0), ))
+#                self.p.start()
+#                
+#                self.send_p.close()
+#                
+#                self.plot_proc = gobject.timeout_add(200, self.experiment_running_plot)
+#                gobject.idle_add(self.experiment_running)
+#                
+#            elif selection == 3: #SWV
+#                parameters['clean_mV'] = int(self.swv.clean_mV.get_text())
+#                parameters['clean_s'] = int(self.swv.clean_s.get_text())
+#                parameters['dep_mV'] = int(self.swv.dep_mV.get_text())
+#                parameters['dep_s'] = int(self.swv.dep_s.get_text())
+#                parameters['start'] = int(self.swv.start_entry.get_text())
+#                parameters['stop'] = int(self.swv.stop_entry.get_text())
+#                parameters['step'] = int(self.swv.step_entry.get_text())
+#                parameters['pulse'] = int(self.swv.pulse_entry.get_text())
+#                parameters['freq'] = int(self.swv.freq_entry.get_text())
+#                
+#                if self.swv.cyclic_checkbutton.get_active():
+#                    parameters['scans'] = int(self.swv.scans_entry.get_text())
+#                    if parameters['scans'] < 1:
+#                        raise InputError(parameters['scans'],"Must have at least one scan.")
+#                else:
+#                    parameters['scans'] = 0
+#                
+#                #check parameters are within hardware limits (doesn't check if pulse will go out of bounds, but instrument checks this (I think))
+#                if (parameters['clean_mV'] > 1499 or parameters['clean_mV'] < -1500):
+#                    raise InputError(parameters['clean_mV'],"Clean potential exceeds hardware limits.")
+#                if (parameters['dep_mV'] > 1499 or parameters['dep_mV'] < -1500):
+#                    raise InputError(parameters['dep_mV'],"Deposition potential exceeds hardware limits.")
+#                if (parameters['clean_s'] < 0):
+#                    raise InputError(parameters['clean_s'],"Clean time cannot be negative.")
+#                if (parameters['dep_s'] < 0):
+#                    raise InputError(parameters['dep_s'],"Deposition time cannot be negative.")
+#                if (parameters['start'] > 1499 or parameters['start'] < -1500):
+#                    raise InputError(parameters['start'],"Start parameter exceeds hardware limits.")
+#                if (parameters['step'] > 200 or parameters['step'] < 1):
+#                    raise InputError(parameters['step'],"Step height parameter exceeds hardware limits.")
+#                if (parameters['stop'] > 1499 or parameters['stop'] < -1500):
+#                    raise InputError(parameters['stop'],"Stop parameter exceeds hardware limits.")
+#                if (parameters['pulse'] > 150 or parameters['pulse'] < 1):
+#                    raise InputError(parameters['pulse'],"Pulse height parameter exceeds hardware limits.")
+#                if (parameters['freq'] < 1 or parameters['freq'] > 1000):
+#                    raise InputError(parameters['freq'], "Frequency parameter outside limits.")
+#                if parameters['start'] == parameters['stop']:
+#                    raise InputError(parameters['start'],"Start cannot equal Stop.")
+#                    
+#                self.recv_p, self.send_p = multiprocessing.Pipe(duplex=True)
+#                self.current_exp = comm.swv_exp(parameters, view_parameters, self.plot, self.rawbuffer, self.send_p)
+#                
+#                self.p = multiprocessing.Process(target=self.current_exp.run, args=(self.serial_liststore.get_value(self.serial_combobox.get_active_iter(), 0), ))
+#                self.p.start()
+#                
+#                self.send_p.close()
+#                
+#                self.plot_proc = gobject.timeout_add(200, self.experiment_running_plot)
+#                gobject.idle_add(self.experiment_running)
+#        
+#            elif selection == 4: #DPV
+#                parameters['clean_mV'] = int(self.dpv.clean_mV.get_text())
+#                parameters['clean_s'] = int(self.dpv.clean_s.get_text())
+#                parameters['dep_mV'] = int(self.dpv.dep_mV.get_text())
+#                parameters['dep_s'] = int(self.dpv.dep_s.get_text())
+#                parameters['start'] = int(self.dpv.start_entry.get_text())
+#                parameters['stop'] = int(self.dpv.stop_entry.get_text())
+#                parameters['step'] = int(self.dpv.step_entry.get_text())
+#                parameters['pulse'] = int(self.dpv.pulse_entry.get_text())
+#                parameters['period'] = int(self.dpv.period_entry.get_text())
+#                parameters['width'] = int(self.dpv.width_entry.get_text())
+#                
+#                #check parameters are within hardware limits (doesn't check if pulse will go out of bounds, but instrument checks this (I think))
+#                if (parameters['clean_mV'] > 1499 or parameters['clean_mV'] < -1500):
+#                    raise InputError(parameters['clean_mV'],"Clean potential exceeds hardware limits.")
+#                if (parameters['dep_mV'] > 1499 or parameters['dep_mV'] < -1500):
+#                    raise InputError(parameters['dep_mV'],"Deposition potential exceeds hardware limits.")
+#                if (parameters['clean_s'] < 0):
+#                    raise InputError(parameters['clean_s'],"Clean time cannot be negative.")
+#                if (parameters['dep_s'] < 0):
+#                    raise InputError(parameters['dep_s'],"Deposition time cannot be negative.")
+#                if (parameters['start'] > 1499 or parameters['start'] < -1500):
+#                    raise InputError(parameters['start'],"Start parameter exceeds hardware limits.")
+#                if (parameters['step'] > 200 or parameters['step'] < 1):
+#                    raise InputError(parameters['step'],"Step height parameter exceeds hardware limits.")
+#                if (parameters['stop'] > 1499 or parameters['stop'] < -1500):
+#                    raise InputError(parameters['stop'],"Stop parameter exceeds hardware limits.")
+#                if (parameters['pulse'] > 150 or parameters['pulse'] < 1):
+#                    raise InputError(parameters['pulse'],"Pulse height parameter exceeds hardware limits.")
+#                if (parameters['period'] < 1 or parameters['period'] > 1000):
+#                    raise InputError(parameters['period'], "Period parameter outside limits.")
+#                if (parameters['width'] < 1 or parameters['width'] > 1000):
+#                    raise InputError(parameters['width'], "Width parameter outside limits.")
+#                if parameters['period'] <= parameters['width']:
+#                    raise InputError(parameters['width'],"Width must be less than period.")
+#                if parameters['start'] == parameters['stop']:
+#                    raise InputError(parameters['start'],"Start cannot equal Stop.")
+#                
+#                self.recv_p, self.send_p = multiprocessing.Pipe(duplex=True)
+#                self.current_exp = comm.dpv_exp(parameters, view_parameters, self.plot, self.rawbuffer, self.send_p)
+#                
+#                self.p = multiprocessing.Process(target=self.current_exp.run, args=(self.serial_liststore.get_value(self.serial_combobox.get_active_iter(), 0), ))
+#                self.p.start()
+#                
+#                self.send_p.close()
+#                
+#                self.plot_proc = gobject.timeout_add(200, self.experiment_running_plot)
+#                gobject.idle_add(self.experiment_running)
 
-                self.recv_p, self.send_p = multiprocessing.Pipe(duplex=True)
-                self.current_exp = comm.lsv_exp(parameters, view_parameters, self.plot, self.rawbuffer, self.send_p)
-                
-                self.p = multiprocessing.Process(target=self.current_exp.run, args=(self.serial_liststore.get_value(self.serial_combobox.get_active_iter(), 0), ))
-                self.p.start()
-                
-                self.send_p.close()
-
-                self.plot_proc = gobject.timeout_add(200, self.experiment_running_plot)
-                gobject.idle_add(self.experiment_running)
-            
-            elif selection == 2: #CV
-                parameters['clean_mV'] = int(self.cv.clean_mV.get_text())
-                parameters['clean_s'] = int(self.cv.clean_s.get_text())
-                parameters['dep_mV'] = int(self.cv.dep_mV.get_text())
-                parameters['dep_s'] = int(self.cv.dep_s.get_text())
-                parameters['start'] = int(self.cv.start_entry.get_text())
-                parameters['slope'] = int(self.cv.slope_entry.get_text())
-                parameters['v1'] = int(self.cv.v1_entry.get_text())
-                parameters['v2'] = int(self.cv.v2_entry.get_text())
-                parameters['scans'] = int(self.cv.scans_entry.get_text())
-                
-                #check parameters are within hardware limits
-                if (parameters['clean_mV'] > 1499 or parameters['clean_mV'] < -1500):
-                    raise InputError(parameters['clean_mV'],"Clean potential exceeds hardware limits.")
-                if (parameters['dep_mV'] > 1499 or parameters['dep_mV'] < -1500):
-                    raise InputError(parameters['dep_mV'],"Deposition potential exceeds hardware limits.")
-                if (parameters['clean_s'] < 0):
-                    raise InputError(parameters['clean_s'],"Clean time cannot be negative.")
-                if (parameters['dep_s'] < 0):
-                    raise InputError(parameters['dep_s'],"Deposition time cannot be negative.")
-                if (parameters['start'] > 1499 or parameters['start'] < -1500):
-                    raise InputError(parameters['start'],"Start parameter exceeds hardware limits.")
-                if (parameters['slope'] > 2000 or parameters['slope'] < 1):
-                    raise InputError(parameters['slope'],"Slope parameter exceeds hardware limits.")
-                if (parameters['v1'] > 1499 or parameters['v1'] < -1500):
-                    raise InputError(parameters['v1'],"Vertex 1 parameter exceeds hardware limits.")
-                if (parameters['v2'] > 1499 or parameters['v2'] < -1500):
-                    raise InputError(parameters['v2'],"Vertex 2 parameter exceeds hardware limits.")
-                if (parameters['scans'] < 1 or parameters['scans'] > 255):
-                    raise InputError(parameters['scans'], "Scans parameter outside limits.")
-                if parameters['v1'] == parameters['v2']:
-                    raise InputError(parameters['v1'],"Vertex 1 cannot equal Vertex 2.")
-                
-                self.recv_p, self.send_p = multiprocessing.Pipe(duplex=True)
-                self.current_exp = comm.cv_exp(parameters, view_parameters, self.plot, self.rawbuffer, self.send_p)
-                
-                self.p = multiprocessing.Process(target=self.current_exp.run, args=(self.serial_liststore.get_value(self.serial_combobox.get_active_iter(), 0), ))
-                self.p.start()
-                
-                self.send_p.close()
-                
-                self.plot_proc = gobject.timeout_add(200, self.experiment_running_plot)
-                gobject.idle_add(self.experiment_running)
-                
-            elif selection == 3: #SWV
-                parameters['clean_mV'] = int(self.swv.clean_mV.get_text())
-                parameters['clean_s'] = int(self.swv.clean_s.get_text())
-                parameters['dep_mV'] = int(self.swv.dep_mV.get_text())
-                parameters['dep_s'] = int(self.swv.dep_s.get_text())
-                parameters['start'] = int(self.swv.start_entry.get_text())
-                parameters['stop'] = int(self.swv.stop_entry.get_text())
-                parameters['step'] = int(self.swv.step_entry.get_text())
-                parameters['pulse'] = int(self.swv.pulse_entry.get_text())
-                parameters['freq'] = int(self.swv.freq_entry.get_text())
-                
-                if self.swv.cyclic_checkbutton.get_active():
-                    parameters['scans'] = int(self.swv.scans_entry.get_text())
-                    if parameters['scans'] < 1:
-                        raise InputError(parameters['scans'],"Must have at least one scan.")
-                else:
-                    parameters['scans'] = 0
-                
-                #check parameters are within hardware limits (doesn't check if pulse will go out of bounds, but instrument checks this (I think))
-                if (parameters['clean_mV'] > 1499 or parameters['clean_mV'] < -1500):
-                    raise InputError(parameters['clean_mV'],"Clean potential exceeds hardware limits.")
-                if (parameters['dep_mV'] > 1499 or parameters['dep_mV'] < -1500):
-                    raise InputError(parameters['dep_mV'],"Deposition potential exceeds hardware limits.")
-                if (parameters['clean_s'] < 0):
-                    raise InputError(parameters['clean_s'],"Clean time cannot be negative.")
-                if (parameters['dep_s'] < 0):
-                    raise InputError(parameters['dep_s'],"Deposition time cannot be negative.")
-                if (parameters['start'] > 1499 or parameters['start'] < -1500):
-                    raise InputError(parameters['start'],"Start parameter exceeds hardware limits.")
-                if (parameters['step'] > 200 or parameters['step'] < 1):
-                    raise InputError(parameters['step'],"Step height parameter exceeds hardware limits.")
-                if (parameters['stop'] > 1499 or parameters['stop'] < -1500):
-                    raise InputError(parameters['stop'],"Stop parameter exceeds hardware limits.")
-                if (parameters['pulse'] > 150 or parameters['pulse'] < 1):
-                    raise InputError(parameters['pulse'],"Pulse height parameter exceeds hardware limits.")
-                if (parameters['freq'] < 1 or parameters['freq'] > 1000):
-                    raise InputError(parameters['freq'], "Frequency parameter outside limits.")
-                if parameters['start'] == parameters['stop']:
-                    raise InputError(parameters['start'],"Start cannot equal Stop.")
-                    
-                self.recv_p, self.send_p = multiprocessing.Pipe(duplex=True)
-                self.current_exp = comm.swv_exp(parameters, view_parameters, self.plot, self.rawbuffer, self.send_p)
-                
-                self.p = multiprocessing.Process(target=self.current_exp.run, args=(self.serial_liststore.get_value(self.serial_combobox.get_active_iter(), 0), ))
-                self.p.start()
-                
-                self.send_p.close()
-                
-                self.plot_proc = gobject.timeout_add(200, self.experiment_running_plot)
-                gobject.idle_add(self.experiment_running)
-        
-            elif selection == 4: #DPV
-                parameters['clean_mV'] = int(self.dpv.clean_mV.get_text())
-                parameters['clean_s'] = int(self.dpv.clean_s.get_text())
-                parameters['dep_mV'] = int(self.dpv.dep_mV.get_text())
-                parameters['dep_s'] = int(self.dpv.dep_s.get_text())
-                parameters['start'] = int(self.dpv.start_entry.get_text())
-                parameters['stop'] = int(self.dpv.stop_entry.get_text())
-                parameters['step'] = int(self.dpv.step_entry.get_text())
-                parameters['pulse'] = int(self.dpv.pulse_entry.get_text())
-                parameters['period'] = int(self.dpv.period_entry.get_text())
-                parameters['width'] = int(self.dpv.width_entry.get_text())
-                
-                #check parameters are within hardware limits (doesn't check if pulse will go out of bounds, but instrument checks this (I think))
-                if (parameters['clean_mV'] > 1499 or parameters['clean_mV'] < -1500):
-                    raise InputError(parameters['clean_mV'],"Clean potential exceeds hardware limits.")
-                if (parameters['dep_mV'] > 1499 or parameters['dep_mV'] < -1500):
-                    raise InputError(parameters['dep_mV'],"Deposition potential exceeds hardware limits.")
-                if (parameters['clean_s'] < 0):
-                    raise InputError(parameters['clean_s'],"Clean time cannot be negative.")
-                if (parameters['dep_s'] < 0):
-                    raise InputError(parameters['dep_s'],"Deposition time cannot be negative.")
-                if (parameters['start'] > 1499 or parameters['start'] < -1500):
-                    raise InputError(parameters['start'],"Start parameter exceeds hardware limits.")
-                if (parameters['step'] > 200 or parameters['step'] < 1):
-                    raise InputError(parameters['step'],"Step height parameter exceeds hardware limits.")
-                if (parameters['stop'] > 1499 or parameters['stop'] < -1500):
-                    raise InputError(parameters['stop'],"Stop parameter exceeds hardware limits.")
-                if (parameters['pulse'] > 150 or parameters['pulse'] < 1):
-                    raise InputError(parameters['pulse'],"Pulse height parameter exceeds hardware limits.")
-                if (parameters['period'] < 1 or parameters['period'] > 1000):
-                    raise InputError(parameters['period'], "Period parameter outside limits.")
-                if (parameters['width'] < 1 or parameters['width'] > 1000):
-                    raise InputError(parameters['width'], "Width parameter outside limits.")
-                if parameters['period'] <= parameters['width']:
-                    raise InputError(parameters['width'],"Width must be less than period.")
-                if parameters['start'] == parameters['stop']:
-                    raise InputError(parameters['start'],"Start cannot equal Stop.")
-                
-                self.recv_p, self.send_p = multiprocessing.Pipe(duplex=True)
-                self.current_exp = comm.dpv_exp(parameters, view_parameters, self.plot, self.rawbuffer, self.send_p)
-                
-                self.p = multiprocessing.Process(target=self.current_exp.run, args=(self.serial_liststore.get_value(self.serial_combobox.get_active_iter(), 0), ))
-                self.p.start()
-                
-                self.send_p.close()
-                
-                self.plot_proc = gobject.timeout_add(200, self.experiment_running_plot)
-                gobject.idle_add(self.experiment_running)
-            
             else:
                 self.statusbar.push(self.error_context_id, "Experiment not yet implemented.")
                 self.startbutton.set_sensitive(True)
@@ -481,9 +495,10 @@ class main:
         
         self.databuffer.set_text("")
         self.databuffer.place_cursor(self.databuffer.get_start_iter())
-        self.rawbuffer.set_text("")
-        self.rawbuffer.place_cursor(self.rawbuffer.get_start_iter())
-        
+        self.rawbuffer.insert_at_cursor("\n")
+#        self.rawbuffer.set_text("")
+#        self.rawbuffer.place_cursor(self.rawbuffer.get_start_iter())
+
         for col in zip(*self.current_exp.data):
             for row in col:
                 self.rawbuffer.insert_at_cursor(str(row)+ "\t")
