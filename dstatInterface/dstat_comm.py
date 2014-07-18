@@ -20,65 +20,6 @@ class delayedSerial(serial.Serial): #overrides normal serial write so that chara
             serial.Serial.write(self, i)
             time.sleep(.001)
 
-class dataCapture(mp.Process):
-    def __init__(self, strPort, pipe, size):
-        mp.Process.__init__(self)
-        self.serial = delayedSerial(strPort, 1024000, timeout=1)
-        self.serial.write("ck")
-        
-        self.serial.flushInput()
-        
-        self.size = size
-        self.recv_p, self.ser_p = pipe
-
-        self.scan = 0
-    
-    def run(self):
-        try:
-            timer = time.clock()
-            while True:
-                if self.ser_p.poll(.1):
-                    cmd = self.ser_p.recv()
-                    if cmd == "?":
-                        break
-                    self.serial.write(cmd)
-                    if cmd == "a":
-                        break
-                for line in self.serial:
-                    if line.startswith('B'):
-                        self.ser_p.send((self.scan, self.serial.read(size=self.size)))
-                    elif line.startswith('S'):
-                        self.scan += 1
-#                        elif line.startswith("#"):
-#                            print line
-                    elif not line.isspace():
-                        self.ser_p.send(line)
-                    print time.clock()-timer
-        
-        except EOFError:
-            print "EOF"
-            pass
-        
-        finally:
-            self.serial.flushInput()
-            self.serial.close()
-            return
-
-#        while True:
-#            for line in self.serial:
-#                if line.startswith('B'):
-#                    self.ser_p.send((scan,self.serial.read(size=self.size)))
-#                
-#                elif line.lstrip().startswith("no"):
-#                    self.serial.flushInput()
-#                    self.ser_p.close() #causes EOF at other end of pipe
-#                    print "closed"
-#                    break
-#                
-#                elif line.lstrip().startswith('S'):
-#                    scan += 1
-#            break
-
 class SerialDevices:
     def __init__(self):
         try:
@@ -117,38 +58,48 @@ class Experiment:
         self.commands[1] += " "
 
     def run(self, strPort):
-        for i in self.commands:
-            self.recv_p, self.ser_p = mp.Pipe()
-            self.ser_proc = dataCapture(strPort, (self.recv_p, self.ser_p), self.databytes)
-            self.ser_proc.start()
-#            self.ser_p.close()
-            self.recv_p.send('!')
-            
-            while True:
-                if self.recv_p.recv().startswith("C"):
-                    break
+        self.serial = delayedSerial(strPort, 1024000, timeout=1)
+        self.serial.write("ck")
         
-            self.recv_p.send(i)
+        self.serial.flushInput()
+        
+        for i in self.commands:
+            print i
+            self.serial.write('!')
             
-            while True:
-                if self.main_pipe.poll():
-                    if self.main_pipe.recv() == 'a':
-                        self.recv_p.send('a')
-                        break
-                if self.recv_p.poll(.1):
-                    input = self.recv_p.recv()
-                    if isinstance(input, tuple):
-                        self.main_pipe.send(self.data_handler(input))
-                    elif input.lstrip().startswith("no"):
-                        self.recv_p.send("?")
-#                        self.recv_p.close()
-                        self.ser_proc.join()
-                        break
-#            del self.recv_p, self.ser_p, self.ser_proc
+            while not self.serial.read().startswith("C"):
+                pass
+
+            self.serial.write(i)
+            if not self.serial_handler():
+                break
 
         self.data_postprocessing()
+        self.serial.close()
         self.main_pipe.close()
-        
+    
+    def serial_handler(self):
+        scan = 0
+        while True:
+            if self.main_pipe.poll():
+                print "abort"
+                if self.main_pipe.recv() == 'a':
+                    self.serial.write('a')
+                    return False
+                        
+            for line in self.serial:
+                if line.startswith('B'):
+                    self.main_pipe.send(self.data_handler((scan, self.serial.read(size=self.databytes))))
+                elif line.startswith('S'):
+                    scan += 1
+                elif line.startswith("#"):
+                    print line
+                elif line.lstrip().startswith("no"):
+                    print line
+                    self.serial.flushInput()
+                    return True
+    
+    
     def data_handler(self, input):
         scan, data = input
         voltage, current = struct.unpack('<Hl', data) #uint16 + int32
