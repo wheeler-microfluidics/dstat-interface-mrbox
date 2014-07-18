@@ -21,30 +21,63 @@ class delayedSerial(serial.Serial): #overrides normal serial write so that chara
             time.sleep(.001)
 
 class dataCapture(mp.Process):
-    def __init__(self, ser_instance, pipe, size):
+    def __init__(self, strPort, pipe, size):
         mp.Process.__init__(self)
+        self.serial = delayedSerial(strPort, 1024000, timeout=1)
+        self.serial.write("ck")
+        
+        self.serial.flushInput()
         
         self.size = size
-        self.serial = ser_instance
-        self.recv_p, self.send_p = pipe
+        self.recv_p, self.ser_p = pipe
 
+        self.scan = 0
+    
     def run(self):
-        scan = 0
+        try:
+            timer = time.clock()
+            while True:
+                if self.ser_p.poll(.1):
+                    cmd = self.ser_p.recv()
+                    if cmd == "?":
+                        break
+                    self.serial.write(cmd)
+                    if cmd == "a":
+                        break
+                for line in self.serial:
+                    if line.startswith('B'):
+                        self.ser_p.send((self.scan, self.serial.read(size=self.size)))
+                    elif line.startswith('S'):
+                        self.scan += 1
+#                        elif line.startswith("#"):
+#                            print line
+                    elif not line.isspace():
+                        self.ser_p.send(line)
+                    print time.clock()-timer
+        
+        except EOFError:
+            print "EOF"
+            pass
+        
+        finally:
+            self.serial.flushInput()
+            self.serial.close()
+            return
 
-        while True:
-            for line in self.serial:
-                if line.startswith('B'):
-                    self.send_p.send((scan,self.serial.read(size=self.size)))
-                
-                elif line.lstrip().startswith("no"):
-                    self.serial.flushInput()
-                    self.send_p.close() #causes EOF at other end of pipe
-                    print "closed"
-                    break
-                
-                elif line.lstrip().startswith('S'):
-                    scan += 1
-            break
+#        while True:
+#            for line in self.serial:
+#                if line.startswith('B'):
+#                    self.ser_p.send((scan,self.serial.read(size=self.size)))
+#                
+#                elif line.lstrip().startswith("no"):
+#                    self.serial.flushInput()
+#                    self.ser_p.close() #causes EOF at other end of pipe
+#                    print "closed"
+#                    break
+#                
+#                elif line.lstrip().startswith('S'):
+#                    scan += 1
+#            break
 
 class SerialDevices:
     def __init__(self):
@@ -61,7 +94,8 @@ class Experiment:
     def run_wrapper(self, *argv):
         self.p = mp.Process(target=call_it, args=(self, 'run', argv))
         self.p.start()
-    def __init__(self): #will always be overriden, but self.parameters and self.viewparameters should be defined
+
+    def __init__(self): #will always be overriden, but self.parameters, self.viewparameters, and self.databytes should be defined
         pass
     
     def init(self):
@@ -83,60 +117,42 @@ class Experiment:
         self.commands[1] += " "
 
     def run(self, strPort):
-        print "run"
-        self.ser = delayedSerial(strPort, 1024000, timeout=5)
-        self.ser.write("ck")
-        
-        self.ser.flushInput()
-        
-        self.updatecounter = 0
-#        self.databuffer.set_text("")
-#        self.databuffer.place_cursor(self.databuffer.get_start_iter())
-
         for i in self.commands:
-#            self.databuffer.insert_at_cursor(i)
-            self.ser.flush()
-            self.ser.write("!")
+            self.recv_p, self.ser_p = mp.Pipe()
+            self.ser_proc = dataCapture(strPort, (self.recv_p, self.ser_p), self.databytes)
+            self.ser_proc.start()
+#            self.ser_p.close()
+            self.recv_p.send('!')
+            
             while True:
-                for line in self.ser:
-                    if line.lstrip().startswith('C'):
-                        self.ser.flushInput()
-                        break
-            
-                break
+                if self.recv_p.recv().startswith("C"):
+                    break
         
-            self.ser.flushInput()
-            self.ser.write(i)
-            print i
+            self.recv_p.send(i)
             
-            self.data_handler() #Will be overridden by experiment classes to deal with more complicated data
+            while True:
+                if self.main_pipe.poll():
+                    if self.main_pipe.recv() == 'a':
+                        self.recv_p.send('a')
+                        break
+                if self.recv_p.poll(.1):
+                    input = self.recv_p.recv()
+                    if isinstance(input, tuple):
+                        self.main_pipe.send(self.data_handler(input))
+                    elif input.lstrip().startswith("no"):
+                        self.recv_p.send("?")
+#                        self.recv_p.close()
+                        self.ser_proc.join()
+                        break
+#            del self.recv_p, self.ser_p, self.ser_proc
 
         self.data_postprocessing()
         self.main_pipe.close()
-        self.ser.close()
         
-    def data_handler(self):
-        recv_p, send_p = mp.Pipe(duplex=False)
-    
-        capture_proc = dataCapture(self.ser, (recv_p, send_p), self.databytes)
-        capture_proc.start()
-        send_p.close() #pipe won't trip EOFError unless all connections are closed
-        
-        while True:
-            try:
-                if self.main_pipe.poll():
-                    if self.main_pipe.recv() == 'a':
-                        self.ser.write('a')
-                        return
-            
-                scan, data = recv_p.recv()
-                voltage, current = struct.unpack('<Hl', data) #uint16 + int32
-                #(line, [data])
-                self.main_pipe.send((0, [(voltage-32768)*3000./65536, current*(1.5/self.gain/8388607)]))
-
-            except EOFError:
-                print "empty"
-                break
+    def data_handler(self, input):
+        scan, data = input
+        voltage, current = struct.unpack('<Hl', data) #uint16 + int32
+        return (scan, [(voltage-32768)*3000./65536, current*(1.5/self.gain/8388607)])
     
     def data_postprocessing(self):
         pass
@@ -170,27 +186,10 @@ class chronoamp(Experiment):
             self.commands[2] += str(i)
             self.commands[2] += " "
             
-    def data_handler(self): #overrides inherited method to not convert x axis
-        recv_p, send_p = mp.Pipe(duplex=False)
-            
-        capture_proc = dataCapture(self.ser, (recv_p, send_p), self.databytes)
-        capture_proc.start()
-        send_p.close() #pipe won't trip EOFError unless all connections are closed
-        
-        while True:
-            try:
-                if self.main_pipe.poll():
-                    if self.main_pipe.recv() == 'a':
-                        self.ser.write('a')
-                        return
-                scan, data = recv_p.recv()
-                seconds, milliseconds, current = struct.unpack('<HHl', data) #2*uint16 + int32
-               #(line, [data])
-                self.main_pipe.send((0, [seconds+milliseconds/1000., current*(1.5/self.gain/8388607)]))
-            
-            except EOFError:
-                print "empty"
-                break
+    def data_handler(self, input): #overrides inherited method to not convert x axis
+        scan, data = input
+        seconds, milliseconds, current = struct.unpack('<HHl', data) #2*uint16 + int32
+        return (scan, [seconds+milliseconds/1000., current*(1.5/self.gain/8388607)])
 
 class lsv_exp(Experiment):
     def __init__(self, parameters, view_parameters, plot_instance, databuffer_instance, send_pipe):
@@ -266,28 +265,10 @@ class cv_exp(Experiment):
         self.commands[2] += str(self.parameters['slope'])
         self.commands[2] += " "
     
-    def data_handler(self):
-        recv_p, send_p = mp.Pipe(duplex=False)
-            
-        capture_proc = dataCapture(self.ser, (recv_p, send_p), self.databytes)
-        capture_proc.start()
-        send_p.close() #pipe won't trip EOFError unless all connections are closed
-        
-        while True:
-            try:
-                if self.main_pipe.poll():
-                    if self.main_pipe.recv() == 'a':
-                        self.ser.write('a')
-                        return
-            
-                scan, data = recv_p.recv()
-                voltage, current = struct.unpack('<Hl', data) #uint16 + int32
-                #(line, [data])
-                self.main_pipe.send((scan, [(voltage-32768)*3000./65536, current*(1.5/self.gain/8388607)]))
-            
-            except EOFError:
-                print "empty"
-                break
+    def data_handler(self, input):
+        scan, data = input
+        voltage, current = struct.unpack('<Hl', data) #uint16 + int32
+        return (scan, [(voltage-32768)*3000./65536, current*(1.5/self.gain/8388607)])
 
 class swv_exp(Experiment):
     def __init__(self, parameters, view_parameters, plot_instance, databuffer_instance, main_pipe):
@@ -332,28 +313,11 @@ class swv_exp(Experiment):
         self.commands[2] += str(self.parameters['scans'])
         self.commands[2] += " "
     
-    def data_handler(self):
-        recv_p, send_p = mp.Pipe(duplex=False)
-        
-        capture_proc = dataCapture(self.ser, (recv_p, send_p), self.databytes)
-        capture_proc.start()
-        send_p.close() #pipe won't trip EOFError unless all connections are closed
-        
-        while True:
-            try:
-                if self.main_pipe.poll():
-                    if self.main_pipe.recv() == 'a':
-                        self.ser.write('a')
-                        return
-                
-                scan, data = recv_p.recv()
-                voltage, forward, reverse = struct.unpack('<Hll', data) #uint16 + int32
-                #(line, [data])
-                self.main_pipe.send((scan, [(voltage-32768)*3000./65536, (forward-reverse)*(1.5/self.gain/8388607), forward*(1.5/self.gain/8388607), reverse*(1.5/self.gain/8388607)]))
-            
-            except EOFError:
-                print "empty"
-                break
+    def data_handler(self, input):
+        scan, data = input
+        voltage, forward, reverse = struct.unpack('<Hll', data) #uint16 + int32
+        return (scan, [(voltage-32768)*3000./65536, (forward-reverse)*(1.5/self.gain/8388607), forward*(1.5/self.gain/8388607), reverse*(1.5/self.gain/8388607)])
+
 
 class dpv_exp(swv_exp):
     def __init__(self, parameters, view_parameters, plot_instance, databuffer_instance, main_pipe):

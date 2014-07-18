@@ -31,6 +31,7 @@ import interface.save as save
 import dstat_comm as comm
 from serial import SerialException
 import multiprocessing
+import time
 #import dill
 #import pathos.multiprocessing as mp
 
@@ -234,7 +235,7 @@ class main:
                 self.plot.clearall()
                 self.plot.changetype(self.current_exp)
                 self.rawbuffer.set_text("")
-                self.rawbuffer.place_cursor(self.databuffer.get_start_iter())
+                self.rawbuffer.place_cursor(self.rawbuffer.get_start_iter())
                 
                 for i in self.current_exp.commands:
                     self.rawbuffer.insert_at_cursor(i)
@@ -475,6 +476,8 @@ class main:
                     self.current_exp.data[2*self.line+i].append(data[i])
                 if len(data) > 2:
                     self.current_exp.data_extra[2*self.line+i].append(data[i])
+            else:
+                time.sleep(.01)
             return True
         except EOFError:
             self.experiment_done()
