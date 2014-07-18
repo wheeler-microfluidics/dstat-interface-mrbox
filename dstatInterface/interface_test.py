@@ -32,10 +32,7 @@ import dstat_comm as comm
 from serial import SerialException
 import multiprocessing
 import time
-#import dill
-#import pathos.multiprocessing as mp
 
-import pudb
 import mpltest
 
 class Error(Exception):
@@ -93,7 +90,7 @@ class main:
         self.lsv_container.reparent(self.exp_section)
         self.cv_container = self.cv.builder.get_object('scrolledwindow1')
         self.cv_container.reparent(self.exp_section)
-        self.swv_container = self.dpv.builder.get_object('scrolledwindow1')
+        self.swv_container = self.swv.builder.get_object('scrolledwindow1')
         self.swv_container.reparent(self.exp_section)
         self.dpv_container = self.dpv.builder.get_object('scrolledwindow1')
         self.dpv_container.reparent(self.exp_section)
@@ -137,6 +134,7 @@ class main:
         self.lsv_container.hide()
         self.cv_container.hide()
         self.swv_container.hide()
+        self.dpv_container.hide()
         self.acv_container.hide()
         self.pd_container.hide()
 
@@ -490,7 +488,6 @@ class main:
         try:
             if self.recv_p.poll():
                 self.line, data = self.recv_p.recv()
-                print self.line, data
                 if self.line > self.lastdataline:
                     self.current_exp.data += [[],[]]
                     if len(data) > 2:
