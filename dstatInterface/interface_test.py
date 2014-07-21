@@ -228,7 +228,7 @@ class main:
                     raise InputError(parameters['potential'],"Step table is empty")
                 
                 self.recv_p, self.send_p = multiprocessing.Pipe(duplex=True)
-                self.current_exp = comm.chronoamp(parameters, view_parameters, self.send_p)
+                self.current_exp = comm.chronoamp(parameters, self.send_p)
                 
                 self.plot.clearall()
                 self.plot.changetype(self.current_exp)
@@ -273,7 +273,7 @@ class main:
                     raise InputError(parameters['start'],"Start cannot equal Stop.")
 
                 self.recv_p, self.send_p = multiprocessing.Pipe(duplex=True)
-                self.current_exp = comm.lsv_exp(parameters, view_parameters, self.plot, self.rawbuffer, self.send_p)
+                self.current_exp = comm.lsv_exp(parameters, self.send_p)
                 
                 self.plot.clearall()
                 self.plot.changetype(self.current_exp)
@@ -324,7 +324,7 @@ class main:
                     raise InputError(parameters['v1'],"Vertex 1 cannot equal Vertex 2.")
                 
                 self.recv_p, self.send_p = multiprocessing.Pipe(duplex=True)
-                self.current_exp = comm.cv_exp(parameters, view_parameters, self.plot, self.rawbuffer, self.send_p)
+                self.current_exp = comm.cv_exp(parameters, self.send_p)
                 
                 self.plot.clearall()
                 self.plot.changetype(self.current_exp)
@@ -382,7 +382,7 @@ class main:
                     raise InputError(parameters['start'],"Start cannot equal Stop.")
                     
                 self.recv_p, self.send_p = multiprocessing.Pipe(duplex=True)
-                self.current_exp = comm.swv_exp(parameters, view_parameters, self.plot, self.rawbuffer, self.send_p)
+                self.current_exp = comm.swv_exp(parameters, self.send_p)
                 
                 self.plot.clearall()
                 self.plot.changetype(self.current_exp)
@@ -438,7 +438,7 @@ class main:
                     raise InputError(parameters['start'],"Start cannot equal Stop.")
                 
                 self.recv_p, self.send_p = multiprocessing.Pipe(duplex=True)
-                self.current_exp = comm.dpv_exp(parameters, view_parameters, self.plot, self.rawbuffer, self.send_p)
+                self.current_exp = comm.dpv_exp(parameters, self.send_p)
                 
                 self.plot.clearall()
                 self.plot.changetype(self.current_exp)

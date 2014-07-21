@@ -43,8 +43,6 @@ class Experiment:
         self.data_extra = [] #must be defined even when not needed
         self.__gaintable = [1e2, 3e2, 3e3, 3e4, 3e5, 3e6, 3e7, 5e8]
         self.gain = self.__gaintable[int(self.parameters['gain'])]
-        self.updatelimit = self.view_parameters['updatelimit']
-        self.update = self.view_parameters['update']
 
         self.commands = ["A","G"]
     
@@ -109,10 +107,9 @@ class Experiment:
         pass
 
 class chronoamp(Experiment):
-    def __init__(self, parameters, view_parameters, main_pipe):
+    def __init__(self, parameters, main_pipe):
         self.main_pipe = main_pipe
         self.parameters = parameters
-        self.view_parameters = view_parameters
         self.datatype = "linearData"
         self.xlabel = "Time (s)"
         self.ylabel = "Current (A)"
@@ -143,12 +140,9 @@ class chronoamp(Experiment):
         return (scan, [seconds+milliseconds/1000., current*(1.5/self.gain/8388607)])
 
 class lsv_exp(Experiment):
-    def __init__(self, parameters, view_parameters, plot_instance, databuffer_instance, send_pipe):
+    def __init__(self, parameters, send_pipe):
         self.main_pipe = send_pipe
         self.parameters = parameters
-        self.view_parameters = view_parameters
-        self.plot = plot_instance
-        self.databuffer = databuffer_instance
 
         self.datatype = "linearData"
         self.xlabel = "Voltage (mV)"
@@ -178,12 +172,9 @@ class lsv_exp(Experiment):
         self.commands[2] += " "
 
 class cv_exp(Experiment):
-    def __init__(self, parameters, view_parameters, plot_instance, databuffer_instance, main_pipe):
+    def __init__(self, parameters, main_pipe):
         self.main_pipe = main_pipe
         self.parameters = parameters
-        self.view_parameters = view_parameters
-        self.plot = plot_instance
-        self.databuffer = databuffer_instance
  
         self.datatype = "CVData"
         self.xlabel = "Voltage (mV)"
@@ -222,12 +213,9 @@ class cv_exp(Experiment):
         return (scan, [(voltage-32768)*3000./65536, current*(1.5/self.gain/8388607)])
 
 class swv_exp(Experiment):
-    def __init__(self, parameters, view_parameters, plot_instance, databuffer_instance, main_pipe):
+    def __init__(self, parameters, main_pipe):
         self.main_pipe = main_pipe
         self.parameters = parameters
-        self.view_parameters = view_parameters
-        self.plot = plot_instance
-        self.databuffer = databuffer_instance
 
         self.datatype = "SWVData"
         self.xlabel = "Voltage (mV)"
@@ -271,12 +259,9 @@ class swv_exp(Experiment):
 
 
 class dpv_exp(swv_exp):
-    def __init__(self, parameters, view_parameters, plot_instance, databuffer_instance, main_pipe):
+    def __init__(self, parameters, main_pipe):
         self.main_pipe = main_pipe
         self.parameters = parameters
-        self.view_parameters = view_parameters
-        self.plot = plot_instance
-        self.databuffer = databuffer_instance
         
         self.datatype = "SWVData"
         self.xlabel = "Voltage (mV)"
