@@ -31,6 +31,8 @@ def manSave(current_exp):
             text(exp, path)
         fcd.destroy()
         
+    elif response == gtk.RESPONSE_CANCEL:
+        fcd.destroy()
 
 def autoSave(current_exp, dir_button, name, expnumber):
     if name == "":
