@@ -78,8 +78,12 @@ class main:
         self.error_context_id = self.statusbar.get_context_id("error")
         
         self.plotwindow = self.builder.get_object('plotbox')
-        self.plotint_checkbox = self.builder.get_object('plotinteractive_checkbutton')
-        self.updatelimit_adj = self.builder.get_object('updatesamples_adj')
+        
+        #setup autosave
+        self.autosave_checkbox = self.builder.get_object('autosave_checkbutton')
+        self.autosavedir_button = self.builder.get_object('autosavedir_button')
+        self.autosavename = self.builder.get_object('autosavename')
+        
         self.plot = mpltest.plotbox(self.plotwindow)
         
         #fill exp_section
@@ -137,6 +141,8 @@ class main:
         self.dpv_container.hide()
         self.acv_container.hide()
         self.pd_container.hide()
+
+        self.expnumber = 0
 
     def exp_param_show(self, selection):
         self.chronoamp_container.hide()
@@ -206,9 +212,6 @@ class main:
         parameters['adc_rate'] = srate_model.get_value(self.adc_pot.srate_combobox.get_active_iter(), 2) #third column
         parameters['adc_pga'] = pga_model.get_value(self.adc_pot.pga_combobox.get_active_iter(), 2)
         parameters['gain'] = gain_model.get_value(self.adc_pot.gain_combobox.get_active_iter(), 2)
-        
-        view_parameters['update'] = self.plotint_checkbox.get_active()
-        view_parameters['updatelimit'] = int(self.updatelimit_adj.get_value())
         
         self.line = 0
         self.lastline = 0
@@ -537,7 +540,10 @@ class main:
                 for row in col:
                     self.databuffer.insert_at_cursor(str(row)+ "\t")
                 self.databuffer.insert_at_cursor("\n")
-        
+    
+        if self.autosave_checkbox.get_active():
+            save_inst = save.autoSave(self.current_exp, self.autosavedir_button, self.autosavename.get_text(), self.expnumber)
+            self.expnumber += 1
         
         self.spinner.stop()
         self.startbutton.set_sensitive(True)
@@ -550,7 +556,7 @@ class main:
     
     def on_file_save_exp_activate(self, menuitem, data=None):
         if self.current_exp:
-            self.save = save.npSave(self.current_exp)
+            save_inst = save.manSave(self.current_exp)
 
 
 if __name__ == "__main__":
