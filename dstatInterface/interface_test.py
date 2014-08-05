@@ -522,7 +522,7 @@ class main:
     def experiment_done(self):
         gobject.source_remove(self.plot_proc) #stop automatic plot update
         self.experiment_running_plot() #make sure all data updated on plot
-        
+
         self.databuffer.set_text("")
         self.databuffer.place_cursor(self.databuffer.get_start_iter())
         self.rawbuffer.insert_at_cursor("\n")
@@ -531,18 +531,19 @@ class main:
 
         for col in zip(*self.current_exp.data):
             for row in col:
-                self.rawbuffer.insert_at_cursor(str(row)+ "\t")
+                self.rawbuffer.insert_at_cursor(str(row)+ "    ")
             self.rawbuffer.insert_at_cursor("\n")
         
         
         if self.current_exp.data_extra:
             for col in zip(*self.current_exp.data_extra):
                 for row in col:
-                    self.databuffer.insert_at_cursor(str(row)+ "\t")
+                    self.databuffer.insert_at_cursor(str(row)+ "    ")
                 self.databuffer.insert_at_cursor("\n")
     
         if self.autosave_checkbox.get_active():
-            save_inst = save.autoSave(self.current_exp, self.autosavedir_button, self.autosavename.get_text(), self.expnumber)
+            save.autoSave(self.current_exp, self.autosavedir_button, self.autosavename.get_text(), self.expnumber)
+            save.autoPlot(self.plot, self.autosavedir_button, self.autosavename.get_text(), self.expnumber)
             self.expnumber += 1
         
         self.spinner.stop()

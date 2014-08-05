@@ -3,6 +3,7 @@
 
 import gtk, io, os
 import numpy as np
+from datetime import datetime
 
 def manSave(current_exp):
     exp = current_exp
@@ -78,41 +79,76 @@ def autoSave(current_exp, dir_button, name, expnumber):
     path += name
     path += str(expnumber)
 
-    text(current_exp, path)
+    text(current_exp, path, auto=True)
+
+def autoPlot(plot, dir_button, name, expnumber):
+    if name == "":
+        name = "file"
+    
+    path = dir_button.get_filename()
+    path += '/'
+    path += name
+    path += str(expnumber)
+    
+    if path.endswith(".pdf"):
+        path = path.rstrip(".pdf")
+
+    j = 1
+    while os.path.exists("".join([path, ".pdf"])):
+        if j > 1:
+            path = path[:-len(str(j))]
+        path += str(j)
+        j += 1
+
+    path += ".pdf"
+    plot.figure.savefig(path)
 
 
-def npy(exp, path):
+def npy(exp, path, auto=False):
     if path.endswith(".npy"):
         path = path.rstrip(".npy")
 
     data = np.array(exp.data)
-    j = 1
-    while os.path.exists("".join([path, ".npy"])):
-        if j > 1:
-            path = path[:-len(str(j))]
-        path += str(j)
-        j += 1
+
+    if auto == True:
+        j = 1
+        while os.path.exists("".join([path, ".npy"])):
+            if j > 1:
+                path = path[:-len(str(j))]
+            path += str(j)
+            j += 1
+
     np.save(path, data)
 
-def text(exp, path):
+def text(exp, path, auto=False):
     if path.endswith(".txt"):
         path = path.rstrip(".txt")
     
-    j = 1
-    
-    while os.path.exists("".join([path, ".txt"])):
-        if j > 1:
-            path = path[:-len(str(j))]
-        path += str(j)
-        j += 1
+    if auto == True:
+        j = 1
+        
+        while os.path.exists("".join([path, ".txt"])):
+            if j > 1:
+                path = path[:-len(str(j))]
+            path += str(j)
+            j += 1
     
     path += ".txt"
+    file = open(path, 'w')
     
+    time = datetime.now()
+
     data = np.array(exp.data)
-    header = ""
+    header = "".join(['#', time.isoformat(), "\n#"])
     for i in exp.commands:
         header += i
 
-    np.savetxt(path, data.transpose(), header=header, newline='\n')
+    file.write("".join([header, '\n']))
+    for col in zip(*exp.data):
+        for row in col:
+            file.write(str(row)+ "    ")
+        file.write('\n')
+    
+    file.close()
 
 
