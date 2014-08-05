@@ -156,6 +156,7 @@
                         <property name="can_focus">False</property>
                         <property name="image">image3</property>
                         <property name="use_stock">False</property>
+                        <signal name="activate" handler="on_file_save_plot_activate" swapped="no"/>
                       </object>
                     </child>
                     <child>
@@ -456,14 +457,17 @@
                           <object class="GtkEntry" id="autosavename">
                             <property name="visible">True</property>
                             <property name="can_focus">True</property>
+                            <property name="has_tooltip">True</property>
                             <property name="max_length">32</property>
                             <property name="invisible_char">●</property>
                             <property name="text" translatable="yes">file</property>
-                            <property name="overwrite_mode">True</property>
+                            <property name="caps_lock_warning">False</property>
+                            <property name="primary_icon_stock">gtk-file</property>
                             <property name="primary_icon_activatable">False</property>
                             <property name="secondary_icon_activatable">False</property>
                             <property name="primary_icon_sensitive">True</property>
                             <property name="secondary_icon_sensitive">True</property>
+                            <property name="primary_icon_tooltip_text" translatable="yes">File name</property>
                           </object>
                           <packing>
                             <property name="expand">False</property>

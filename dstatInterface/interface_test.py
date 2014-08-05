@@ -557,6 +557,9 @@ class main:
     def on_file_save_exp_activate(self, menuitem, data=None):
         if self.current_exp:
             save_inst = save.manSave(self.current_exp)
+    
+    def on_file_save_plot_activate(self, menuitem, data=None):
+            save_inst = save.plotSave(self.plot)
 
 
 if __name__ == "__main__":

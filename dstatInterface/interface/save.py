@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 
 import gtk, io, os
 import numpy as np
@@ -31,6 +32,41 @@ def manSave(current_exp):
             text(exp, path)
         fcd.destroy()
         
+    elif response == gtk.RESPONSE_CANCEL:
+        fcd.destroy()
+
+def plotSave(plot):
+    fcd = gtk.FileChooserDialog("Save Plot…", None, gtk.FILE_CHOOSER_ACTION_SAVE, (gtk.STOCK_CANCEL, gtk.RESPONSE_CANCEL, gtk.STOCK_SAVE, gtk.RESPONSE_OK))
+
+    filters = [gtk.FileFilter()]
+    filters[0].set_name("Portable Document Format (.pdf)")
+    filters[0].add_pattern("*.pdf")
+    filters.append(gtk.FileFilter())
+    filters[1].set_name("Portable Network Graphics (.png)")
+    filters[1].add_pattern("*.png")
+    
+    fcd.set_do_overwrite_confirmation(True)
+    for i in filters:
+        fcd.add_filter(i)
+    
+    response = fcd.run()
+    
+    if response == gtk.RESPONSE_OK:
+        path = fcd.get_filename()
+        print "Selected filepath: %s" % path
+        filter_selection = fcd.get_filter().get_name()
+        
+        if filter_selection.endswith("(.pdf)"):
+            if not path.endswith(".pdf"):
+                path += ".pdf"
+        
+        elif filter_selection.endswith("(.png)"):
+            if not path.endswith(".png"):
+                path += ".png"
+
+        plot.figure.savefig(path) #savefig determines format from file extension
+        fcd.destroy()
+    
     elif response == gtk.RESPONSE_CANCEL:
         fcd.destroy()
 
