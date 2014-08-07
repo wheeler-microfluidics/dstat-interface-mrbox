@@ -593,7 +593,7 @@ class main:
         self.microdrop_proc = gobject.timeout_add(500, self.microdrop_listen)
     
     def on_menu_dropbot_disconnect_activate(self, menuitem, data= None):
-        gobject.source_remove(self.microdrop_listen)
+        gobject.source_remove(self.microdrop_proc)
         self.microdrop.reset()
         del self.microdrop
         self.dropbot_enabled = False

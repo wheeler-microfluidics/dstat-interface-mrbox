@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXFileReference section */
+		5F05410F1994220800185C41 /* build_windows.py */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.script.python; path = build_windows.py; sourceTree = "<group>"; };
 		5F87883C19072E86007B53E0 /* mpltest.py */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.script.python; path = mpltest.py; sourceTree = "<group>"; };
 		5FB0B8E1198ACD4B00FA6CB7 /* microdrop.py */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.script.python; path = microdrop.py; sourceTree = "<group>"; };
 		5FCB541B190591CD00CEB148 /* interface */ = {isa = PBXFileReference; lastKnownFileType = folder; path = interface; sourceTree = "<group>"; };
@@ -23,6 +24,7 @@
 			children = (
 				5FF00FDC1942BD16004D38A8 /* setup.py */,
 				5F87883C19072E86007B53E0 /* mpltest.py */,
+				5F05410F1994220800185C41 /* build_windows.py */,
 				5FCB541D1905923800CEB148 /* interface_test.py */,
 				5FB0B8E1198ACD4B00FA6CB7 /* microdrop.py */,
 				5FCB54231905B6EE00CEB148 /* dstat_comm.py */,
