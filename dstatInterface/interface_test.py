@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 
 import sys
 try:
@@ -34,6 +35,7 @@ import multiprocessing
 import time
 
 import mpltest
+import microdrop
 
 class Error(Exception):
     pass
@@ -76,10 +78,15 @@ class main:
         self.pd = pd.pd()
         
         self.error_context_id = self.statusbar.get_context_id("error")
+        self.message_context_id = self.statusbar.get_context_id("message")
         
         self.plotwindow = self.builder.get_object('plotbox')
-        self.plotint_checkbox = self.builder.get_object('plotinteractive_checkbutton')
-        self.updatelimit_adj = self.builder.get_object('updatesamples_adj')
+        
+        #setup autosave
+        self.autosave_checkbox = self.builder.get_object('autosave_checkbutton')
+        self.autosavedir_button = self.builder.get_object('autosavedir_button')
+        self.autosavename = self.builder.get_object('autosavename')
+        
         self.plot = mpltest.plotbox(self.plotwindow)
         
         #fill exp_section
@@ -138,6 +145,13 @@ class main:
         self.acv_container.hide()
         self.pd_container.hide()
 
+        self.expnumber = 0
+        
+        self.menu_dropbot_connect = self.builder.get_object('menu_dropbot_connect')
+        self.menu_dropbot_disconnect = self.builder.get_object('menu_dropbot_disconnect')
+        self.dropbot_enabled = False
+        self.dropbot_triggered = False
+
     def exp_param_show(self, selection):
         self.chronoamp_container.hide()
         self.lsv_container.hide()
@@ -190,6 +204,18 @@ class main:
             self.serial_liststore.append([i])
 
     def on_pot_start_clicked(self, data=None):
+    
+        def exceptions(): #cleans up after errors
+            if self.dropbot_enabled == True:
+                if self.dropbot_triggered == True:
+                    self.dropbot_triggered = False
+                    print "finallydone"
+                    self.microdrop.reply(microdrop.EXPFINISHED)
+                    self.microdrop_proc = gobject.timeout_add(500, self.microdrop_listen)
+            self.spinner.stop()
+            self.startbutton.set_sensitive(True)
+            self.stopbutton.set_sensitive(False)
+            
         selection = self.expcombobox.get_active()
         parameters = {}
         view_parameters = {}
@@ -206,9 +232,6 @@ class main:
         parameters['adc_rate'] = srate_model.get_value(self.adc_pot.srate_combobox.get_active_iter(), 2) #third column
         parameters['adc_pga'] = pga_model.get_value(self.adc_pot.pga_combobox.get_active_iter(), 2)
         parameters['gain'] = gain_model.get_value(self.adc_pot.gain_combobox.get_active_iter(), 2)
-        
-        view_parameters['update'] = self.plotint_checkbox.get_active()
-        view_parameters['updatelimit'] = int(self.updatelimit_adj.get_value())
         
         self.line = 0
         self.lastline = 0
@@ -244,6 +267,7 @@ class main:
                 
                 self.plot_proc = gobject.timeout_add(200, self.experiment_running_plot)
                 gobject.idle_add(self.experiment_running)
+                return
         
             elif selection == 1: #LSV
                 parameters['clean_mV'] = int(self.lsv.clean_mV.get_text())
@@ -289,6 +313,7 @@ class main:
 
                 self.plot_proc = gobject.timeout_add(200, self.experiment_running_plot)
                 gobject.idle_add(self.experiment_running)
+                return
             
             elif selection == 2: #CV
                 parameters['clean_mV'] = int(self.cv.clean_mV.get_text())
@@ -340,6 +365,7 @@ class main:
                 
                 self.plot_proc = gobject.timeout_add(200, self.experiment_running_plot)
                 gobject.idle_add(self.experiment_running)
+                return
                 
             elif selection == 3: #SWV
                 parameters['clean_mV'] = int(self.swv.clean_mV.get_text())
@@ -398,6 +424,7 @@ class main:
                 
                 self.plot_proc = gobject.timeout_add(200, self.experiment_running_plot)
                 gobject.idle_add(self.experiment_running)
+                return
         
             elif selection == 4: #DPV
                 parameters['clean_mV'] = int(self.dpv.clean_mV.get_text())
@@ -454,35 +481,27 @@ class main:
 
                 self.plot_proc = gobject.timeout_add(200, self.experiment_running_plot)
                 gobject.idle_add(self.experiment_running)
+                return
 
             else:
                 self.statusbar.push(self.error_context_id, "Experiment not yet implemented.")
-                self.startbutton.set_sensitive(True)
-                self.stopbutton.set_sensitive(False)
+                exceptions()
                 
         except ValueError:
-            self.spinner.stop()
             self.statusbar.push(self.error_context_id, "Experiment parameters must be integers.")
-            self.startbutton.set_sensitive(True)
-            self.stopbutton.set_sensitive(False)
+            exceptions()
         
         except InputError as e:
-            self.spinner.stop()
             self.statusbar.push(self.error_context_id, e.msg)
-            self.startbutton.set_sensitive(True)
-            self.stopbutton.set_sensitive(False)
+            exceptions()
         
         except SerialException:
-            self.spinner.stop()
             self.statusbar.push(self.error_context_id, "Could not establish serial connection.")
-            self.startbutton.set_sensitive(True)
-            self.stopbutton.set_sensitive(False)
+            exceptions()
 
         except AssertionError as e:
-            self.spinner.stop()
             self.statusbar.push(self.error_context_id, str(e))
-            self.startbutton.set_sensitive(True)
-            self.stopbutton.set_sensitive(False)
+            exceptions()
 
     def experiment_running(self):
         try:
@@ -519,7 +538,7 @@ class main:
     def experiment_done(self):
         gobject.source_remove(self.plot_proc) #stop automatic plot update
         self.experiment_running_plot() #make sure all data updated on plot
-        
+
         self.databuffer.set_text("")
         self.databuffer.place_cursor(self.databuffer.get_start_iter())
         self.rawbuffer.insert_at_cursor("\n")
@@ -528,16 +547,26 @@ class main:
 
         for col in zip(*self.current_exp.data):
             for row in col:
-                self.rawbuffer.insert_at_cursor(str(row)+ "\t")
+                self.rawbuffer.insert_at_cursor(str(row)+ "    ")
             self.rawbuffer.insert_at_cursor("\n")
-        
         
         if self.current_exp.data_extra:
             for col in zip(*self.current_exp.data_extra):
                 for row in col:
-                    self.databuffer.insert_at_cursor(str(row)+ "\t")
+                    self.databuffer.insert_at_cursor(str(row)+ "    ")
                 self.databuffer.insert_at_cursor("\n")
+    
+        if self.autosave_checkbox.get_active():
+            save.autoSave(self.current_exp, self.autosavedir_button, self.autosavename.get_text(), self.expnumber)
+            save.autoPlot(self.plot, self.autosavedir_button, self.autosavename.get_text(), self.expnumber)
+            self.expnumber += 1
         
+        if self.dropbot_enabled == True:
+            if self.dropbot_triggered == True:
+                self.dropbot_triggered = False
+                print "expdone"
+                self.microdrop.reply(microdrop.EXPFINISHED)
+            self.microdrop_proc = gobject.timeout_add(500, self.microdrop_listen)
         
         self.spinner.stop()
         self.startbutton.set_sensitive(True)
@@ -550,7 +579,50 @@ class main:
     
     def on_file_save_exp_activate(self, menuitem, data=None):
         if self.current_exp:
-            self.save = save.npSave(self.current_exp)
+            save_inst = save.manSave(self.current_exp)
+    
+    def on_file_save_plot_activate(self, menuitem, data=None):
+        save_inst = save.plotSave(self.plot)
+    
+    def on_menu_dropbot_connect_activate(self, menuitem, data=None):
+        self.microdrop = microdrop.microdropConnection()
+        self.dropbot_enabled = True
+        self.menu_dropbot_connect.set_sensitive(False)
+        self.menu_dropbot_disconnect.set_sensitive(True)
+        self.statusbar.push(self.message_context_id, "Waiting for µDrop to connect…")
+        self.microdrop_proc = gobject.timeout_add(500, self.microdrop_listen)
+    
+    def on_menu_dropbot_disconnect_activate(self, menuitem, data= None):
+        gobject.source_remove(self.microdrop_proc)
+        self.microdrop.reset()
+        del self.microdrop
+        self.dropbot_enabled = False
+        self.menu_dropbot_connect.set_sensitive(True)
+        self.menu_dropbot_disconnect.set_sensitive(False)
+
+    def microdrop_listen(self):
+        drdy, data = self.microdrop.listen()
+        if drdy == False:
+            return True
+        if self.microdrop.connected == False:
+            if data == microdrop.CONREQ:
+                print "INFO: µDrop connected"
+                self.statusbar.push(self.message_context_id, "µDrop connected.")
+                self.microdrop.reply(microdrop.CONREP)
+                self.microdrop.connected = True
+            else:
+                print "WAR: Invalid µDrop connection request."
+                self.microdrop.reply(microdrop.INVAL_CMD)
+        elif data == microdrop.STARTEXP:
+            self.dropbot_triggered = True
+            self.on_pot_start_clicked()
+            return False
+        else:
+            print "WAR: Received invalid command from µDrop"
+            self.microdrop.reply(microdrop.INVAL_CMD)
+        return True
+
+
 
 
 if __name__ == "__main__":
