@@ -724,7 +724,7 @@ class Main:
             return True
 
         if data == microdrop.EXP_FINISH_REQ:
-            if self.microdrop.triggered:
+            if self.dropbot_triggered:
                 self.on_pot_start_clicked()
                 return False  # Removes function from GTK's main loop
             else:
