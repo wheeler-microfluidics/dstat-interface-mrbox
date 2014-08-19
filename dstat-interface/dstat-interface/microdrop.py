@@ -4,8 +4,10 @@ import zmq.error
 #signals
 CONREQ = "0"
 CONREP = "1"
-STARTEXP = "10"
-EXPFINISHED = "11"
+STARTEXP = "start"
+START_REP = "started"
+EXP_FINISH_REQ = "notify_completion"
+EXPFINISHED = "completed"
 INVAL_CMD = "99"
 
 #States

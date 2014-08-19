@@ -716,26 +716,27 @@ class Main:
         self.menu_dropbot_disconnect.set_sensitive(False)
 
     def microdrop_listen(self):
-        """Manage signals from µDrop. Handles initial handshake and
-        subsequent commands. Must be added to GTK's main loop to
+        """Manage signals from µDrop. Must be added to GTK's main loop to
         run periodically.
         """
         drdy, data = self.microdrop.listen()
         if drdy == False:
             return True
-        if self.microdrop.connected == False:
-            if data == microdrop.CONREQ:
-                print "INFO: µDrop connected"
-                self.statusbar.push(self.message_context_id, "µDrop connected.")
-                self.microdrop.reply(microdrop.CONREP)
-                self.microdrop.connected = True
+
+        if data == microdrop.EXP_FINISH_REQ:
+            if self.microdrop.triggered:
+                self.on_pot_start_clicked()
+                return False  # Removes function from GTK's main loop
             else:
-                print "WAR: Invalid µDrop connection request."
-                self.microdrop.reply(microdrop.INVAL_CMD)
+                print "WAR: µDrop requested experiment finish confirmation \
+                        without starting experiment."
+                self.microdrop.reply(microdrop.EXPFINISHED)
+            
         elif data == microdrop.STARTEXP:
+            self.microdrop.connected = True
+            self.statusbar.push(self.message_context_id, "µDrop connected.")
             self.dropbot_triggered = True
-            self.on_pot_start_clicked()
-            return False
+            self.microdrop.reply(microdrop.START_REP)
         else:
             print "WAR: Received invalid command from µDrop"
             self.microdrop.reply(microdrop.INVAL_CMD)
