@@ -6,37 +6,46 @@
     <columns>
       <!-- column-name index -->
       <column type="guint"/>
+      <!-- column-name id -->
+      <column type="gchararray"/>
       <!-- column-name name -->
       <column type="gchararray"/>
     </columns>
     <data>
       <row>
         <col id="0">0</col>
-        <col id="1" translatable="yes">Chronoamperometry</col>
+        <col id="1" translatable="yes">cae</col>
+        <col id="2" translatable="yes">Chronoamperometry</col>
       </row>
       <row>
         <col id="0">1</col>
-        <col id="1" translatable="yes">Linear Sweep Voltammetry</col>
+        <col id="1" translatable="yes">lsv</col>
+        <col id="2" translatable="yes">Linear Sweep Voltammetry</col>
       </row>
       <row>
         <col id="0">2</col>
-        <col id="1" translatable="yes">Cyclic Voltammetry</col>
+        <col id="1" translatable="yes">cve</col>
+        <col id="2" translatable="yes">Cyclic Voltammetry</col>
       </row>
       <row>
         <col id="0">3</col>
-        <col id="1" translatable="yes">Square Wave Voltammetry</col>
+        <col id="1" translatable="yes">swv</col>
+        <col id="2" translatable="yes">Square Wave Voltammetry</col>
       </row>
       <row>
         <col id="0">4</col>
-        <col id="1" translatable="yes">Differential Pulse Voltammetry</col>
+        <col id="1" translatable="yes">dpv</col>
+        <col id="2" translatable="yes">Differential Pulse Voltammetry</col>
       </row>
       <row>
         <col id="0">5</col>
-        <col id="1" translatable="yes">AC Voltammetry</col>
+        <col id="1" translatable="yes">acv</col>
+        <col id="2" translatable="yes">AC Voltammetry</col>
       </row>
       <row>
         <col id="0">6</col>
-        <col id="1" translatable="yes">Photodiode</col>
+        <col id="1" translatable="yes">pde</col>
+        <col id="2" translatable="yes">Photodiode</col>
       </row>
     </data>
   </object>
@@ -188,6 +197,7 @@
                         <property name="label">gtk-connect</property>
                         <property name="visible">True</property>
                         <property name="can_focus">False</property>
+                        <property name="use_underline">True</property>
                         <property name="use_stock">True</property>
                         <signal name="activate" handler="on_menu_dropbot_connect_activate" swapped="no"/>
                       </object>
@@ -198,6 +208,7 @@
                         <property name="visible">True</property>
                         <property name="sensitive">False</property>
                         <property name="can_focus">False</property>
+                        <property name="use_underline">True</property>
                         <property name="use_stock">True</property>
                         <signal name="activate" handler="on_menu_dropbot_disconnect_activate" swapped="no"/>
                       </object>

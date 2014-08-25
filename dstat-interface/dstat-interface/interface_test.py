@@ -20,16 +20,10 @@ except ImportError:
     print('gobject not available')
     sys.exit(1)
 
-import interface.adc_pot as adc_pot
-import interface.chronoamp as chronoamp
-import interface.lsv as lsv
-import interface.cv as cv
-import interface.swv as swv
-import interface.dpv as dpv
-import interface.acv as acv
-import interface.pd as pd
 import interface.save as save
 import dstat_comm as comm
+import interface.exp_window as exp_window
+import interface.adc_pot as adc_pot
 import mpltest
 import microdrop
 
@@ -70,18 +64,13 @@ class Main:
         self.stopbutton = self.builder.get_object('pot_stop')
         self.startbutton = self.builder.get_object('pot_start')
         self.adc_pot = adc_pot.adc_pot()
-        self.chronoamp = chronoamp.chronoamp()
-        self.lsv = lsv.lsv()
-        self.cve = cv.cv()
-        self.swv = swv.swv()
-        self.dpv = dpv.dpv()
-        self.acv = acv.acv()
-        self.pde = pd.pd()
         
         self.error_context_id = self.statusbar.get_context_id("error")
         self.message_context_id = self.statusbar.get_context_id("message")
         
         self.plotwindow = self.builder.get_object('plotbox')
+        
+        self.exp_window = exp_window.Experiments(self.builder)
         
         #setup autosave
         self.autosave_checkbox = self.builder.get_object('autosave_checkbutton')
@@ -89,24 +78,6 @@ class Main:
         self.autosavename = self.builder.get_object('autosavename')
         
         self.plot = mpltest.plotbox(self.plotwindow)
-        
-        #fill exp_section
-        self.exp_section = self.builder.get_object('exp_section_box')
-        self.chronoamp_container = self.chronoamp.builder.get_object(
-                                                              'scrolledwindow1')
-        self.chronoamp_container.reparent(self.exp_section)
-        self.lsv_container = self.lsv.builder.get_object('scrolledwindow1')
-        self.lsv_container.reparent(self.exp_section)
-        self.cve_container = self.cve.builder.get_object('scrolledwindow1')
-        self.cve_container.reparent(self.exp_section)
-        self.swv_container = self.swv.builder.get_object('scrolledwindow1')
-        self.swv_container.reparent(self.exp_section)
-        self.dpv_container = self.dpv.builder.get_object('scrolledwindow1')
-        self.dpv_container.reparent(self.exp_section)
-        self.acv_container = self.acv.builder.get_object('scrolledwindow1')
-        self.acv_container.reparent(self.exp_section)
-        self.pde_container = self.pde.builder.get_object('scrolledwindow1')
-        self.pde_container.reparent(self.exp_section)
         
         #fill adc_pot_box
         self.adc_pot_box = self.builder.get_object('gain_adc_box')
@@ -129,7 +100,7 @@ class Main:
         #initialize experiment selection combobox
         self.expcombobox = self.builder.get_object('expcombobox')
         self.expcombobox.pack_start(self.cell, True)
-        self.expcombobox.add_attribute(self.cell, 'text', 1)
+        self.expcombobox.add_attribute(self.cell, 'text', 2)
         self.expcombobox.set_active(0)
         
         self.spinner = self.builder.get_object('spinner')
@@ -138,14 +109,7 @@ class Main:
         self.mainwindow.set_title("Dstat Interface 0.1")
         self.mainwindow.show_all()
         
-        # hide unused experiment controls
-        #self.chronoamp_container.hide()
-        self.lsv_container.hide()
-        self.cve_container.hide()
-        self.swv_container.hide()
-        self.dpv_container.hide()
-        self.acv_container.hide()
-        self.pde_container.hide()
+        self.on_expcombobox_changed()
 
         self.expnumber = 0
         
@@ -155,40 +119,6 @@ class Main:
                                                       'menu_dropbot_disconnect')
         self.dropbot_enabled = False
         self.dropbot_triggered = False
-
-    def exp_param_show(self, selection):
-        """Changes parameter tab to selected experiment.
-        
-        Arguments:
-        selection -- integer index of experiment type
-        """
-        self.chronoamp_container.hide()
-        self.lsv_container.hide()
-        self.cve_container.hide()
-        self.swv_container.hide()
-        self.dpv_container.hide()
-        self.acv_container.hide()
-        self.pde_container.hide()
-        
-        self.statusbar.remove_all(self.error_context_id)
-
-        if selection == 0:
-            self.chronoamp_container.show()
-        elif selection == 1:
-            self.lsv_container.show()
-        elif selection == 2:
-            self.cve_container.show()
-        elif selection == 3:
-            self.swv_container.show()
-        elif selection == 4:
-            self.dpv_container.show()
-        elif selection == 5:
-            self.acv_container.show()
-        elif selection == 6:
-            self.pde_container.show()
-        else:
-            self.statusbar.push(
-                self.error_context_id, "Experiment not yet implemented")
 
     def on_window1_destroy(self, object, data=None):
         """ Quit when main window closed."""
@@ -208,7 +138,12 @@ class Main:
 
     def on_expcombobox_changed(self, data=None):
         """Change the experiment window when experiment box changed."""
-        self.exp_param_show(self.expcombobox.get_active)
+        model = self.expcombobox.get_model()
+        _, id, _ = model[self.expcombobox.get_active()]  # id is in 2nd col
+        self.statusbar.remove_all(self.error_context_id)
+        if not self.exp_window.set_exp(id):
+            self.statusbar.push(
+                self.error_context_id, "Experiment not yet implemented")
 
     def on_serial_refresh_clicked(self, data=None):
         """Refresh list of serial devices."""
