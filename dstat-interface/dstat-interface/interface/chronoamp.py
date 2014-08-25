@@ -20,8 +20,10 @@ class chronoamp:
 
         self.cell_renderer = gtk.CellRendererText()
         
-        self.treeview.insert_column_with_attributes(-1, "Time", self.cell_renderer, text=1).set_expand(True)
-        self.treeview.insert_column_with_attributes(-1, "Potential", self.cell_renderer, text=0).set_expand(True)
+        self.treeview.insert_column_with_attributes(-1, "Time",
+                                    self.cell_renderer, text=1).set_expand(True)
+        self.treeview.insert_column_with_attributes(-1, "Potential",
+                                    self.cell_renderer, text=0).set_expand(True)
         
         self.treeviewselection = self.treeview.get_selection()
         self.treeviewselection.set_mode(gtk.SELECTION_MULTIPLE)
@@ -46,7 +48,8 @@ class chronoamp:
             self.statusbar.push(0, str(e))
 
     def on_remove_button_clicked(self, widget):
-        self.selected_rows = list(self.treeviewselection.get_selected_rows()[1]) #returns 2-tuple: treemodel, list of paths selected rows
+        # returns 2-tuple: treemodel, list of paths of selected rows
+        self.selected_rows = list(self.treeviewselection.get_selected_rows()[1]) 
         
         self.referencelist = []
         
