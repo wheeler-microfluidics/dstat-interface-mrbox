@@ -198,11 +198,8 @@ class Main:
         
         try:
             if selection == 0:  # CA
-                parameters['potential'] = [int(r[0]) for r 
-                                           in self.chronoamp.model]
-                parameters['time'] = [int(r[1]) for r 
-                                      in self.chronoamp.model]
-            
+                # Add experiment parameters to existing
+                parameters.update(self.exp_window.get_params('cae'))
                 if not parameters['potential']:
                     raise InputError(parameters['potential'],
                                      "Step table is empty")

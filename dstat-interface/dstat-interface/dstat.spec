@@ -1,5 +1,5 @@
 # -*- mode: python -*-
-a = Analysis(['./interface_test.py'],
+a = Analysis(['./main.py'],
              pathex=['/Users/mdryden/src/dstat-interface2/dstatInterface'],
              hiddenimports=[],
              hookspath=None,
@@ -8,7 +8,7 @@ pyz = PYZ(a.pure)
 exe = EXE(pyz,
           a.scripts,
           exclude_binaries=True,
-          name='interface_test',
+          name='DStat',
           debug=False,
           strip=None,
           upx=True,
@@ -19,7 +19,7 @@ coll = COLLECT(exe,
                a.datas,
                strip=None,
                upx=True,
-               name='interface_test')
+               name='DStat')
 app = BUNDLE(coll,
-             name='interface_test.app',
+             name='DStat.app',
              icon=None)
