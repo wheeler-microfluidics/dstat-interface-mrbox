@@ -54,3 +54,11 @@ class Chronoamp:
         
         for i in referencelist:
             self.model.remove(self.model.get_iter(i.get_path()))
+
+    def get_params(self):
+        """Returns a dict of parameters for experiment."""
+        parameters = {}
+        parameters['potential'] = [int(r[0]) for r in self.model]
+        parameters['time'] = [int(r[1]) for r in self.model]
+        
+        return parameters

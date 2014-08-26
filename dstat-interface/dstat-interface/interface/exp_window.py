@@ -45,3 +45,5 @@ class Experiments:
         
         return True
         
+    def get_params(self, experiment):
+        return self.classes[experiment].get_params()
