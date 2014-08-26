@@ -29,7 +29,7 @@ class delayedSerial(serial.Serial):
             serial.Serial.write(self, i)
             time.sleep(.001)
 
-class SerialDevices:
+class SerialDevices(object):
     """Retrieves and stores list of serial devices in self.ports"""
     def __init__(self):
         try:
@@ -42,7 +42,7 @@ class SerialDevices:
         """Refreshes list of ports."""
         self.ports, _, _ = zip(*list_ports.comports())
 
-class Experiment:
+class Experiment(object):
     """Store and acquire a potentiostat experiment. Meant to be subclassed
     to by different experiment types and not used instanced directly.
     """

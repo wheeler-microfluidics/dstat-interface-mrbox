@@ -14,7 +14,7 @@ INVAL_CMD = "99"
 RECV = 0
 SEND = 1
 
-class microdropConnection:
+class microdropConnection(object):
     """Manages microdrop connection over TCP with zmq"""
     def __init__(self, port=6789):
         """Create zmq context and bind to port. Should be called manually

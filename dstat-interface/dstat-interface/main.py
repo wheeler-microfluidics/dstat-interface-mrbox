@@ -47,7 +47,7 @@ class InputError(Error):
         self.expr = expr
         self.msg = msg
 
-class Main:
+class Main(object):
     """Main program """
     def __init__(self):
         self.builder = gtk.Builder()

@@ -14,7 +14,7 @@ from matplotlib.backends.backend_gtkagg \
 from matplotlib.backends.backend_gtkagg \
     import NavigationToolbar2GTKAgg as NavigationToolbar
 
-class plotbox:
+class plotbox(object):
     """Contains main data plot and associated methods."""
     def __init__(self, plotwindow_instance):
         """Creates plot and moves it to a gtk container.
