@@ -1,23 +1,17 @@
-import chronoamp
-import lsv
-import cv
-import swv
-import dpv
-import acv
-import pd
+import interface.exp_int as exp
 
 class Experiments:
     def __init__(self, builder):
         self.builder = builder
         
         self.classes = {}
-        self.classes['cae'] = chronoamp.Chronoamp()
-        self.classes['lsv'] = lsv.lsv()
-        self.classes['cve'] = cv.cv()
-        self.classes['swv'] = swv.swv()
-        self.classes['dpv'] = dpv.dpv()
-        self.classes['acv'] = acv.acv()
-        self.classes['pde'] = pd.pd()
+        self.classes['cae'] = exp.Chronoamp()
+        self.classes['lsv'] = exp.LSV()
+        self.classes['cve'] = exp.CV()
+        self.classes['swv'] = exp.SWV()
+        self.classes['dpv'] = exp.DPV()
+        self.classes['acv'] = exp.ACV()
+        self.classes['pde'] = exp.PD()
  
         #fill exp_section
         exp_section = self.builder.get_object('exp_section_box')

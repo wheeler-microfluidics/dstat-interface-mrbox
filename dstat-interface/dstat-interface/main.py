@@ -226,13 +226,7 @@ class Main(object):
                 return
         
             elif selection == 1: # LSV
-                parameters['clean_mV'] = int(self.lsv.clean_mV.get_text())
-                parameters['clean_s'] = int(self.lsv.clean_s.get_text())
-                parameters['dep_mV'] = int(self.lsv.dep_mV.get_text())
-                parameters['dep_s'] = int(self.lsv.dep_s.get_text())
-                parameters['start'] = int(self.lsv.start_entry.get_text())
-                parameters['stop'] = int(self.lsv.stop_entry.get_text())
-                parameters['slope'] = int(self.lsv.slope_entry.get_text())
+                parameters.update(self.exp_window.get_params('lsv'))
                 
                 #check parameters are within hardware limits
                 if (parameters['clean_mV'] > 1499 or 
@@ -285,15 +279,7 @@ class Main(object):
                 return
             
             elif selection == 2: # CV
-                parameters['clean_mV'] = int(self.cve.clean_mV.get_text())
-                parameters['clean_s'] = int(self.cve.clean_s.get_text())
-                parameters['dep_mV'] = int(self.cve.dep_mV.get_text())
-                parameters['dep_s'] = int(self.cve.dep_s.get_text())
-                parameters['start'] = int(self.cve.start_entry.get_text())
-                parameters['slope'] = int(self.cve.slope_entry.get_text())
-                parameters['v1'] = int(self.cve.v1_entry.get_text())
-                parameters['v2'] = int(self.cve.v2_entry.get_text())
-                parameters['scans'] = int(self.cve.scans_entry.get_text())
+                parameters.update(self.exp_window.get_params('cve'))
                 
                 # check parameters are within hardware limits
                 if (parameters['clean_mV'] > 1499 or
@@ -352,18 +338,9 @@ class Main(object):
                 return
                 
             elif selection == 3:  # SWV
-                parameters['clean_mV'] = int(self.swv.clean_mV.get_text())
-                parameters['clean_s'] = int(self.swv.clean_s.get_text())
-                parameters['dep_mV'] = int(self.swv.dep_mV.get_text())
-                parameters['dep_s'] = int(self.swv.dep_s.get_text())
-                parameters['start'] = int(self.swv.start_entry.get_text())
-                parameters['stop'] = int(self.swv.stop_entry.get_text())
-                parameters['step'] = int(self.swv.step_entry.get_text())
-                parameters['pulse'] = int(self.swv.pulse_entry.get_text())
-                parameters['freq'] = int(self.swv.freq_entry.get_text())
+                parameters.update(self.exp_window.get_params('swv'))
                 
-                if self.swv.cyclic_checkbutton.get_active():
-                    parameters['scans'] = int(self.swv.scans_entry.get_text())
+                if parameters['cyclic_checkbutton'] :
                     if parameters['scans'] < 1:
                         raise InputError(parameters['scans'],
                                         "Must have at least one scan.")
@@ -429,16 +406,7 @@ class Main(object):
                 return
         
             elif selection == 4:  # DPV
-                parameters['clean_mV'] = int(self.dpv.clean_mV.get_text())
-                parameters['clean_s'] = int(self.dpv.clean_s.get_text())
-                parameters['dep_mV'] = int(self.dpv.dep_mV.get_text())
-                parameters['dep_s'] = int(self.dpv.dep_s.get_text())
-                parameters['start'] = int(self.dpv.start_entry.get_text())
-                parameters['stop'] = int(self.dpv.stop_entry.get_text())
-                parameters['step'] = int(self.dpv.step_entry.get_text())
-                parameters['pulse'] = int(self.dpv.pulse_entry.get_text())
-                parameters['period'] = int(self.dpv.period_entry.get_text())
-                parameters['width'] = int(self.dpv.width_entry.get_text())
+                parameters.update(self.exp_window.get_params('dpv'))
                 
                 if (parameters['clean_mV'] > 1499 or
                         parameters['clean_mV'] < -1500):
