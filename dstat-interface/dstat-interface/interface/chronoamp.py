@@ -46,11 +46,11 @@ class Chronoamp:
     def on_remove_button_clicked(self, widget):
         """Remove currently selected items from model."""
         # returns 2-tuple: treemodel, list of paths of selected rows
-        self.selected_rows = list(self.selection.get_selected_rows()[1])
-        self.referencelist = []
+        selected_rows = list(self.selection.get_selected_rows()[1])
+        referencelist = []
         
-        for i in self.selected_rows:
-            self.referencelist.append(gtk.TreeRowReference(self.model, i))
+        for i in selected_rows:
+            referencelist.append(gtk.TreeRowReference(self.model, i))
         
-        for i in self.referencelist:
+        for i in referencelist:
             self.model.remove(self.model.get_iter(i.get_path()))
