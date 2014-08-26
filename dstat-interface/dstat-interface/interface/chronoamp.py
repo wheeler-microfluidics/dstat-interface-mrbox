@@ -3,10 +3,6 @@
 import gtk
 
 class chronoamp:
-    def label_set_func(self, tree_column, cell, model, iter):
-        info = model.get_value(iter, 1)
-        cell.set_property("text", info)
-    
     def __init__(self):
         self.builder = gtk.Builder()
         self.builder.add_from_file('interface/chronoamp.glade')
