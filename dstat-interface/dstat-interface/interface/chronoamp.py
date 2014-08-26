@@ -2,18 +2,15 @@
 
 import gtk
 
-class chronoamp:
+class Chronoamp:
     def __init__(self):
         self.builder = gtk.Builder()
         self.builder.add_from_file('interface/chronoamp.glade')
         self.builder.connect_signals(self)
         
         self.statusbar = self.builder.get_object('statusbar')
-        self.potential = self.builder.get_object('potential_entry')
-        self.time = self.builder.get_object('time_entry')
         self.model = self.builder.get_object('ca_list')
         self.treeview = self.builder.get_object('treeview')
-
         self.cell_renderer = gtk.CellRendererText()
         
         self.treeview.insert_column_with_attributes(-1, "Time",
@@ -21,15 +18,18 @@ class chronoamp:
         self.treeview.insert_column_with_attributes(-1, "Potential",
                                     self.cell_renderer, text=0).set_expand(True)
         
-        self.treeviewselection = self.treeview.get_selection()
-        self.treeviewselection.set_mode(gtk.SELECTION_MULTIPLE)
+        self.selection = self.treeview.get_selection()
+        self.selection.set_mode(gtk.SELECTION_MULTIPLE)
 
     def on_add_button_clicked(self, widget):
+        """Add current values in potential_entry and time_entry to model."""
+        
         self.statusbar.remove_all(0)
         
         try:
-            potential = int(self.potential.get_text())
-            time = int(self.time.get_text())
+            potential = int(
+                          self.builder.get_object('potential_entry').get_text())
+            time = int(self.builder.get_object('time_entry').get_text())
             
             if (potential > 1499 or potential < -1500):
                 raise ValueError("Potential out of range")
@@ -38,20 +38,19 @@ class chronoamp:
         
             self.model.append([potential, time])
         
-        except ValueError as e:
-            self.statusbar.push(0, str(e))
-        except TypeError as e:
-            self.statusbar.push(0, str(e))
+        except ValueError as err:
+            self.statusbar.push(0, str(err))
+        except TypeError as err:
+            self.statusbar.push(0, str(err))
 
     def on_remove_button_clicked(self, widget):
+        """Remove currently selected items from model."""
         # returns 2-tuple: treemodel, list of paths of selected rows
-        self.selected_rows = list(self.treeviewselection.get_selected_rows()[1]) 
-        
+        self.selected_rows = list(self.selection.get_selected_rows()[1])
         self.referencelist = []
         
         for i in self.selected_rows:
-            x=gtk.TreeRowReference(self.model, i)
-            self.referencelist.append(x)
+            self.referencelist.append(gtk.TreeRowReference(self.model, i))
         
         for i in self.referencelist:
             self.model.remove(self.model.get_iter(i.get_path()))
