@@ -1,0 +1,6 @@
+<?xml version="1.0" ?>
+<project name="dstat-interface" version="1.0">
+   <optionset name="general"/>
+   <package name="dstat-interface"/>
+   <folder name="tests"/>
+</project>

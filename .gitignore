@@ -4,6 +4,9 @@ Breakpoints_v2.xcbkptlist
 *.c
 *.so
 *.pyc
+*.pyo
 *~
 /dstatInterface/dist/
 /dstatInterface/build/
+/dstat-interface/dstat-interface/dist/
+/dstat-interface/dstat-interface/build/

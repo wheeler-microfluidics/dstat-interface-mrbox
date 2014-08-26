@@ -7,7 +7,9 @@ from datetime import datetime
 
 def manSave(current_exp):
     exp = current_exp
-    fcd = gtk.FileChooserDialog("Save...", None, gtk.FILE_CHOOSER_ACTION_SAVE, (gtk.STOCK_CANCEL, gtk.RESPONSE_CANCEL, gtk.STOCK_SAVE, gtk.RESPONSE_OK))
+    fcd = gtk.FileChooserDialog("Save...", None, gtk.FILE_CHOOSER_ACTION_SAVE,
+                                (gtk.STOCK_CANCEL, gtk.RESPONSE_CANCEL,
+                                 gtk.STOCK_SAVE, gtk.RESPONSE_OK))
     
     filters = [gtk.FileFilter()]
     filters[0].set_name("NumPy binary (.npy)")
@@ -37,7 +39,10 @@ def manSave(current_exp):
         fcd.destroy()
 
 def plotSave(plot):
-    fcd = gtk.FileChooserDialog("Save Plot…", None, gtk.FILE_CHOOSER_ACTION_SAVE, (gtk.STOCK_CANCEL, gtk.RESPONSE_CANCEL, gtk.STOCK_SAVE, gtk.RESPONSE_OK))
+    fcd = gtk.FileChooserDialog("Save Plot…", None,
+                                gtk.FILE_CHOOSER_ACTION_SAVE,
+                                (gtk.STOCK_CANCEL, gtk.RESPONSE_CANCEL,
+                                 gtk.STOCK_SAVE, gtk.RESPONSE_OK))
 
     filters = [gtk.FileFilter()]
     filters[0].set_name("Portable Document Format (.pdf)")
@@ -65,7 +70,7 @@ def plotSave(plot):
             if not path.endswith(".png"):
                 path += ".png"
 
-        plot.figure.savefig(path) #savefig determines format from file extension
+        plot.figure.savefig(path)  # determines format from file extension
         fcd.destroy()
     
     elif response == gtk.RESPONSE_CANCEL:
