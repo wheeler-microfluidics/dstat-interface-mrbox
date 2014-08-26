@@ -513,7 +513,7 @@ class Main(object):
                     self.current_exp.data[2*self.line+i].append(data[i])
                     if len(data) > 2:
                         self.current_exp.data_extra[2*self.line+i].append(
-                                                                        data[i])
+                                                                      data[i+2])
             else:
                 time.sleep(.001)
             return True
@@ -548,8 +548,8 @@ class Main(object):
         self.databuffer.set_text("")
         self.databuffer.place_cursor(self.databuffer.get_start_iter())
         self.rawbuffer.insert_at_cursor("\n")
-#        self.rawbuffer.set_text("")
-#        self.rawbuffer.place_cursor(self.rawbuffer.get_start_iter())
+        self.rawbuffer.set_text("")
+        self.rawbuffer.place_cursor(self.rawbuffer.get_start_iter())
 
         for col in zip(*self.current_exp.data):
             for row in col:
