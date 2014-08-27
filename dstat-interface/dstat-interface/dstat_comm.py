@@ -54,13 +54,11 @@ class Experiment(object):
         self.proc.start()
 
     def __init__(self, parameters, main_pipe):
-        """Must be overridden to define self.parameters, and self.databytes."""
+        """Adds commands for gain and ADC."""
         self.parameters = parameters
         self.main_pipe = main_pipe
         self.databytes = 8
-    
-    def init(self):
-        """Adds commands for gain and ADC."""
+
         self.data_extra = []  # must be defined even when not needed
         self.__gaintable = [1e2, 3e2, 3e3, 3e4, 3e5, 3e6, 3e7, 5e8]
         self.gain = self.__gaintable[int(self.parameters['gain'])]
@@ -147,11 +145,11 @@ class Experiment(object):
         """
         pass
 
-class chronoamp(Experiment):
+class Chronoamp(Experiment):
     """Chronoamperometry experiment"""
     def __init__(self, parameters, main_pipe):
-        self.main_pipe = main_pipe
-        self.parameters = parameters
+        super(Chronoamp, self).__init__(parameters, main_pipe)
+
         self.datatype = "linearData"
         self.xlabel = "Time (s)"
         self.ylabel = "Current (A)"
@@ -163,8 +161,6 @@ class chronoamp(Experiment):
         
         for i in self.parameters['time']:
             self.xmax += int(i)
-        
-        self.init()  # need to call after xmin and xmax are set
         
         self.commands += "R"
         self.commands[2] += str(len(self.parameters['potential']))
@@ -184,11 +180,10 @@ class chronoamp(Experiment):
         return (scan,
                 [seconds+milliseconds/1000., current*(1.5/self.gain/8388607)])
 
-class lsv_exp(Experiment):
+class LSVExp(Experiment):
     """Linear Scan Voltammetry experiment"""
-    def __init__(self, parameters, send_pipe):
-        self.main_pipe = send_pipe
-        self.parameters = parameters
+    def __init__(self, parameters, main_pipe):
+        super(LSVExp, self).__init__(parameters, main_pipe)
 
         self.datatype = "linearData"
         self.xlabel = "Voltage (mV)"
@@ -219,11 +214,10 @@ class lsv_exp(Experiment):
         self.commands[2] += str(self.parameters['slope'])
         self.commands[2] += " "
 
-class cv_exp(Experiment):
+class CVExp(Experiment):
     """Cyclic Voltammetry experiment"""
     def __init__(self, parameters, main_pipe):
-        self.main_pipe = main_pipe
-        self.parameters = parameters
+        super(CVExp, self).__init__(parameters, main_pipe)
  
         self.datatype = "CVData"
         self.xlabel = "Voltage (mV)"
@@ -233,8 +227,6 @@ class cv_exp(Experiment):
         self.databytes = 6  # uint16 + int32
         self.xmin = self.parameters['v1']
         self.xmax = self.parameters['v2']
-        
-        self.init()
         
         self.commands += "C"
         self.commands[2] += str(self.parameters['clean_s'])
@@ -258,11 +250,10 @@ class cv_exp(Experiment):
         self.commands[2] += str(self.parameters['slope'])
         self.commands[2] += " "
 
-class swv_exp(Experiment):
+class SWVExp(Experiment):
     """Square Wave Voltammetry experiment"""
     def __init__(self, parameters, main_pipe):
-        self.main_pipe = main_pipe
-        self.parameters = parameters
+        super(SWVExp, self).__init__(parameters, main_pipe)
 
         self.datatype = "SWVData"
         self.xlabel = "Voltage (mV)"
@@ -273,8 +264,7 @@ class swv_exp(Experiment):
         
         self.xmin = self.parameters['start']
         self.xmax = self.parameters['stop']
-        
-        self.init()
+
         # forward/reverse stored here - needs to be after 
         # self.init to keep from being redefined
         self.data_extra = [[], []]  
@@ -314,12 +304,11 @@ class swv_exp(Experiment):
                        reverse*(1.5/self.gain/8388607)])
 
 
-class dpv_exp(swv_exp):
+class DPVExp(SWVExp):
     """Diffential Pulse Voltammetry experiment."""
     def __init__(self, parameters, main_pipe):
-        """Overrides swv_exp method"""
-        self.main_pipe = main_pipe
-        self.parameters = parameters
+        """Overrides SWVExp method"""
+        super(DPVExp, self).__init__(parameters, main_pipe)
         
         self.datatype = "SWVData"
         self.xlabel = "Voltage (mV)"
