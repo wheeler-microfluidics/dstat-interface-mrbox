@@ -269,7 +269,7 @@ class Main(object):
                 self.send_p.close()
 
                 self.plot_proc = gobject.timeout_add(200, 
-                                                self.experiment_running_plot)
+                                                   self.experiment_running_plot)
                 gobject.idle_add(self.experiment_running)
                 return
             
@@ -323,7 +323,7 @@ class Main(object):
                 self.send_p.close()
                 
                 self.plot_proc = gobject.timeout_add(200, 
-                                                self.experiment_running_plot)
+                                                   self.experiment_running_plot)
                 gobject.idle_add(self.experiment_running)
                 return
                 
