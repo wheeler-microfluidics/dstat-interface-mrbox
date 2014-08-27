@@ -261,11 +261,6 @@ class Main(object):
                 
                 self.plot.clearall()
                 self.plot.changetype(self.current_exp)
-                self.rawbuffer.set_text("")
-                self.rawbuffer.place_cursor(self.rawbuffer.get_start_iter())
-                
-                for i in self.current_exp.commands:
-                    self.rawbuffer.insert_at_cursor(i)
                 
                 self.current_exp.run_wrapper(
                     self.serial_liststore.get_value(
@@ -320,11 +315,6 @@ class Main(object):
                 
                 self.plot.clearall()
                 self.plot.changetype(self.current_exp)
-                self.rawbuffer.set_text("")
-                self.rawbuffer.place_cursor(self.rawbuffer.get_start_iter())
-                
-                for i in self.current_exp.commands:
-                    self.rawbuffer.insert_at_cursor(i)
                 
                 self.current_exp.run_wrapper(
                     self.serial_liststore.get_value(
@@ -388,11 +378,6 @@ class Main(object):
                 
                 self.plot.clearall()
                 self.plot.changetype(self.current_exp)
-                self.rawbuffer.set_text("")
-                self.rawbuffer.place_cursor(self.rawbuffer.get_start_iter())
-                
-                for i in self.current_exp.commands:
-                    self.rawbuffer.insert_at_cursor(i)
                 
                 self.current_exp.run_wrapper(
                     self.serial_liststore.get_value(
@@ -452,11 +437,6 @@ class Main(object):
                 
                 self.plot.clearall()
                 self.plot.changetype(self.current_exp)
-                self.rawbuffer.set_text("")
-                self.rawbuffer.place_cursor(self.rawbuffer.get_start_iter())
-
-                for i in self.current_exp.commands:
-                    self.rawbuffer.insert_at_cursor(i)
 
                 self.current_exp.run_wrapper(
                     self.serial_liststore.get_value(
@@ -550,6 +530,9 @@ class Main(object):
         self.rawbuffer.insert_at_cursor("\n")
         self.rawbuffer.set_text("")
         self.rawbuffer.place_cursor(self.rawbuffer.get_start_iter())
+
+        for i in self.current_exp.commands:
+            self.rawbuffer.insert_at_cursor(i)
 
         for col in zip(*self.current_exp.data):
             for row in col:
