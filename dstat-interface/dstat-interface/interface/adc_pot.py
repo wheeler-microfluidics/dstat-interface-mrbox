@@ -25,4 +25,4 @@ class adc_pot:
         self.gain_combobox = self.builder.get_object('gain_combobox')
         self.gain_combobox.pack_start(self.cell, True)
         self.gain_combobox.add_attribute(self.cell, 'text', 1)
-        self.gain_combobox.set_active(1)
+        self.gain_combobox.set_active(2)

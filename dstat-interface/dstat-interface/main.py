@@ -122,17 +122,14 @@ class Main(object):
 
     def on_window1_destroy(self, object, data=None):
         """ Quit when main window closed."""
-        print "quit with cancel"
         gtk.main_quit()
 
     def on_gtk_quit_activate(self, menuitem, data=None):
         """Quit when Quit selected from menu."""
-        print "quit from menu"
         gtk.main_quit()
 
     def on_gtk_about_activate(self, menuitem, data=None):
         """Display the about window."""
-        print "help about selected"
         self.response = self.aboutdialog.run()  # waits for user to click close
         self.aboutdialog.hide()
 
