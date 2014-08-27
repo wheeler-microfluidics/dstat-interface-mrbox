@@ -24,7 +24,7 @@ import interface.save as save
 import dstat_comm as comm
 import interface.exp_window as exp_window
 import interface.adc_pot as adc_pot
-import mpltest
+import plot
 import microdrop
 
 from serial import SerialException
@@ -77,7 +77,7 @@ class Main(object):
         self.autosavedir_button = self.builder.get_object('autosavedir_button')
         self.autosavename = self.builder.get_object('autosavename')
         
-        self.plot = mpltest.plotbox(self.plotwindow)
+        self.plot = plot.plotbox(self.plotwindow)
         
         #fill adc_pot_box
         self.adc_pot_box = self.builder.get_object('gain_adc_box')
@@ -205,7 +205,7 @@ class Main(object):
                                      "Step table is empty")
                 
                 self.recv_p, self.send_p = multiprocessing.Pipe(duplex=True)
-                self.current_exp = comm.chronoamp(parameters, self.send_p)
+                self.current_exp = comm.Chronoamp(parameters, self.send_p)
                 
                 self.plot.clearall()
                 self.plot.changetype(self.current_exp)
@@ -257,15 +257,10 @@ class Main(object):
                                      "Start cannot equal Stop.")
 
                 self.recv_p, self.send_p = multiprocessing.Pipe(duplex=True)
-                self.current_exp = comm.lsv_exp(parameters, self.send_p)
+                self.current_exp = comm.LSVExp(parameters, self.send_p)
                 
                 self.plot.clearall()
                 self.plot.changetype(self.current_exp)
-                self.rawbuffer.set_text("")
-                self.rawbuffer.place_cursor(self.rawbuffer.get_start_iter())
-                
-                for i in self.current_exp.commands:
-                    self.rawbuffer.insert_at_cursor(i)
                 
                 self.current_exp.run_wrapper(
                     self.serial_liststore.get_value(
@@ -274,7 +269,7 @@ class Main(object):
                 self.send_p.close()
 
                 self.plot_proc = gobject.timeout_add(200, 
-                                                self.experiment_running_plot)
+                                                   self.experiment_running_plot)
                 gobject.idle_add(self.experiment_running)
                 return
             
@@ -316,15 +311,10 @@ class Main(object):
                                      "Vertex 1 cannot equal Vertex 2.")
                 
                 self.recv_p, self.send_p = multiprocessing.Pipe(duplex=True)
-                self.current_exp = comm.cv_exp(parameters, self.send_p)
+                self.current_exp = comm.CVExp(parameters, self.send_p)
                 
                 self.plot.clearall()
                 self.plot.changetype(self.current_exp)
-                self.rawbuffer.set_text("")
-                self.rawbuffer.place_cursor(self.rawbuffer.get_start_iter())
-                
-                for i in self.current_exp.commands:
-                    self.rawbuffer.insert_at_cursor(i)
                 
                 self.current_exp.run_wrapper(
                     self.serial_liststore.get_value(
@@ -333,7 +323,7 @@ class Main(object):
                 self.send_p.close()
                 
                 self.plot_proc = gobject.timeout_add(200, 
-                                                self.experiment_running_plot)
+                                                   self.experiment_running_plot)
                 gobject.idle_add(self.experiment_running)
                 return
                 
@@ -384,15 +374,10 @@ class Main(object):
                                      "Start cannot equal Stop.")
                     
                 self.recv_p, self.send_p = multiprocessing.Pipe(duplex=True)
-                self.current_exp = comm.swv_exp(parameters, self.send_p)
+                self.current_exp = comm.SWVExp(parameters, self.send_p)
                 
                 self.plot.clearall()
                 self.plot.changetype(self.current_exp)
-                self.rawbuffer.set_text("")
-                self.rawbuffer.place_cursor(self.rawbuffer.get_start_iter())
-                
-                for i in self.current_exp.commands:
-                    self.rawbuffer.insert_at_cursor(i)
                 
                 self.current_exp.run_wrapper(
                     self.serial_liststore.get_value(
@@ -448,15 +433,10 @@ class Main(object):
                                      "Start cannot equal Stop.")
                 
                 self.recv_p, self.send_p = multiprocessing.Pipe(duplex=True)
-                self.current_exp = comm.dpv_exp(parameters, self.send_p)
+                self.current_exp = comm.DPVExp(parameters, self.send_p)
                 
                 self.plot.clearall()
                 self.plot.changetype(self.current_exp)
-                self.rawbuffer.set_text("")
-                self.rawbuffer.place_cursor(self.rawbuffer.get_start_iter())
-
-                for i in self.current_exp.commands:
-                    self.rawbuffer.insert_at_cursor(i)
 
                 self.current_exp.run_wrapper(
                     self.serial_liststore.get_value(
@@ -551,6 +531,9 @@ class Main(object):
         self.rawbuffer.set_text("")
         self.rawbuffer.place_cursor(self.rawbuffer.get_start_iter())
 
+        for i in self.current_exp.commands:
+            self.rawbuffer.insert_at_cursor(i)
+
         for col in zip(*self.current_exp.data):
             for row in col:
                 self.rawbuffer.insert_at_cursor(str(row)+ "    ")
@@ -590,11 +573,11 @@ class Main(object):
     def on_file_save_exp_activate(self, menuitem, data=None):
         """Activate dialogue to save current experiment data. """
         if self.current_exp:
-            save_inst = save.manSave(self.current_exp)
+            save.manSave(self.current_exp)
     
     def on_file_save_plot_activate(self, menuitem, data=None):
         """Activate dialogue to save current plot."""
-        save_inst = save.plotSave(self.plot)
+        save.plotSave(self.plot)
     
     def on_menu_dropbot_connect_activate(self, menuitem, data=None):
         """Listen for remote control connection from µDrop."""
