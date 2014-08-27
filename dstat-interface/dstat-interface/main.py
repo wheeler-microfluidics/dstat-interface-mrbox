@@ -24,7 +24,7 @@ import interface.save as save
 import dstat_comm as comm
 import interface.exp_window as exp_window
 import interface.adc_pot as adc_pot
-import mpltest
+import plot
 import microdrop
 
 from serial import SerialException
@@ -77,7 +77,7 @@ class Main(object):
         self.autosavedir_button = self.builder.get_object('autosavedir_button')
         self.autosavename = self.builder.get_object('autosavename')
         
-        self.plot = mpltest.plotbox(self.plotwindow)
+        self.plot = plot.plotbox(self.plotwindow)
         
         #fill adc_pot_box
         self.adc_pot_box = self.builder.get_object('gain_adc_box')
