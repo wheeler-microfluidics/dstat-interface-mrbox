@@ -211,8 +211,6 @@ class LSVExp(Experiment):
         self.xmin = self.parameters['start']
         self.xmax = self.parameters['stop']
         
-        self.init()  # need to call after xmin and xmax are set
-        
         self.commands += "L"
         self.commands[2] += str(self.parameters['clean_s'])
         self.commands[2] += " "
@@ -282,8 +280,6 @@ class SWVExp(Experiment):
         self.xmin = self.parameters['start']
         self.xmax = self.parameters['stop']
 
-        # forward/reverse stored here - needs to be after 
-        # self.init to keep from being redefined
         self.data_extra = [[], []]  
         
         self.commands += "S"
@@ -336,10 +332,7 @@ class DPVExp(SWVExp):
         
         self.xmin = self.parameters['start']
         self.xmax = self.parameters['stop']
-        
-        self.init()
-        # forward/reverse stored here - needs to be after self.init to
-        # keep from being redefined
+
         self.data_extra = [[], []]
         
         self.commands += "D"
