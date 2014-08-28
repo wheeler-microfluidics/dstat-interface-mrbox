@@ -321,7 +321,7 @@ class DPVExp(SWVExp):
     """Diffential Pulse Voltammetry experiment."""
     def __init__(self, parameters, main_pipe):
         """Overrides SWVExp method"""
-        super(DPVExp, self).__init__(parameters, main_pipe)
+        super(SWVExp, self).__init__(parameters, main_pipe)
         
         self.datatype = "SWVData"
         self.xlabel = "Voltage (mV)"
