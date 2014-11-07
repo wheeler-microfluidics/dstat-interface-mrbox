@@ -36,6 +36,40 @@ def call_it(instance, name, args=(), kwargs=None):
         kwargs = {}
     return getattr(instance, name)(*args, **kwargs)
 
+def version_check(ser_port):
+    """Tries to contact DStat and get version. Returns a tuple of
+    (major, minor). If no response, returns empty tuple.
+        
+    Arguments:
+    ser_port -- address of serial port to use
+    """
+    ser = delayedSerial(ser_port, 1024000, timeout=1)
+    ser.write("ck")
+        
+    ser.flushInput()
+    ser.write('!')
+            
+    while not ser.read().startswith("C"):
+        pass
+    ser.write('V')
+    for line in ser:
+        if line.startswith('V'):
+            input = line.lstrip('V')
+        elif line.startswith("#"):
+            print line
+        elif line.lstrip().startswith("no"):
+            print line
+            ser.flushInput()
+            break
+            
+    parted = input.rstrip().split('.')
+    print parted
+    
+    ser.close()
+    
+    return (int(parted[0]), int(parted[1]))
+    
+    
 
 class delayedSerial(serial.Serial): 
     """Extends Serial.write so that characters are output individually
@@ -77,7 +111,7 @@ class Experiment(object):
         self.databytes = 8
 
         self.data_extra = []  # must be defined even when not needed
-        self.__gaintable = [1e2, 3e2, 3e3, 3e4, 3e5, 3e6, 3e7, 5e8]
+        self.__gaintable = [1e2, 3e2, 3e3, 3e4, 3e5, 3e6, 3e7, 5e8] #todo version settings
         self.gain = self.__gaintable[int(self.parameters['gain'])]
 
         self.commands = ["A", "G"]

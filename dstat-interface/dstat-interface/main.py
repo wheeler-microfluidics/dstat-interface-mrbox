@@ -167,6 +167,26 @@ class Main(object):
         
         for i in self.serial_devices.ports:
             self.serial_liststore.append([i])
+            
+    def on_serial_version_clicked(self, data=None):
+        """Retrieve DStat version."""
+        self.version = comm.version_check(self.serial_liststore.get_value(
+                                     self.serial_combobox.get_active_iter(), 0))
+        
+        print self.version
+        
+        self.statusbar.remove_all(self.error_context_id)
+        
+        if not len(self.version) == 2:
+            self.statusbar.push(self.error_context_id, "Communication Error")
+            return
+        
+        else:
+            self.adc_pot.set_version(self.version)
+            self.statusbar.push(self.error_context_id,
+                                "".join(["DStat version: ", str(self.version[0]), ".",
+                                str(self.version[1])])
+                               )
 
     def on_pot_start_clicked(self, data=None):
         """Run currently visible experiment."""
