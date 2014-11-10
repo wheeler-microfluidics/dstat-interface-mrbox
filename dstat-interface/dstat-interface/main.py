@@ -44,26 +44,11 @@ import interface.exp_window as exp_window
 import interface.adc_pot as adc_pot
 import plot
 import microdrop
+from errors import InputError, VarError
 
 from serial import SerialException
 import multiprocessing
 import time
-
-class Error(Exception):
-    """Copies Exception class"""
-    pass
-
-class InputError(Error):
-    """Exception raised for errors in the input. Extends Error class.
-        
-    Attributes:
-        expr -- input expression in which the error occurred
-        msg  -- error message
-    """
-    
-    def __init__(self, expr, msg):
-        self.expr = expr
-        self.msg = msg
 
 class Main(object):
     """Main program """

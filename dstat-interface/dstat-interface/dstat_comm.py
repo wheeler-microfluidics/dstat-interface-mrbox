@@ -22,6 +22,7 @@ from serial.tools import list_ports
 import time
 import struct
 import multiprocessing as mp
+from errors import VarError
 
 def call_it(instance, name, args=(), kwargs=None):
     """Indirect caller for instance methods and multiprocessing.
