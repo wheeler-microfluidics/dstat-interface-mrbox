@@ -112,7 +112,17 @@ class Experiment(object):
         self.databytes = 8
 
         self.data_extra = []  # must be defined even when not needed
-        self.__gaintable = [1e2, 3e2, 3e3, 3e4, 3e5, 3e6, 3e7, 5e8] #todo version settings
+        
+        major, minor = self.parameters['version']
+        
+        if major >= 1:
+            if minor == 1:
+                self.__gaintable = [1e2, 3e2, 3e3, 3e4, 3e5, 3e6, 3e7, 5e8]
+            elif minor >= 2:
+                self.__gaintable = [1, 1e2, 3e3, 3e4, 3e5, 3e6, 3e7, 1e8]
+        else:
+            raise VarError(parameters['version'], "Invalid version parameter.")
+            
         self.gain = self.__gaintable[int(self.parameters['gain'])]
 
         self.commands = ["A", "G"]

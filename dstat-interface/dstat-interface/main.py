@@ -188,6 +188,7 @@ class Main(object):
             
         selection = self.expcombobox.get_active()
         parameters = {}
+        parameters['version'] = self.version
         
         if self.adc_pot.buffer_toggle.get_active(): #True if box checked
             parameters['adc_buffer'] = "2"
