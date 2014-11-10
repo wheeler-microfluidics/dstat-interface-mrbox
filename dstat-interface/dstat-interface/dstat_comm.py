@@ -45,12 +45,12 @@ def version_check(ser_port):
     """
     ser = delayedSerial(ser_port, 1024000, timeout=1)
     ser.write("ck")
-        
+    
     ser.flushInput()
     ser.write('!')
             
     while not ser.read().startswith("C"):
-        pass
+        ser.write('!')
     ser.write('V')
     for line in ser:
         if line.startswith('V'):
