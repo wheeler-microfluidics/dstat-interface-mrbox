@@ -44,26 +44,11 @@ import interface.exp_window as exp_window
 import interface.adc_pot as adc_pot
 import plot
 import microdrop
+from errors import InputError, VarError
 
 from serial import SerialException
 import multiprocessing
 import time
-
-class Error(Exception):
-    """Copies Exception class"""
-    pass
-
-class InputError(Error):
-    """Exception raised for errors in the input. Extends Error class.
-        
-    Attributes:
-        expr -- input expression in which the error occurred
-        msg  -- error message
-    """
-    
-    def __init__(self, expr, msg):
-        self.expr = expr
-        self.msg = msg
 
 class Main(object):
     """Main program """
@@ -167,6 +152,24 @@ class Main(object):
         
         for i in self.serial_devices.ports:
             self.serial_liststore.append([i])
+            
+    def on_serial_version_clicked(self, data=None):
+        """Retrieve DStat version."""
+        self.version = comm.version_check(self.serial_liststore.get_value(
+                                     self.serial_combobox.get_active_iter(), 0))
+        
+        self.statusbar.remove_all(self.error_context_id)
+        
+        if not len(self.version) == 2:
+            self.statusbar.push(self.error_context_id, "Communication Error")
+            return
+        
+        else:
+            self.adc_pot.set_version(self.version)
+            self.statusbar.push(self.error_context_id,
+                                "".join(["DStat version: ", str(self.version[0]),
+                                ".", str(self.version[1])])
+                               )
 
     def on_pot_start_clicked(self, data=None):
         """Run currently visible experiment."""
@@ -185,6 +188,7 @@ class Main(object):
             
         selection = self.expcombobox.get_active()
         parameters = {}
+        parameters['version'] = self.version
         
         if self.adc_pot.buffer_toggle.get_active(): #True if box checked
             parameters['adc_buffer'] = "2"

@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 #     DStat Interface - An interface for the open hardware DStat potentiostat
 #     Copyright (C) 2014  Michael D. M. Dryden - 
 #     Wheeler Microfluidics Laboratory <http://microfluidics.utoronto.ca>
@@ -18,6 +19,24 @@
 #     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import gtk
+
+v1_1_gain = [(0, "100 Ω (15 mA FS)", 0),
+             (1, "300 Ω (5 mA FS)", 1),
+             (2, "3 kΩ (500 µA FS)", 2),
+             (3, "30 kΩ (50 µA FS)", 3),
+             (4, "300 kΩ (5 µA FS)", 4),
+             (5, "3 MΩ (500 nA FS)", 5),
+             (6, "30 MΩ (50 nA FS)", 6),
+             (7, "500 MΩ (3 nA FS)", 7)]
+
+v1_2_gain = [(0, "Bypass", 0),
+             (1, "100 Ω (15 mA FS)", 1),
+             (2, "3 kΩ (500 µA FS)", 2),
+             (3, "30 kΩ (50 µA FS)", 3),
+             (4, "300 kΩ (5 µA FS)", 4),
+             (5, "3 MΩ (500 nA FS)", 5),
+             (6, "30 MΩ (50 nA FS)", 6),
+             (7, "100 MΩ (15 nA FS)", 7)]
 
 class adc_pot:
     def __init__(self):
@@ -40,6 +59,19 @@ class adc_pot:
         self.srate_combobox.set_active(7)
         
         self.gain_combobox = self.builder.get_object('gain_combobox')
+        self.gain_liststore = self.builder.get_object('gain_liststore')
         self.gain_combobox.pack_start(self.cell, True)
         self.gain_combobox.add_attribute(self.cell, 'text', 1)
         self.gain_combobox.set_active(2)
+        
+    def set_version(self, version):
+        """ Sets menus for DStat version. """
+        self.gain_liststore.clear()
+        if version[0] == 1:
+            if version[1] == 1:
+                for i in v1_1_gain:
+                    self.gain_liststore.append(i)
+            elif version[1] >= 2:
+                for i in v1_2_gain:
+                    self.gain_liststore.append(i)
+                
