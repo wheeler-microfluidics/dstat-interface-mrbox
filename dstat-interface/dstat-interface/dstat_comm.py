@@ -172,12 +172,15 @@ class Experiment(object):
         scan = 0
         while True:
             if self.main_pipe.poll():
-                print "abort"
                 if self.main_pipe.recv() == 'a':
                     self.serial.write('a')
                     return False
                         
             for line in self.serial:
+                if self.main_pipe.poll():
+                    if self.main_pipe.recv() == 'a':
+                        self.serial.write('a')
+                        return False
                 if line.startswith('B'):
                     self.main_pipe.send(self.data_handler(
                                  (scan, self.serial.read(size=self.databytes))))
