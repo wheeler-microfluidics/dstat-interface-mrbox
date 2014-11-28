@@ -709,6 +709,7 @@ class Main(object):
         self.dropbot_enabled = False
         self.menu_dropbot_connect.set_sensitive(True)
         self.menu_dropbot_disconnect.set_sensitive(False)
+        self.statusbar.push(self.message_context_id, "µDrop disconnected.")
 
     def microdrop_listen(self):
         """Manage signals from µDrop. Must be added to GTK's main loop to
