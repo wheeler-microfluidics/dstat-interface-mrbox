@@ -44,14 +44,18 @@ def version_check(ser_port):
     Arguments:
     ser_port -- address of serial port to use
     """
+
     ser = delayedSerial(ser_port, 1024000, timeout=1)
     ser.write("ck")
     
     ser.flushInput()
     ser.write('!')
             
-    while not ser.read().startswith("C"):
+    while not ser.read()=="C":
+        time.sleep(.5)
         ser.write('!')
+
+        
     ser.write('V')
     for line in ser:
         if line.startswith('V'):
@@ -158,6 +162,7 @@ class Experiment(object):
 
             self.serial.write(i)
             if not self.serial_handler():
+                self.main_pipe.send("ABORT")
                 break
 
         self.data_postprocessing()
@@ -174,13 +179,16 @@ class Experiment(object):
             if self.main_pipe.poll():
                 if self.main_pipe.recv() == 'a':
                     self.serial.write('a')
+                    print "ABORT!"
                     return False
                         
             for line in self.serial:
                 if self.main_pipe.poll():
                     if self.main_pipe.recv() == 'a':
                         self.serial.write('a')
+                        print "ABORT!"
                         return False
+                        
                 if line.startswith('B'):
                     self.main_pipe.send(self.data_handler(
                                  (scan, self.serial.read(size=self.databytes))))
@@ -244,6 +252,32 @@ class Chronoamp(Experiment):
         seconds, milliseconds, current = struct.unpack('<HHl', data)
         return (scan,
                 [seconds+milliseconds/1000., current*(1.5/self.gain/8388607)])
+
+class PotExp(Experiment):
+    """Potentiometry experiment"""
+    def __init__(self, parameters, main_pipe):
+        super(PotExp, self).__init__(parameters, main_pipe)
+
+        self.datatype = "linearData"
+        self.xlabel = "Time (s)"
+        self.ylabel = "Voltage (V)"
+        self.data = [[], []]
+        self.datalength = 2
+        self.databytes = 8
+        self.xmin = 0
+        self.xmax = self.parameters['time']
+        
+        self.commands += "P"
+        self.commands[2] += str(self.parameters['time'])
+        self.commands[2] += " 1 " #potentiometry mode
+
+    def data_handler(self, data_input):
+        """Overrides Experiment method to not convert x axis to mV."""
+        scan, data = data_input
+        # 2*uint16 + int32
+        seconds, milliseconds, voltage = struct.unpack('<HHl', data)
+        return (scan,
+                [seconds+milliseconds/1000., voltage*(1.5/8388607.)])
 
 class LSVExp(Experiment):
     """Linear Scan Voltammetry experiment"""
@@ -406,3 +440,26 @@ class DPVExp(SWVExp):
         self.commands[2] += " "
         self.commands[2] += str(self.parameters['width'])
         self.commands[2] += " "
+
+class OCPExp(Experiment):
+    """Open circuit potential measumement in statusbar."""
+    def __init__(self, main_pipe):
+        """Only needs data pipe."""
+        self.main_pipe = main_pipe
+        self.databytes = 8
+        
+        self.commands = ["A", "P"]
+    
+        self.commands[0] += "2 " # input buffer
+        self.commands[0] += "3 " # 2.5 Hz sample rate
+        self.commands[0] += "1 " # 2x PGA
+        
+        self.commands[1] += "0 " # no timeout
+        self.commands[1] += "0 " # OCP measurement mode
+        
+    def data_handler(self, data_input):
+        """Overrides Experiment method to only send ADC values."""
+        scan, data = data_input
+        # 2*uint16 + int32
+        seconds, milliseconds, voltage = struct.unpack('<HHl', data)
+        return (voltage/5.592405e6)

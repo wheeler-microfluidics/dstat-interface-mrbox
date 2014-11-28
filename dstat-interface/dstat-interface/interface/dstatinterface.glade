@@ -47,6 +47,11 @@
         <col id="1" translatable="yes">pde</col>
         <col id="2" translatable="yes">Photodiode</col>
       </row>
+      <row>
+        <col id="0">7</col>
+        <col id="1" translatable="yes">pot</col>
+        <col id="2" translatable="yes">Potentiometry</col>
+      </row>
     </data>
   </object>
   <object class="GtkAboutDialog" id="aboutdialog1">
@@ -1226,6 +1231,21 @@ Thanks to Christian Fobel for help with Dropbot Plugin</property>
               </packing>
             </child>
             <child>
+              <object class="GtkLabel" id="ocp_disp">
+                <property name="visible">True</property>
+                <property name="can_focus">False</property>
+                <property name="xalign">0</property>
+                <property name="xpad">5</property>
+                <property name="label" translatable="yes">OCP:</property>
+                <property name="single_line_mode">True</property>
+              </object>
+              <packing>
+                <property name="expand">False</property>
+                <property name="fill">False</property>
+                <property name="position">4</property>
+              </packing>
+            </child>
+            <child>
               <object class="GtkStatusbar" id="statusbar">
                 <property name="visible">True</property>
                 <property name="can_focus">False</property>
@@ -1234,7 +1254,7 @@ Thanks to Christian Fobel for help with Dropbot Plugin</property>
               <packing>
                 <property name="expand">True</property>
                 <property name="fill">True</property>
-                <property name="position">4</property>
+                <property name="position">5</property>
               </packing>
             </child>
           </object>

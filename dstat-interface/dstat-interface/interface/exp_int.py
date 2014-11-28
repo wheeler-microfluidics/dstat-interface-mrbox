@@ -202,3 +202,11 @@ class PD(ExpInterface):
         
         self.entry['voltage'] = self.builder.get_object('voltage_entry')
         self.entry['time'] = self.builder.get_object('time_entry')
+        
+class POT(ExpInterface):
+    """Experiment class for Potentiometry."""
+    def __init__(self):
+        """Adds entry listings to superclass's self.entry dict"""
+        super(POT, self).__init__('interface/potexp.glade')
+        
+        self.entry['time'] = self.builder.get_object('time_entry')

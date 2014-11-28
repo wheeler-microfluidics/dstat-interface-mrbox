@@ -60,6 +60,7 @@ class Main(object):
 
         #create instance of interface components
         self.statusbar = self.builder.get_object('statusbar')
+        self.ocp_disp = self.builder.get_object('ocp_disp')
         self.window = self.builder.get_object('window1')
         self.aboutdialog = self.builder.get_object('aboutdialog1')
         self.rawbuffer = self.builder.get_object('databuffer1')
@@ -125,10 +126,12 @@ class Main(object):
 
     def on_window1_destroy(self, object, data=None):
         """ Quit when main window closed."""
+        self.on_pot_stop_clicked()
         gtk.main_quit()
 
     def on_gtk_quit_activate(self, menuitem, data=None):
         """Quit when Quit selected from menu."""
+        self.on_pot_stop_clicked()
         gtk.main_quit()
 
     def on_gtk_about_activate(self, menuitem, data=None):
@@ -155,6 +158,11 @@ class Main(object):
             
     def on_serial_version_clicked(self, data=None):
         """Retrieve DStat version."""
+        try:
+            self.on_pot_stop_clicked()
+        except AttributeError:
+            pass
+            
         self.version = comm.version_check(self.serial_liststore.get_value(
                                      self.serial_combobox.get_active_iter(), 0))
         
@@ -170,6 +178,23 @@ class Main(object):
                                 "".join(["DStat version: ", str(self.version[0]),
                                 ".", str(self.version[1])])
                                )
+            self.start_ocp()
+
+    def start_ocp(self):
+        """Start OCP measurements."""
+        if self.version[0] >= 1 and self.version[1] >= 2: 
+            self.recv_p, self.send_p = multiprocessing.Pipe(duplex=True)
+            self.current_exp = comm.OCPExp(self.send_p)
+            
+            self.current_exp.run_wrapper(self.serial_liststore.get_value(
+                                    self.serial_combobox.get_active_iter(), 0))
+                                
+            self.send_p.close()  # need for EOF signal to work
+            
+            self.ocp_proc = gobject.idle_add(self.ocp_running)
+        else:
+            print "OCP measurements not supported on v1.1 boards."
+        return
 
     def on_pot_start_clicked(self, data=None):
         """Run currently visible experiment."""
@@ -185,7 +210,12 @@ class Main(object):
             self.spinner.stop()
             self.startbutton.set_sensitive(True)
             self.stopbutton.set_sensitive(False)
-            
+            self.start_ocp()
+        
+        # Stop OCP measurements
+        self.on_pot_stop_clicked()
+        gobject.source_remove(self.ocp_proc)
+        
         selection = self.expcombobox.get_active()
         parameters = {}
         parameters['version'] = self.version
@@ -467,7 +497,38 @@ class Main(object):
                                                    self.experiment_running_plot)
                 gobject.idle_add(self.experiment_running)
                 return
+            elif selection == 7:  # POT
+                if not (self.version[0] >= 1 and self.version[1] >= 2):
+                    self.statusbar.push(self.error_context_id, 
+                                "v1.1 board does not support potentiometry.")
+                    exceptions()
+                    return
+                    
+                parameters.update(self.exp_window.get_params('pot'))
+                
+                if (parameters['time'] <= 0):
+                    raise InputError(parameters['clean_s'],
+                                     "Time must be greater than zero.")
+                if (parameters['time'] > 65535):
+                    raise InputError(parameters['clean_s'],
+                                     "Time must fit in 16-bit counter.")
+                
+                self.recv_p, self.send_p = multiprocessing.Pipe(duplex=True)
+                self.current_exp = comm.PotExp(parameters, self.send_p)
+                
+                self.plot.clearall()
+                self.plot.changetype(self.current_exp)
 
+                self.current_exp.run_wrapper(
+                    self.serial_liststore.get_value(
+                        self.serial_combobox.get_active_iter(), 0))
+
+                self.send_p.close()
+
+                self.plot_proc = gobject.timeout_add(200,
+                                                   self.experiment_running_plot)
+                gobject.idle_add(self.experiment_running)
+                return
             else:
                 self.statusbar.push(self.error_context_id, 
                                     "Experiment not yet implemented.")
@@ -521,6 +582,29 @@ class Main(object):
             return False
         except IOError:
             self.experiment_done()
+            return False
+            
+    def ocp_running(self):
+        """Receive OCP value from experiment process and update ocp_disp field
+        
+        Returns:
+        True -- when experiment is continuing to keep function in GTK's queue.
+        False -- when experiment process signals EOFError or IOError to remove
+            function from GTK's queue.
+        """
+        try:
+            if self.recv_p.poll():
+                data = "".join(["OCP: ",
+                                "{0:.3f}".format(self.recv_p.recv()),
+                                " V"])
+                self.ocp_disp.set_text(data)
+
+            else:
+                time.sleep(.001)
+            return True
+        except EOFError:
+            return False
+        except IOError:
             return False
             
     def experiment_running_plot(self):
@@ -582,12 +666,21 @@ class Main(object):
         self.spinner.stop()
         self.startbutton.set_sensitive(True)
         self.stopbutton.set_sensitive(False)
+        self.start_ocp()
 
     def on_pot_stop_clicked(self, data=None):
         """Stop current experiment. Signals experiment process to stop."""
-        if self.recv_p:
+        try:
             print "stop"
             self.recv_p.send('a')
+            while True:
+                if self.recv_p.poll():
+                    if self.recv_p.recv() == "ABORT":
+                        return
+        except AttributeError:
+            pass
+        except IOError:
+            pass
     
     def on_file_save_exp_activate(self, menuitem, data=None):
         """Activate dialogue to save current experiment data. """
