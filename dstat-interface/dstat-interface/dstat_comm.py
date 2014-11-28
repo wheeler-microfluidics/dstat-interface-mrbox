@@ -142,7 +142,7 @@ class Experiment(object):
 
     def run(self, ser_port):
         """Execute experiment. Connects and sends handshake signal to DStat
-        then sendsself.commands. Don't call directly as a process in Windows,
+        then sends self.commands. Don't call directly as a process in Windows,
         use run_wrapper instead.
         
         Arguments:
@@ -402,7 +402,7 @@ class SWVExp(Experiment):
 class DPVExp(SWVExp):
     """Diffential Pulse Voltammetry experiment."""
     def __init__(self, parameters, main_pipe):
-        """Overrides SWVExp method"""
+        """Overrides SWVExp method, extends Experiment method"""
         super(SWVExp, self).__init__(parameters, main_pipe)
         
         self.datatype = "SWVData"
