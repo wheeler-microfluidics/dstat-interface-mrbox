@@ -184,9 +184,9 @@ class Main(object):
         """Start OCP measurements."""
         if self.version[0] >= 1 and self.version[1] >= 2: 
             self.recv_p, self.send_p = multiprocessing.Pipe(duplex=True)
-            self.current_exp = comm.OCPExp(self.send_p)
+            self.ocp_exp = comm.OCPExp(self.send_p)
             
-            self.current_exp.run_wrapper(self.serial_liststore.get_value(
+            self.ocp_exp.run_wrapper(self.serial_liststore.get_value(
                                     self.serial_combobox.get_active_iter(), 0))
                                 
             self.send_p.close()  # need for EOF signal to work
