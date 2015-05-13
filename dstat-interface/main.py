@@ -20,7 +20,8 @@
 
 """ GUI Interface for Wheeler Lab DStat """
 
-import sys
+import sys,os
+
 try:
     import pygtk
     pygtk.require('2.0')
@@ -37,6 +38,8 @@ try:
 except ImportError:
     print('gobject not available')
     sys.exit(1)
+
+os.chdir(os.path.dirname(sys.argv[0]))
 
 import interface.save as save
 import dstat_comm as comm
