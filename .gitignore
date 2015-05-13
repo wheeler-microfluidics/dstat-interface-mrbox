@@ -6,7 +6,5 @@ Breakpoints_v2.xcbkptlist
 *.pyc
 *.pyo
 *~
-/dstatInterface/dist/
-/dstatInterface/build/
-/dstat-interface/dstat-interface/dist/
-/dstat-interface/dstat-interface/build/
+/dstat-interface/dist/
+/dstat-interface/build/
