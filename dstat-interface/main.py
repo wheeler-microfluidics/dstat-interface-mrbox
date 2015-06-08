@@ -120,6 +120,8 @@ class Main(object):
 
         self.expnumber = 0
         
+        self.connected = False
+        
         self.menu_dropbot_connect = self.builder.get_object(
                                                          'menu_dropbot_connect')
         self.menu_dropbot_disconnect = self.builder.get_object(
@@ -182,6 +184,7 @@ class Main(object):
                                 ".", str(self.version[1])])
                                )
             self.start_ocp()
+            self.connected = True
 
     def start_ocp(self):
         """Start OCP measurements."""
@@ -704,7 +707,7 @@ class Main(object):
                             "Waiting for µDrop to connect…")
         self.microdrop_proc = gobject.timeout_add(500, self.microdrop_listen)
     
-    def on_menu_dropbot_disconnect_activate(self, menuitem, data= None):
+    def on_menu_dropbot_disconnect_activate(self, menuitem=None, data=None):
         """Disconnect µDrop connection and stop listening."""
         gobject.source_remove(self.microdrop_proc)
         self.microdrop.reset()
@@ -724,11 +727,19 @@ class Main(object):
 
         if data == microdrop.EXP_FINISH_REQ:
             if self.dropbot_triggered:
-                self.on_pot_start_clicked()
-                return False  # Removes function from GTK's main loop
+                if self.connected:
+                    self.on_pot_start_clicked()
+                else:
+                    print ("WAR: µDrop requested experiment but DStat "
+                           "disconnected.")
+                    self.statusbar.push(self.message_context_id,
+                                        "Listen stopped—DStat disconnected.")
+                    self.microdrop.reply(microdrop.EXPFINISHED)
+                    self.on_menu_dropbot_disconnect_activate()
+                    return False  # Removes function from GTK's main loop 
             else:
-                print "WAR: µDrop requested experiment finish confirmation \
-                        without starting experiment."
+                print ("WAR: µDrop requested experiment finish confirmation "
+                        "without starting experiment.")
                 self.microdrop.reply(microdrop.EXPFINISHED)
             
         elif data == microdrop.STARTEXP:
