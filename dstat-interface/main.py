@@ -39,7 +39,7 @@ except ImportError:
     print('gobject not available')
     sys.exit(1)
 
-os.chdir(os.path.dirname(sys.argv[0]))
+os.chdir(os.path.dirname(os.path.abspath(sys.argv[0])))
 
 import interface.save as save
 import dstat_comm as comm
