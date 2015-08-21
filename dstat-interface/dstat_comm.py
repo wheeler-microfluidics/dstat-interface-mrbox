@@ -253,6 +253,28 @@ class Chronoamp(Experiment):
         return (scan,
                 [seconds+milliseconds/1000., current*(1.5/self.gain/8388607)])
 
+class PDExp(Chronoamp):
+    """Photodiode/PMT experiment"""
+    def __init__(self, parameters, main_pipe):
+        super(Chronoamp, self).__init__(parameters, main_pipe) # Don't want to call CA's init
+
+        self.datatype = "linearData"
+        self.xlabel = "Time (s)"
+        self.ylabel = "Current (A)"
+        self.data = [[], []]
+        self.datalength = 2
+        self.databytes = 8
+        self.xmin = 0
+        self.xmax = self.parameters['time']
+        
+        self.commands += "R"
+        self.commands[2] += "1"
+        self.commands[2] += " "
+        self.commands[2] += str(int(65536-self.parameters['voltage']*(65536./3000)))
+        self.commands[2] += " "
+        self.commands[2] += str(self.parameters['time'])
+        self.commands[2] += " "
+
 class PotExp(Experiment):
     """Potentiometry experiment"""
     def __init__(self, parameters, main_pipe):

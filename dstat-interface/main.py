@@ -503,6 +503,34 @@ class Main(object):
                                                    self.experiment_running_plot)
                 gobject.idle_add(self.experiment_running)
                 return
+                
+            elif selection == 6:  # PD                    
+                parameters.update(self.exp_window.get_params('pde'))
+                
+                if (parameters['time'] <= 0):
+                    raise InputError(parameters['clean_s'],
+                                     "Time must be greater than zero.")
+                if (parameters['time'] > 65535):
+                    raise InputError(parameters['clean_s'],
+                                     "Time must fit in 16-bit counter.")
+                
+                self.recv_p, self.send_p = multiprocessing.Pipe(duplex=True)
+                self.current_exp = comm.PDExp(parameters, self.send_p)
+                
+                self.plot.clearall()
+                self.plot.changetype(self.current_exp)
+
+                self.current_exp.run_wrapper(
+                    self.serial_liststore.get_value(
+                        self.serial_combobox.get_active_iter(), 0))
+
+                self.send_p.close()
+
+                self.plot_proc = gobject.timeout_add(200,
+                                                   self.experiment_running_plot)
+                gobject.idle_add(self.experiment_running)
+                return
+                            
             elif selection == 7:  # POT
                 if not (self.version[0] >= 1 and self.version[1] >= 2):
                     self.statusbar.push(self.error_context_id, 
@@ -535,6 +563,7 @@ class Main(object):
                                                    self.experiment_running_plot)
                 gobject.idle_add(self.experiment_running)
                 return
+                
             else:
                 self.statusbar.push(self.error_context_id, 
                                     "Experiment not yet implemented.")
