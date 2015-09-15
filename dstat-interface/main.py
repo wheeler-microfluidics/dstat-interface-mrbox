@@ -20,7 +20,8 @@
 
 """ GUI Interface for Wheeler Lab DStat """
 
-import sys
+import sys,os
+
 try:
     import pygtk
     pygtk.require('2.0')
@@ -38,32 +39,19 @@ except ImportError:
     print('gobject not available')
     sys.exit(1)
 
+os.chdir(os.path.dirname(os.path.abspath(sys.argv[0])))
+
 import interface.save as save
 import dstat_comm as comm
 import interface.exp_window as exp_window
 import interface.adc_pot as adc_pot
 import plot
 import microdrop
+from errors import InputError, VarError
 
 from serial import SerialException
 import multiprocessing
 import time
-
-class Error(Exception):
-    """Copies Exception class"""
-    pass
-
-class InputError(Error):
-    """Exception raised for errors in the input. Extends Error class.
-        
-    Attributes:
-        expr -- input expression in which the error occurred
-        msg  -- error message
-    """
-    
-    def __init__(self, expr, msg):
-        self.expr = expr
-        self.msg = msg
 
 class Main(object):
     """Main program """
@@ -75,6 +63,7 @@ class Main(object):
 
         #create instance of interface components
         self.statusbar = self.builder.get_object('statusbar')
+        self.ocp_disp = self.builder.get_object('ocp_disp')
         self.window = self.builder.get_object('window1')
         self.aboutdialog = self.builder.get_object('aboutdialog1')
         self.rawbuffer = self.builder.get_object('databuffer1')
@@ -124,12 +113,14 @@ class Main(object):
         self.spinner = self.builder.get_object('spinner')
 
         self.mainwindow = self.builder.get_object('window1')
-        self.mainwindow.set_title("Dstat Interface 0.1")
+        self.mainwindow.set_title("Dstat Interface 1.0")
         self.mainwindow.show_all()
         
         self.on_expcombobox_changed()
 
         self.expnumber = 0
+        
+        self.connected = False
         
         self.menu_dropbot_connect = self.builder.get_object(
                                                          'menu_dropbot_connect')
@@ -140,10 +131,12 @@ class Main(object):
 
     def on_window1_destroy(self, object, data=None):
         """ Quit when main window closed."""
+        self.on_pot_stop_clicked()
         gtk.main_quit()
 
     def on_gtk_quit_activate(self, menuitem, data=None):
         """Quit when Quit selected from menu."""
+        self.on_pot_stop_clicked()
         gtk.main_quit()
 
     def on_gtk_about_activate(self, menuitem, data=None):
@@ -167,6 +160,47 @@ class Main(object):
         
         for i in self.serial_devices.ports:
             self.serial_liststore.append([i])
+            
+    def on_serial_version_clicked(self, data=None):
+        """Retrieve DStat version."""
+        try:
+            self.on_pot_stop_clicked()
+        except AttributeError:
+            pass
+            
+        self.version = comm.version_check(self.serial_liststore.get_value(
+                                     self.serial_combobox.get_active_iter(), 0))
+        
+        self.statusbar.remove_all(self.error_context_id)
+        
+        if not len(self.version) == 2:
+            self.statusbar.push(self.error_context_id, "Communication Error")
+            return
+        
+        else:
+            self.adc_pot.set_version(self.version)
+            self.statusbar.push(self.error_context_id,
+                                "".join(["DStat version: ", str(self.version[0]),
+                                ".", str(self.version[1])])
+                               )
+            self.start_ocp()
+            self.connected = True
+
+    def start_ocp(self):
+        """Start OCP measurements."""
+        if self.version[0] >= 1 and self.version[1] >= 2: 
+            self.recv_p, self.send_p = multiprocessing.Pipe(duplex=True)
+            self.ocp_exp = comm.OCPExp(self.send_p)
+            
+            self.ocp_exp.run_wrapper(self.serial_liststore.get_value(
+                                    self.serial_combobox.get_active_iter(), 0))
+                                
+            self.send_p.close()  # need for EOF signal to work
+            
+            self.ocp_proc = gobject.idle_add(self.ocp_running)
+        else:
+            print "OCP measurements not supported on v1.1 boards."
+        return
 
     def on_pot_start_clicked(self, data=None):
         """Run currently visible experiment."""
@@ -182,9 +216,15 @@ class Main(object):
             self.spinner.stop()
             self.startbutton.set_sensitive(True)
             self.stopbutton.set_sensitive(False)
-            
+            self.start_ocp()
+        
+        # Stop OCP measurements
+        self.on_pot_stop_clicked()
+        gobject.source_remove(self.ocp_proc)
+        
         selection = self.expcombobox.get_active()
         parameters = {}
+        parameters['version'] = self.version
         
         if self.adc_pot.buffer_toggle.get_active(): #True if box checked
             parameters['adc_buffer'] = "2"
@@ -463,7 +503,67 @@ class Main(object):
                                                    self.experiment_running_plot)
                 gobject.idle_add(self.experiment_running)
                 return
+                
+            elif selection == 6:  # PD                    
+                parameters.update(self.exp_window.get_params('pde'))
+                
+                if (parameters['time'] <= 0):
+                    raise InputError(parameters['clean_s'],
+                                     "Time must be greater than zero.")
+                if (parameters['time'] > 65535):
+                    raise InputError(parameters['clean_s'],
+                                     "Time must fit in 16-bit counter.")
+                
+                self.recv_p, self.send_p = multiprocessing.Pipe(duplex=True)
+                self.current_exp = comm.PDExp(parameters, self.send_p)
+                
+                self.plot.clearall()
+                self.plot.changetype(self.current_exp)
 
+                self.current_exp.run_wrapper(
+                    self.serial_liststore.get_value(
+                        self.serial_combobox.get_active_iter(), 0))
+
+                self.send_p.close()
+
+                self.plot_proc = gobject.timeout_add(200,
+                                                   self.experiment_running_plot)
+                gobject.idle_add(self.experiment_running)
+                return
+                            
+            elif selection == 7:  # POT
+                if not (self.version[0] >= 1 and self.version[1] >= 2):
+                    self.statusbar.push(self.error_context_id, 
+                                "v1.1 board does not support potentiometry.")
+                    exceptions()
+                    return
+                    
+                parameters.update(self.exp_window.get_params('pot'))
+                
+                if (parameters['time'] <= 0):
+                    raise InputError(parameters['clean_s'],
+                                     "Time must be greater than zero.")
+                if (parameters['time'] > 65535):
+                    raise InputError(parameters['clean_s'],
+                                     "Time must fit in 16-bit counter.")
+                
+                self.recv_p, self.send_p = multiprocessing.Pipe(duplex=True)
+                self.current_exp = comm.PotExp(parameters, self.send_p)
+                
+                self.plot.clearall()
+                self.plot.changetype(self.current_exp)
+
+                self.current_exp.run_wrapper(
+                    self.serial_liststore.get_value(
+                        self.serial_combobox.get_active_iter(), 0))
+
+                self.send_p.close()
+
+                self.plot_proc = gobject.timeout_add(200,
+                                                   self.experiment_running_plot)
+                gobject.idle_add(self.experiment_running)
+                return
+                
             else:
                 self.statusbar.push(self.error_context_id, 
                                     "Experiment not yet implemented.")
@@ -517,6 +617,29 @@ class Main(object):
             return False
         except IOError:
             self.experiment_done()
+            return False
+            
+    def ocp_running(self):
+        """Receive OCP value from experiment process and update ocp_disp field
+        
+        Returns:
+        True -- when experiment is continuing to keep function in GTK's queue.
+        False -- when experiment process signals EOFError or IOError to remove
+            function from GTK's queue.
+        """
+        try:
+            if self.recv_p.poll():
+                data = "".join(["OCP: ",
+                                "{0:.3f}".format(self.recv_p.recv()),
+                                " V"])
+                self.ocp_disp.set_text(data)
+
+            else:
+                time.sleep(.001)
+            return True
+        except EOFError:
+            return False
+        except IOError:
             return False
             
     def experiment_running_plot(self):
@@ -578,12 +701,21 @@ class Main(object):
         self.spinner.stop()
         self.startbutton.set_sensitive(True)
         self.stopbutton.set_sensitive(False)
+        self.start_ocp()
 
     def on_pot_stop_clicked(self, data=None):
         """Stop current experiment. Signals experiment process to stop."""
-        if self.recv_p:
+        try:
             print "stop"
             self.recv_p.send('a')
+            while True:
+                if self.recv_p.poll():
+                    if self.recv_p.recv() == "ABORT":
+                        return
+        except AttributeError:
+            pass
+        except IOError:
+            pass
     
     def on_file_save_exp_activate(self, menuitem, data=None):
         """Activate dialogue to save current experiment data. """
@@ -604,7 +736,7 @@ class Main(object):
                             "Waiting for µDrop to connect…")
         self.microdrop_proc = gobject.timeout_add(500, self.microdrop_listen)
     
-    def on_menu_dropbot_disconnect_activate(self, menuitem, data= None):
+    def on_menu_dropbot_disconnect_activate(self, menuitem=None, data=None):
         """Disconnect µDrop connection and stop listening."""
         gobject.source_remove(self.microdrop_proc)
         self.microdrop.reset()
@@ -612,6 +744,7 @@ class Main(object):
         self.dropbot_enabled = False
         self.menu_dropbot_connect.set_sensitive(True)
         self.menu_dropbot_disconnect.set_sensitive(False)
+        self.statusbar.push(self.message_context_id, "µDrop disconnected.")
 
     def microdrop_listen(self):
         """Manage signals from µDrop. Must be added to GTK's main loop to
@@ -623,11 +756,19 @@ class Main(object):
 
         if data == microdrop.EXP_FINISH_REQ:
             if self.dropbot_triggered:
-                self.on_pot_start_clicked()
-                return False  # Removes function from GTK's main loop
+                if self.connected:
+                    self.on_pot_start_clicked()
+                else:
+                    print ("WAR: µDrop requested experiment but DStat "
+                           "disconnected.")
+                    self.statusbar.push(self.message_context_id,
+                                        "Listen stopped—DStat disconnected.")
+                    self.microdrop.reply(microdrop.EXPFINISHED)
+                    self.on_menu_dropbot_disconnect_activate()
+                    return False  # Removes function from GTK's main loop 
             else:
-                print "WAR: µDrop requested experiment finish confirmation \
-                        without starting experiment."
+                print ("WAR: µDrop requested experiment finish confirmation "
+                        "without starting experiment.")
                 self.microdrop.reply(microdrop.EXPFINISHED)
             
         elif data == microdrop.STARTEXP:

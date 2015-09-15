@@ -22,6 +22,7 @@ from serial.tools import list_ports
 import time
 import struct
 import multiprocessing as mp
+from errors import VarError
 
 def call_it(instance, name, args=(), kwargs=None):
     """Indirect caller for instance methods and multiprocessing.
@@ -36,6 +37,44 @@ def call_it(instance, name, args=(), kwargs=None):
         kwargs = {}
     return getattr(instance, name)(*args, **kwargs)
 
+def version_check(ser_port):
+    """Tries to contact DStat and get version. Returns a tuple of
+    (major, minor). If no response, returns empty tuple.
+        
+    Arguments:
+    ser_port -- address of serial port to use
+    """
+
+    ser = delayedSerial(ser_port, 1024000, timeout=1)
+    ser.write("ck")
+    
+    ser.flushInput()
+    ser.write('!')
+            
+    while not ser.read()=="C":
+        time.sleep(.5)
+        ser.write('!')
+
+        
+    ser.write('V')
+    for line in ser:
+        if line.startswith('V'):
+            input = line.lstrip('V')
+        elif line.startswith("#"):
+            print line
+        elif line.lstrip().startswith("no"):
+            print line
+            ser.flushInput()
+            break
+            
+    parted = input.rstrip().split('.')
+    print parted
+    
+    ser.close()
+    
+    return (int(parted[0]), int(parted[1]))
+    
+    
 
 class delayedSerial(serial.Serial): 
     """Extends Serial.write so that characters are output individually
@@ -77,7 +116,17 @@ class Experiment(object):
         self.databytes = 8
 
         self.data_extra = []  # must be defined even when not needed
-        self.__gaintable = [1e2, 3e2, 3e3, 3e4, 3e5, 3e6, 3e7, 5e8]
+        
+        major, minor = self.parameters['version']
+        
+        if major >= 1:
+            if minor == 1:
+                self.__gaintable = [1e2, 3e2, 3e3, 3e4, 3e5, 3e6, 3e7, 5e8]
+            elif minor >= 2:
+                self.__gaintable = [1, 1e2, 3e3, 3e4, 3e5, 3e6, 3e7, 1e8]
+        else:
+            raise VarError(parameters['version'], "Invalid version parameter.")
+            
         self.gain = self.__gaintable[int(self.parameters['gain'])]
 
         self.commands = ["A", "G"]
@@ -93,7 +142,7 @@ class Experiment(object):
 
     def run(self, ser_port):
         """Execute experiment. Connects and sends handshake signal to DStat
-        then sendsself.commands. Don't call directly as a process in Windows,
+        then sends self.commands. Don't call directly as a process in Windows,
         use run_wrapper instead.
         
         Arguments:
@@ -113,6 +162,7 @@ class Experiment(object):
 
             self.serial.write(i)
             if not self.serial_handler():
+                self.main_pipe.send("ABORT")
                 break
 
         self.data_postprocessing()
@@ -127,12 +177,18 @@ class Experiment(object):
         scan = 0
         while True:
             if self.main_pipe.poll():
-                print "abort"
                 if self.main_pipe.recv() == 'a':
                     self.serial.write('a')
+                    print "ABORT!"
                     return False
                         
             for line in self.serial:
+                if self.main_pipe.poll():
+                    if self.main_pipe.recv() == 'a':
+                        self.serial.write('a')
+                        print "ABORT!"
+                        return False
+                        
                 if line.startswith('B'):
                     self.main_pipe.send(self.data_handler(
                                  (scan, self.serial.read(size=self.databytes))))
@@ -197,6 +253,54 @@ class Chronoamp(Experiment):
         return (scan,
                 [seconds+milliseconds/1000., current*(1.5/self.gain/8388607)])
 
+class PDExp(Chronoamp):
+    """Photodiode/PMT experiment"""
+    def __init__(self, parameters, main_pipe):
+        super(Chronoamp, self).__init__(parameters, main_pipe) # Don't want to call CA's init
+
+        self.datatype = "linearData"
+        self.xlabel = "Time (s)"
+        self.ylabel = "Current (A)"
+        self.data = [[], []]
+        self.datalength = 2
+        self.databytes = 8
+        self.xmin = 0
+        self.xmax = self.parameters['time']
+        
+        self.commands += "R"
+        self.commands[2] += "1"
+        self.commands[2] += " "
+        self.commands[2] += str(int(65536-self.parameters['voltage']*(65536./3000)))
+        self.commands[2] += " "
+        self.commands[2] += str(self.parameters['time'])
+        self.commands[2] += " "
+
+class PotExp(Experiment):
+    """Potentiometry experiment"""
+    def __init__(self, parameters, main_pipe):
+        super(PotExp, self).__init__(parameters, main_pipe)
+
+        self.datatype = "linearData"
+        self.xlabel = "Time (s)"
+        self.ylabel = "Voltage (V)"
+        self.data = [[], []]
+        self.datalength = 2
+        self.databytes = 8
+        self.xmin = 0
+        self.xmax = self.parameters['time']
+        
+        self.commands += "P"
+        self.commands[2] += str(self.parameters['time'])
+        self.commands[2] += " 1 " #potentiometry mode
+
+    def data_handler(self, data_input):
+        """Overrides Experiment method to not convert x axis to mV."""
+        scan, data = data_input
+        # 2*uint16 + int32
+        seconds, milliseconds, voltage = struct.unpack('<HHl', data)
+        return (scan,
+                [seconds+milliseconds/1000., voltage*(1.5/8388607.)])
+
 class LSVExp(Experiment):
     """Linear Scan Voltammetry experiment"""
     def __init__(self, parameters, main_pipe):
@@ -210,8 +314,6 @@ class LSVExp(Experiment):
         self.databytes = 6  # uint16 + int32
         self.xmin = self.parameters['start']
         self.xmax = self.parameters['stop']
-        
-        self.init()  # need to call after xmin and xmax are set
         
         self.commands += "L"
         self.commands[2] += str(self.parameters['clean_s'])
@@ -282,8 +384,6 @@ class SWVExp(Experiment):
         self.xmin = self.parameters['start']
         self.xmax = self.parameters['stop']
 
-        # forward/reverse stored here - needs to be after 
-        # self.init to keep from being redefined
         self.data_extra = [[], []]  
         
         self.commands += "S"
@@ -324,8 +424,8 @@ class SWVExp(Experiment):
 class DPVExp(SWVExp):
     """Diffential Pulse Voltammetry experiment."""
     def __init__(self, parameters, main_pipe):
-        """Overrides SWVExp method"""
-        super(DPVExp, self).__init__(parameters, main_pipe)
+        """Overrides SWVExp method, extends Experiment method"""
+        super(SWVExp, self).__init__(parameters, main_pipe)
         
         self.datatype = "SWVData"
         self.xlabel = "Voltage (mV)"
@@ -336,10 +436,7 @@ class DPVExp(SWVExp):
         
         self.xmin = self.parameters['start']
         self.xmax = self.parameters['stop']
-        
-        self.init()
-        # forward/reverse stored here - needs to be after self.init to
-        # keep from being redefined
+
         self.data_extra = [[], []]
         
         self.commands += "D"
@@ -365,3 +462,26 @@ class DPVExp(SWVExp):
         self.commands[2] += " "
         self.commands[2] += str(self.parameters['width'])
         self.commands[2] += " "
+
+class OCPExp(Experiment):
+    """Open circuit potential measumement in statusbar."""
+    def __init__(self, main_pipe):
+        """Only needs data pipe."""
+        self.main_pipe = main_pipe
+        self.databytes = 8
+        
+        self.commands = ["A", "P"]
+    
+        self.commands[0] += "2 " # input buffer
+        self.commands[0] += "3 " # 2.5 Hz sample rate
+        self.commands[0] += "1 " # 2x PGA
+        
+        self.commands[1] += "0 " # no timeout
+        self.commands[1] += "0 " # OCP measurement mode
+        
+    def data_handler(self, data_input):
+        """Overrides Experiment method to only send ADC values."""
+        scan, data = data_input
+        # 2*uint16 + int32
+        seconds, milliseconds, voltage = struct.unpack('<HHl', data)
+        return (voltage/5.592405e6)

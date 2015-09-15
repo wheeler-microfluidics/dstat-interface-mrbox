@@ -31,6 +31,7 @@ class Experiments:
         self.classes['dpv'] = exp.DPV()
         self.classes['acv'] = exp.ACV()
         self.classes['pde'] = exp.PD()
+        self.classes['pot'] = exp.POT()
  
         #fill exp_section
         exp_section = self.builder.get_object('exp_section_box')

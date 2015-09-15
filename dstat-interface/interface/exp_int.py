@@ -200,5 +200,21 @@ class PD(ExpInterface):
         """Adds entry listings to superclass's self.entry dict"""
         super(PD, self).__init__('interface/pd.glade')
         
-        self.entry['voltage'] = self.builder.get_object('voltage_entry')
+        self.entry['voltage'] = self.builder.get_object('voltage_adjustment')
+        self.entry['time'] = self.builder.get_object('time_entry')
+        
+    def get_params(self):
+        """Returns a dict of parameters for experiment."""
+        parameters = {}    
+        parameters['voltage'] = int(self.entry['voltage'].get_value())
+        parameters['time'] = int(self.entry['time'].get_text())
+            
+        return parameters
+        
+class POT(ExpInterface):
+    """Experiment class for Potentiometry."""
+    def __init__(self):
+        """Adds entry listings to superclass's self.entry dict"""
+        super(POT, self).__init__('interface/potexp.glade')
+        
         self.entry['time'] = self.builder.get_object('time_entry')

@@ -47,6 +47,11 @@
         <col id="1" translatable="yes">pde</col>
         <col id="2" translatable="yes">Photodiode</col>
       </row>
+      <row>
+        <col id="0">7</col>
+        <col id="1" translatable="yes">pot</col>
+        <col id="2" translatable="yes">Potentiometry</col>
+      </row>
     </data>
   </object>
   <object class="GtkAboutDialog" id="aboutdialog1">
@@ -58,7 +63,7 @@
     <property name="version">1.0</property>
     <property name="copyright" translatable="yes">© Michael Dryden 2014</property>
     <property name="comments" translatable="yes">This software is licensed under the GNU GPL v3</property>
-    <property name="website">http://microfluidics.utoronto.ca</property>
+    <property name="website">http://microfluidics.utoronto.ca/dstat</property>
     <property name="license" translatable="yes">                    GNU GENERAL PUBLIC LICENSE
                        Version 3, 29 June 2007
 
@@ -1211,6 +1216,36 @@ Thanks to Christian Fobel for help with Dropbot Plugin</property>
               </packing>
             </child>
             <child>
+              <object class="GtkButton" id="serial_version">
+                <property name="label">gtk-connect</property>
+                <property name="visible">True</property>
+                <property name="can_focus">True</property>
+                <property name="receives_default">True</property>
+                <property name="use_stock">True</property>
+                <signal name="clicked" handler="on_serial_version_clicked" swapped="no"/>
+              </object>
+              <packing>
+                <property name="expand">False</property>
+                <property name="fill">False</property>
+                <property name="position">3</property>
+              </packing>
+            </child>
+            <child>
+              <object class="GtkLabel" id="ocp_disp">
+                <property name="visible">True</property>
+                <property name="can_focus">False</property>
+                <property name="xalign">0</property>
+                <property name="xpad">5</property>
+                <property name="label" translatable="yes">OCP:</property>
+                <property name="single_line_mode">True</property>
+              </object>
+              <packing>
+                <property name="expand">False</property>
+                <property name="fill">False</property>
+                <property name="position">4</property>
+              </packing>
+            </child>
+            <child>
               <object class="GtkStatusbar" id="statusbar">
                 <property name="visible">True</property>
                 <property name="can_focus">False</property>
@@ -1219,7 +1254,7 @@ Thanks to Christian Fobel for help with Dropbot Plugin</property>
               <packing>
                 <property name="expand">True</property>
                 <property name="fill">True</property>
-                <property name="position">3</property>
+                <property name="position">5</property>
               </packing>
             </child>
           </object>
