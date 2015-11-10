@@ -8,3 +8,8 @@ Breakpoints_v2.xcbkptlist
 *~
 /dstat-interface/dist/
 /dstat-interface/build/
+RELEASE-VERSION
+paver-minilib.zip
+dist
+setup.py
+*.egg-info
