@@ -17,7 +17,7 @@ setup(name='dstat-interface',
       url='https://github.com/wheeler-microfluidics/dstat-interface',
       license='GPL',
       packages=['dstat_interface', ],
-      install_requires=['matplotlib', 'numpy', 'pycairo', 'pyserial', 'pygtk',
+      install_requires=['matplotlib', 'numpy', 'pyserial', 
                         'pygobject', 'pyzmq'],
       # Install data listed in `MANIFEST.in`
       include_package_data=True)

@@ -6,8 +6,6 @@ Breakpoints_v2.xcbkptlist
 *.pyc
 *.pyo
 *~
-/dstat-interface/dist/
-/dstat-interface/build/
 RELEASE-VERSION
 paver-minilib.zip
 dist
