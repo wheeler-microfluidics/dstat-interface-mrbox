@@ -92,6 +92,9 @@ class Main(object):
         self.adc_pot_container.reparent(self.adc_pot_box)
         
         #fill serial
+        self.serial_connect = self.builder.get_object('serial_connect')
+        self.serial_disconnect = self.builder.get_object('serial_disconnect')
+        self.serial_disconnect.set_sensitive(False)
         self.serial_combobox = self.builder.get_object('serial_combobox')
         self.serial_combobox.pack_start(self.cell, True)
         self.serial_combobox.add_attribute(self.cell, 'text', 0)
@@ -132,11 +135,13 @@ class Main(object):
     def on_window1_destroy(self, object, data=None):
         """ Quit when main window closed."""
         self.on_pot_stop_clicked()
+        self.on_serial_disconnect_clicked()
         gtk.main_quit()
 
     def on_gtk_quit_activate(self, menuitem, data=None):
         """Quit when Quit selected from menu."""
         self.on_pot_stop_clicked()
+        self.on_serial_disconnect_clicked()
         gtk.main_quit()
 
     def on_gtk_about_activate(self, menuitem, data=None):
@@ -161,15 +166,18 @@ class Main(object):
         for i in self.serial_devices.ports:
             self.serial_liststore.append([i])
             
-    def on_serial_version_clicked(self, data=None):
-        """Retrieve DStat version."""
+    def on_serial_connect_clicked(self, data=None):
+        """Connect and retrieve DStat version."""
         try:
             self.on_pot_stop_clicked()
         except AttributeError:
             pass
             
-        self.version = comm.version_check(self.serial_liststore.get_value(
+        version_list = comm.version_check(self.serial_liststore.get_value(
                                      self.serial_combobox.get_active_iter(), 0))
+                                     
+        self.version = version_list[0]
+        self.serial = version_list[1]
         
         self.statusbar.remove_all(self.error_context_id)
         
@@ -185,6 +193,24 @@ class Main(object):
                                )
             self.start_ocp()
             self.connected = True
+            self.serial_connect.set_sensitive(False)
+            self.serial_disconnect.set_sensitive(True)
+            
+    def on_serial_disconnect_clicked(self, data=None):
+        """Disconnect from DStat."""
+        try:
+            self.on_pot_stop_clicked()
+        except AttributeError:
+            pass
+            
+        # Stop OCP measurements
+        gobject.source_remove(self.ocp_proc)
+        
+        self.serial.close()
+        del(self.serial)
+        self.connected = False
+        self.serial_connect.set_sensitive(True)
+        self.serial_disconnect.set_sensitive(False)
 
     def start_ocp(self):
         """Start OCP measurements."""
@@ -192,8 +218,7 @@ class Main(object):
             self.recv_p, self.send_p = multiprocessing.Pipe(duplex=True)
             self.ocp_exp = comm.OCPExp(self.send_p)
             
-            self.ocp_exp.run_wrapper(self.serial_liststore.get_value(
-                                    self.serial_combobox.get_active_iter(), 0))
+            self.ocp_exp.run_wrapper(self.serial)
                                 
             self.send_p.close()  # need for EOF signal to work
             
@@ -270,8 +295,7 @@ class Main(object):
                 for i in self.current_exp.commands:
                     self.rawbuffer.insert_at_cursor(i)
                 
-                self.current_exp.run_wrapper(self.serial_liststore.get_value(
-                                     self.serial_combobox.get_active_iter(), 0))
+                self.current_exp.run_wrapper(self.serial)
                                     
                 self.send_p.close()  # need for EOF signal to work
                 
@@ -317,9 +341,7 @@ class Main(object):
                 self.plot.clearall()
                 self.plot.changetype(self.current_exp)
                 
-                self.current_exp.run_wrapper(
-                    self.serial_liststore.get_value(
-                        self.serial_combobox.get_active_iter(), 0))
+                self.current_exp.run_wrapper(self.serial)
                 
                 self.send_p.close()
 
@@ -371,9 +393,7 @@ class Main(object):
                 self.plot.clearall()
                 self.plot.changetype(self.current_exp)
                 
-                self.current_exp.run_wrapper(
-                    self.serial_liststore.get_value(
-                        self.serial_combobox.get_active_iter(), 0))
+                self.current_exp.run_wrapper(self.serial)
                 
                 self.send_p.close()
                 
@@ -434,9 +454,7 @@ class Main(object):
                 self.plot.clearall()
                 self.plot.changetype(self.current_exp)
                 
-                self.current_exp.run_wrapper(
-                    self.serial_liststore.get_value(
-                        self.serial_combobox.get_active_iter(), 0))
+                self.current_exp.run_wrapper(self.serial)
                 
                 self.send_p.close()
                 
@@ -493,9 +511,7 @@ class Main(object):
                 self.plot.clearall()
                 self.plot.changetype(self.current_exp)
 
-                self.current_exp.run_wrapper(
-                    self.serial_liststore.get_value(
-                        self.serial_combobox.get_active_iter(), 0))
+                self.current_exp.run_wrapper(self.serial)
 
                 self.send_p.close()
 
@@ -520,9 +536,7 @@ class Main(object):
                 self.plot.clearall()
                 self.plot.changetype(self.current_exp)
 
-                self.current_exp.run_wrapper(
-                    self.serial_liststore.get_value(
-                        self.serial_combobox.get_active_iter(), 0))
+                self.current_exp.run_wrapper(self.serial)
 
                 self.send_p.close()
 
@@ -553,9 +567,7 @@ class Main(object):
                 self.plot.clearall()
                 self.plot.changetype(self.current_exp)
 
-                self.current_exp.run_wrapper(
-                    self.serial_liststore.get_value(
-                        self.serial_combobox.get_active_iter(), 0))
+                self.current_exp.run_wrapper(self.serial)
 
                 self.send_p.close()
 

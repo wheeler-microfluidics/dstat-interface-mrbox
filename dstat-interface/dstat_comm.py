@@ -38,14 +38,14 @@ def call_it(instance, name, args=(), kwargs=None):
     return getattr(instance, name)(*args, **kwargs)
 
 def version_check(ser_port):
-    """Tries to contact DStat and get version. Returns a tuple of
-    (major, minor). If no response, returns empty tuple.
+    """Tries to contact DStat and get version. Returns a list of
+    [(major, minor), serial instance]. If no response, returns empty tuple.
         
     Arguments:
     ser_port -- address of serial port to use
     """
 
-    ser = delayedSerial(ser_port, 1024000, timeout=1)
+    ser = delayedSerial(ser_port, baudrate=1000000, timeout=1)
     ser.write("ck")
     
     ser.flushInput()
@@ -70,9 +70,7 @@ def version_check(ser_port):
     parted = input.rstrip().split('.')
     print parted
     
-    ser.close()
-    
-    return (int(parted[0]), int(parted[1]))
+    return [(int(parted[0]), int(parted[1])), ser]
     
     
 
@@ -140,17 +138,16 @@ class Experiment(object):
         self.commands[1] += (self.parameters['gain'])
         self.commands[1] += " "
 
-    def run(self, ser_port):
+    def run(self, ser):
         """Execute experiment. Connects and sends handshake signal to DStat
         then sends self.commands. Don't call directly as a process in Windows,
         use run_wrapper instead.
         
         Arguments:
-        ser_port -- address of serial port to use
+        ser -- serial instance to use
         """
-        self.serial = delayedSerial(ser_port, 1024000, timeout=1)
+        self.serial = ser
         self.serial.write("ck")
-        
         self.serial.flushInput()
         
         for i in self.commands:
@@ -166,7 +163,6 @@ class Experiment(object):
                 break
 
         self.data_postprocessing()
-        self.serial.close()
         self.main_pipe.close()
     
     def serial_handler(self):
