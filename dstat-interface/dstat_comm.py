@@ -266,7 +266,12 @@ class PDExp(Chronoamp):
         self.commands += "R"
         self.commands[2] += "1"
         self.commands[2] += " "
-        self.commands[2] += str(int(65536-self.parameters['voltage']*(65536./3000)))
+        
+        if self.parameters['voltage'] == 0: # Special case where V=0
+            self.commands[2] += "65535"
+        else:
+            self.commands[2] += str(int(
+                            65535-(self.parameters['voltage']*(65536./3000))))
         self.commands[2] += " "
         self.commands[2] += str(self.parameters['time'])
         self.commands[2] += " "
