@@ -128,7 +128,7 @@ class Experiment(object):
             
         self.gain = self.__gaintable[int(self.parameters['gain'])]
 
-        self.commands = ["A", "G"]
+        self.commands = ["EA", "EG"]
     
         self.commands[0] += (self.parameters['adc_buffer'])
         self.commands[0] += " "
@@ -148,23 +148,29 @@ class Experiment(object):
         ser -- serial instance to use
         """
         self.serial = ser
-        self.serial.write("ck")
-        self.serial.flushInput()
+#         self.serial.write("ck")
         
-        for i in self.commands:
-            print i
-            self.serial.write('!')
+        try:
+            self.serial.flushInput()
             
-            while not self.serial.read().startswith("C"):
-                pass
-
-            self.serial.write(i)
-            if not self.serial_handler():
-                self.main_pipe.send("ABORT")
-                break
-
-        self.data_postprocessing()
-        self.main_pipe.close()
+            for i in self.commands:
+                print i
+                self.serial.write('!')
+                
+                while not self.serial.read().startswith("C"):
+                    pass
+    
+                self.serial.write(i)
+                if not self.serial_handler():
+                    self.main_pipe.send("ABORT")
+                    break
+                    
+        except serial.SerialException:
+            self.main_pipe.send("ABORT")
+            
+        finally:
+            self.data_postprocessing()
+            self.main_pipe.close()
     
     def serial_handler(self):
         """Handles incoming serial transmissions from DStat. Returns False
@@ -198,6 +204,7 @@ class Experiment(object):
                         print line
                         self.serial.flushInput()
                         return True
+                        
         except serial.SerialException:
             return False
     
@@ -235,7 +242,8 @@ class Chronoamp(Experiment):
         for i in self.parameters['time']:
             self.xmax += int(i)
         
-        self.commands += "R"
+        self.commands += "E"
+        self.commands[2] += "R"
         self.commands[2] += str(len(self.parameters['potential']))
         self.commands[2] += " "
         for i in self.parameters['potential']:
@@ -244,6 +252,7 @@ class Chronoamp(Experiment):
         for i in self.parameters['time']:
             self.commands[2] += str(i)
             self.commands[2] += " "
+        self.commands[2] += "0 " # disable photodiode interlock
             
     def data_handler(self, data_input):
         """Overrides Experiment method to not convert x axis to mV."""
@@ -267,7 +276,8 @@ class PDExp(Chronoamp):
         self.xmin = 0
         self.xmax = self.parameters['time']
         
-        self.commands += "R"
+        self.commands += "E"
+        self.commands[2] += "R"
         self.commands[2] += "1"
         self.commands[2] += " "
         
@@ -278,6 +288,11 @@ class PDExp(Chronoamp):
                             65535-(self.parameters['voltage']*(65536./3000))))
         self.commands[2] += " "
         self.commands[2] += str(self.parameters['time'])
+        self.commands[2] += " "
+        if self.parameters['interlock']:
+            self.commands[2] += "1"
+        else:
+            self.commands[2] += "0"
         self.commands[2] += " "
 
 class PotExp(Experiment):
@@ -294,7 +309,8 @@ class PotExp(Experiment):
         self.xmin = 0
         self.xmax = self.parameters['time']
         
-        self.commands += "P"
+        self.commands += "E"
+        self.commands[2] += "P"
         self.commands[2] += str(self.parameters['time'])
         self.commands[2] += " 1 " #potentiometry mode
 
@@ -320,7 +336,8 @@ class LSVExp(Experiment):
         self.xmin = self.parameters['start']
         self.xmax = self.parameters['stop']
         
-        self.commands += "L"
+        self.commands += "E"
+        self.commands[2] += "L"
         self.commands[2] += str(self.parameters['clean_s'])
         self.commands[2] += " "
         self.commands[2] += str(self.parameters['dep_s'])
@@ -352,7 +369,8 @@ class CVExp(Experiment):
         self.xmin = self.parameters['v1']
         self.xmax = self.parameters['v2']
         
-        self.commands += "C"
+        self.commands += "E"
+        self.commands[2] += "C"
         self.commands[2] += str(self.parameters['clean_s'])
         self.commands[2] += " "
         self.commands[2] += str(self.parameters['dep_s'])
@@ -391,7 +409,8 @@ class SWVExp(Experiment):
 
         self.data_extra = [[], []]  
         
-        self.commands += "S"
+        self.commands += "E"
+        self.commands[2] += "S"
         self.commands[2] += str(self.parameters['clean_s'])
         self.commands[2] += " "
         self.commands[2] += str(self.parameters['dep_s'])
@@ -444,7 +463,8 @@ class DPVExp(SWVExp):
 
         self.data_extra = [[], []]
         
-        self.commands += "D"
+        self.commands += "E"
+        self.commands[2] += "D"
         self.commands[2] += str(self.parameters['clean_s'])
         self.commands[2] += " "
         self.commands[2] += str(self.parameters['dep_s'])
@@ -475,7 +495,7 @@ class OCPExp(Experiment):
         self.main_pipe = main_pipe
         self.databytes = 8
         
-        self.commands = ["A", "P"]
+        self.commands = ["EA", "EP"]
     
         self.commands[0] += "2 " # input buffer
         self.commands[0] += "3 " # 2.5 Hz sample rate

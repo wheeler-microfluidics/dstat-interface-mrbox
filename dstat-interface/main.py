@@ -608,7 +608,13 @@ class Main(object):
         """
         try:
             if self.recv_p.poll():
-                self.line, data = self.recv_p.recv()
+                incoming = self.recv_p.recv()
+                if isinstance(incoming, basestring): #test if incoming is str
+                    self.experiment_done()
+                    self.on_serial_disconnect_clicked()
+                    return False
+                
+                self.line, data = incoming
                 if self.line > self.lastdataline:
                     self.current_exp.data += [[], []]
                     if len(data) > 2:
