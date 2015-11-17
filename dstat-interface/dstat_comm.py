@@ -44,8 +44,9 @@ def version_check(ser_port):
     Arguments:
     ser_port -- address of serial port to use
     """
-
+    
     ser = delayedSerial(ser_port, baudrate=1000000, timeout=1)
+        
     ser.write("ck")
     
     ser.flushInput()
@@ -171,31 +172,34 @@ class Experiment(object):
         data to self.main_pipe as result of self.data_handler).
         """
         scan = 0
-        while True:
-            if self.main_pipe.poll():
-                if self.main_pipe.recv() == 'a':
-                    self.serial.write('a')
-                    print "ABORT!"
-                    return False
-                        
-            for line in self.serial:
+        try:
+            while True:
                 if self.main_pipe.poll():
                     if self.main_pipe.recv() == 'a':
                         self.serial.write('a')
                         print "ABORT!"
                         return False
-                        
-                if line.startswith('B'):
-                    self.main_pipe.send(self.data_handler(
-                                 (scan, self.serial.read(size=self.databytes))))
-                elif line.startswith('S'):
-                    scan += 1
-                elif line.startswith("#"):
-                    print line
-                elif line.lstrip().startswith("no"):
-                    print line
-                    self.serial.flushInput()
-                    return True
+                            
+                for line in self.serial:
+                    if self.main_pipe.poll():
+                        if self.main_pipe.recv() == 'a':
+                            self.serial.write('a')
+                            print "ABORT!"
+                            return False
+                            
+                    if line.startswith('B'):
+                        self.main_pipe.send(self.data_handler(
+                                    (scan, self.serial.read(size=self.databytes))))
+                    elif line.startswith('S'):
+                        scan += 1
+                    elif line.startswith("#"):
+                        print line
+                    elif line.lstrip().startswith("no"):
+                        print line
+                        self.serial.flushInput()
+                        return True
+        except serial.SerialException:
+            return False
     
     
     def data_handler(self, data_input):

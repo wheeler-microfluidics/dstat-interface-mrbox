@@ -200,14 +200,12 @@ class Main(object):
         """Disconnect from DStat."""
         try:
             self.on_pot_stop_clicked()
+            gobject.source_remove(self.ocp_proc) # Stop OCP measurements
+            self.serial.close()
+            del(self.serial)
         except AttributeError:
             pass
-            
-        # Stop OCP measurements
-        gobject.source_remove(self.ocp_proc)
         
-        self.serial.close()
-        del(self.serial)
         self.connected = False
         self.serial_connect.set_sensitive(True)
         self.serial_disconnect.set_sensitive(False)
@@ -641,8 +639,14 @@ class Main(object):
         """
         try:
             if self.recv_p.poll():
+                incoming = self.recv_p.recv()
+                
+                if isinstance(incoming, basestring): #test if incoming is str
+                    self.on_serial_disconnect_clicked()
+                    return False
+                    
                 data = "".join(["OCP: ",
-                                "{0:.3f}".format(self.recv_p.recv()),
+                                "{0:.3f}".format(incoming),
                                 " V"])
                 self.ocp_disp.set_text(data)
 
