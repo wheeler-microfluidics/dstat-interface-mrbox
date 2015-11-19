@@ -73,6 +73,90 @@ def version_check(ser_port):
     
     return (int(parted[0]), int(parted[1]))
     
+def read_light_sensor():
+    """Tries to contact DStat and get light sensor reading. Returns uint of
+    light sensor clear channel.
+    """
+    
+    serial_instance.flushInput()
+    serial_instance.write('!')
+            
+    while not serial_instance.read()=="C":
+        time.sleep(.5)
+        serial_instance.write('!')
+
+        
+    serial_instance.write('T')
+    for line in serial_instance:
+        if line.lstrip().startswith('T'):
+            input = line.lstrip().lstrip('T')
+        elif line.startswith("#"):
+            print line
+        elif line.lstrip().startswith("no"):
+            print line
+            serial_instance.flushInput()
+            break
+            
+    parted = input.rstrip().split('.')
+    print parted
+    
+    return int(parted[0])
+    
+def read_settings():
+    """Tries to contact DStat and get settings. Returns dict of
+    settings.
+    """
+    
+    global settings
+    settings = {}
+    
+    serial_instance.flushInput()
+    serial_instance.write('!')
+            
+    while not serial_instance.read()=="C":
+        time.sleep(.5)
+        serial_instance.write('!')
+        
+    serial_instance.write('SR')
+    for line in serial_instance:
+        if line.lstrip().startswith('S'):
+            input = line.lstrip().lstrip('S')
+        elif line.startswith("#"):
+            print line
+        elif line.lstrip().startswith("no"):
+            print line
+            serial_instance.flushInput()
+            break
+            
+    parted = input.rstrip().split(':')
+    
+    for i in range(len(parted)):
+        settings[parted[i].split('.')[0]] = [i, parted[i].split('.')[1]]
+    
+    return
+    
+def write_settings():
+    """Tries to write settings to DStat from global settings var.
+    """
+    
+    serial_instance.flushInput()
+    serial_instance.write('!')
+            
+    while not serial_instance.read()=="C":
+        time.sleep(.5)
+        serial_instance.write('!')
+        
+    write_buffer = range(len(settings))
+
+    for i in settings: # make sure settings are in right order
+        write_buffer[settings[i][0]] = settings[i][1]
+    
+    serial_instance.write('SW')
+    for i in write_buffer:
+        serial_instance.write(i)
+        serial_instance.write(' ')
+    
+    return
     
 
 class delayedSerial(serial.Serial): 
@@ -137,6 +221,8 @@ class Experiment(object):
         self.commands[0] += (self.parameters['adc_pga'])
         self.commands[0] += " "
         self.commands[1] += (self.parameters['gain'])
+        self.commands[1] += " "
+        self.commands[1] += (self.parameters['re_short'])
         self.commands[1] += " "
 
     def run(self):

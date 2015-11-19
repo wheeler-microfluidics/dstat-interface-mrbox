@@ -17,7 +17,11 @@
 #     You should have received a copy of the GNU General Public License
 #     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+import os, sys
 import gtk
+import dstat_comm
+import __main__
+import gobject
 
 class ExpInterface(object):
     """Generic experiment interface class. Should be subclassed to implement
@@ -202,12 +206,35 @@ class PD(ExpInterface):
         
         self.entry['voltage'] = self.builder.get_object('voltage_adjustment')
         self.entry['time'] = self.builder.get_object('time_entry')
+        self.entry['interlock'] = self.builder.get_object('interlock_button')
+        
+    def on_light_button_clicked(self, data=None):
+        __main__.MAIN.on_pot_stop_clicked()
+        gobject.source_remove(__main__.MAIN.ocp_proc)
+        self.builder.get_object('light_label').set_text(str(
+            dstat_comm.read_light_sensor()))
+        dstat_comm.read_settings()
+        self.builder.get_object('threshold_entry').set_text(str(
+                                dstat_comm.settings['tcs_clear_threshold'][1]))   
+        __main__.MAIN.start_ocp()
+        
+    def on_threshold_button_clicked(self, data=None):
+        __main__.MAIN.on_pot_stop_clicked()
+        gobject.source_remove(__main__.MAIN.ocp_proc)
+        dstat_comm.settings['tcs_clear_threshold'][1] = self.builder.get_object(
+                                                'threshold_entry').get_text()
+        dstat_comm.write_settings()
+        dstat_comm.read_settings()
+        self.builder.get_object('threshold_entry').set_text(
+                            str(dstat_comm.settings['tcs_clear_threshold'][1]))   
+        __main__.MAIN.start_ocp()
         
     def get_params(self):
         """Returns a dict of parameters for experiment."""
         parameters = {}    
         parameters['voltage'] = int(self.entry['voltage'].get_value())
         parameters['time'] = int(self.entry['time'].get_text())
+        parameters['interlock'] = self.entry['interlock'].get_active()
             
         return parameters
         

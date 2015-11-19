@@ -176,8 +176,7 @@ class Main(object):
         version_list = comm.version_check(self.serial_liststore.get_value(
                                      self.serial_combobox.get_active_iter(), 0))
                                      
-        self.version = version_list[0]
-        self.serial = version_list[1]
+        self.version = version_list
         
         self.statusbar.remove_all(self.error_context_id)
         
@@ -191,6 +190,7 @@ class Main(object):
                                 "".join(["DStat version: ", str(self.version[0]),
                                 ".", str(self.version[1])])
                                )
+            comm.read_settings()
             self.start_ocp()
             self.connected = True
             self.serial_connect.set_sensitive(False)
@@ -253,6 +253,11 @@ class Main(object):
             parameters['adc_buffer'] = "2"
         else:
             parameters['adc_buffer'] = "0"
+            
+        if self.adc_pot.short_toggle.get_active():
+            parameters['re_short'] = "1"
+        else:
+            parameters['re_short'] = "0"
         
         srate_model = self.adc_pot.srate_combobox.get_model()
         pga_model = self.adc_pot.pga_combobox.get_model()

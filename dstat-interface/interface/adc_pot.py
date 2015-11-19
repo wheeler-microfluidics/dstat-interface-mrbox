@@ -46,6 +46,7 @@ class adc_pot:
         self.cell = gtk.CellRendererText()
         
         self.buffer_toggle = self.builder.get_object('buffer_checkbutton')
+        self.short_toggle = self.builder.get_object('short_checkbutton')
 
         #initialize comboboxes
         self.pga_combobox = self.builder.get_object('pga_combobox')
