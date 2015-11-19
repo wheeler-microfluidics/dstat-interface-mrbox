@@ -201,8 +201,8 @@ class Main(object):
         try:
             self.on_pot_stop_clicked()
             gobject.source_remove(self.ocp_proc) # Stop OCP measurements
-            self.serial.close()
-            del(self.serial)
+            comm.serial_instance.close()
+            
         except AttributeError:
             pass
         
@@ -216,7 +216,7 @@ class Main(object):
             self.recv_p, self.send_p = multiprocessing.Pipe(duplex=True)
             self.ocp_exp = comm.OCPExp(self.send_p)
             
-            self.ocp_exp.run_wrapper(self.serial)
+            self.ocp_exp.run_wrapper()
                                 
             self.send_p.close()  # need for EOF signal to work
             
@@ -293,7 +293,7 @@ class Main(object):
                 for i in self.current_exp.commands:
                     self.rawbuffer.insert_at_cursor(i)
                 
-                self.current_exp.run_wrapper(self.serial)
+                self.current_exp.run_wrapper()
                                     
                 self.send_p.close()  # need for EOF signal to work
                 
@@ -339,7 +339,7 @@ class Main(object):
                 self.plot.clearall()
                 self.plot.changetype(self.current_exp)
                 
-                self.current_exp.run_wrapper(self.serial)
+                self.current_exp.run_wrapper()
                 
                 self.send_p.close()
 
@@ -391,7 +391,7 @@ class Main(object):
                 self.plot.clearall()
                 self.plot.changetype(self.current_exp)
                 
-                self.current_exp.run_wrapper(self.serial)
+                self.current_exp.run_wrapper()
                 
                 self.send_p.close()
                 
@@ -452,7 +452,7 @@ class Main(object):
                 self.plot.clearall()
                 self.plot.changetype(self.current_exp)
                 
-                self.current_exp.run_wrapper(self.serial)
+                self.current_exp.run_wrapper()
                 
                 self.send_p.close()
                 
@@ -509,7 +509,7 @@ class Main(object):
                 self.plot.clearall()
                 self.plot.changetype(self.current_exp)
 
-                self.current_exp.run_wrapper(self.serial)
+                self.current_exp.run_wrapper()
 
                 self.send_p.close()
 
@@ -534,7 +534,7 @@ class Main(object):
                 self.plot.clearall()
                 self.plot.changetype(self.current_exp)
 
-                self.current_exp.run_wrapper(self.serial)
+                self.current_exp.run_wrapper()
 
                 self.send_p.close()
 
@@ -565,7 +565,7 @@ class Main(object):
                 self.plot.clearall()
                 self.plot.changetype(self.current_exp)
 
-                self.current_exp.run_wrapper(self.serial)
+                self.current_exp.run_wrapper()
 
                 self.send_p.close()
 
@@ -737,6 +737,8 @@ class Main(object):
         except AttributeError:
             pass
         except IOError:
+            pass
+        except EOFError:
             pass
     
     def on_file_save_exp_activate(self, menuitem, data=None):

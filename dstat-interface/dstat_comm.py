@@ -45,33 +45,33 @@ def version_check(ser_port):
     ser_port -- address of serial port to use
     """
     
-    ser = delayedSerial(ser_port, baudrate=1000000, timeout=1)
+    global serial_instance
+    serial_instance = delayedSerial(ser_port, baudrate=1000000, timeout=1)
         
-    ser.write("ck")
+    serial_instance.write("ck")
     
-    ser.flushInput()
-    ser.write('!')
+    serial_instance.flushInput()
+    serial_instance.write('!')
             
-    while not ser.read()=="C":
+    while not serial_instance.read()=="C":
         time.sleep(.5)
-        ser.write('!')
-
+        serial_instance.write('!')
         
-    ser.write('V')
-    for line in ser:
+    serial_instance.write('V')
+    for line in serial_instance:
         if line.startswith('V'):
             input = line.lstrip('V')
         elif line.startswith("#"):
             print line
         elif line.lstrip().startswith("no"):
             print line
-            ser.flushInput()
+            serial_instance.flushInput()
             break
             
     parted = input.rstrip().split('.')
     print parted
     
-    return [(int(parted[0]), int(parted[1])), ser]
+    return (int(parted[0]), int(parted[1]))
     
     
 
@@ -139,16 +139,12 @@ class Experiment(object):
         self.commands[1] += (self.parameters['gain'])
         self.commands[1] += " "
 
-    def run(self, ser):
+    def run(self):
         """Execute experiment. Connects and sends handshake signal to DStat
         then sends self.commands. Don't call directly as a process in Windows,
         use run_wrapper instead.
-        
-        Arguments:
-        ser -- serial instance to use
         """
-        self.serial = ser
-#         self.serial.write("ck")
+        self.serial = serial_instance
         
         try:
             self.serial.flushInput()
@@ -198,7 +194,7 @@ class Experiment(object):
                                     (scan, self.serial.read(size=self.databytes))))
                     elif line.startswith('S'):
                         scan += 1
-                    elif line.startswith("#"):
+                    elif line.lstrip().startswith("#"):
                         print line
                     elif line.lstrip().startswith("no"):
                         print line
