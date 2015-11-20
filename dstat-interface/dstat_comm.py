@@ -90,7 +90,7 @@ def read_light_sensor():
     for line in serial_instance:
         if line.lstrip().startswith('T'):
             input = line.lstrip().lstrip('T')
-        elif line.startswith("#"):
+        elif line.lstrip().startswith("#"):
             print line
         elif line.lstrip().startswith("no"):
             print line
@@ -121,7 +121,7 @@ def read_settings():
     for line in serial_instance:
         if line.lstrip().startswith('S'):
             input = line.lstrip().lstrip('S')
-        elif line.startswith("#"):
+        elif line.lstrip().startswith("#"):
             print line
         elif line.lstrip().startswith("no"):
             print line
