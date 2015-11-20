@@ -207,10 +207,15 @@ class Experiment(object):
                 self.__gaintable = [1e2, 3e2, 3e3, 3e4, 3e5, 3e6, 3e7, 5e8]
             elif minor >= 2:
                 self.__gaintable = [1, 1e2, 3e3, 3e4, 3e5, 3e6, 3e7, 1e8]
+                self.__gain_trim_table = [None, 'r100_trim', 'r3k_trim',
+                                        'r30k_trim', 'r300k_trim', 'r3M_trim',
+                                        'r30M_trim', 'r100M_trim']
         else:
             raise VarError(parameters['version'], "Invalid version parameter.")
             
         self.gain = self.__gaintable[int(self.parameters['gain'])]
+        self.gain_trim = int(
+            settings[self.__gain_trim_table[int(self.parameters['gain'])]][1])
 
         self.commands = ["EA", "EG"]
     
@@ -299,7 +304,8 @@ class Experiment(object):
         scan, data = data_input
         voltage, current = struct.unpack('<Hl', data) #uint16 + int32
         return (scan,
-                [(voltage-32768)*3000./65536, current*(1.5/self.gain/8388607)])
+                [(voltage-32768)*3000./65536,
+                (current+self.gain_trim)*(1.5/self.gain/8388607)])
     
     def data_postprocessing(self):
         """No data postprocessing done by default, can be overridden
@@ -342,7 +348,8 @@ class Chronoamp(Experiment):
         # 2*uint16 + int32
         seconds, milliseconds, current = struct.unpack('<HHl', data)
         return (scan,
-                [seconds+milliseconds/1000., current*(1.5/self.gain/8388607)])
+                [seconds+milliseconds/1000.,
+                (current+self.gain_trim)*(1.5/self.gain/8388607)])
 
 class PDExp(Chronoamp):
     """Photodiode/PMT experiment"""
@@ -521,10 +528,13 @@ class SWVExp(Experiment):
         scan, data = input_data
         # uint16 + int32
         voltage, forward, reverse = struct.unpack('<Hll', data)
+        f_trim = forward+self.gain_trim
+        r_trim = reverse+self.gain_trim
+        
         return (scan, [(voltage-32768)*3000./65536,
-                       (forward-reverse)*(1.5/self.gain/8388607),
-                       forward*(1.5/self.gain/8388607),
-                       reverse*(1.5/self.gain/8388607)])
+                       (f_trim-r_trim)*(1.5/self.gain/8388607),
+                       f_trim*(1.5/self.gain/8388607),
+                       r_trim*(1.5/self.gain/8388607)])
 
 
 class DPVExp(SWVExp):

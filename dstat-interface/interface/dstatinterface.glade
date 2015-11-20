@@ -52,6 +52,11 @@
         <col id="1" translatable="yes">pot</col>
         <col id="2" translatable="yes">Potentiometry</col>
       </row>
+      <row>
+        <col id="0">8</col>
+        <col id="1" translatable="yes">cal</col>
+        <col id="2" translatable="yes">Offset Calibration</col>
+      </row>
     </data>
   </object>
   <object class="GtkAboutDialog" id="aboutdialog1">

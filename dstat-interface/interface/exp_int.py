@@ -245,3 +245,55 @@ class POT(ExpInterface):
         super(POT, self).__init__('interface/potexp.glade')
         
         self.entry['time'] = self.builder.get_object('time_entry')
+        
+class CAL(ExpInterface):
+    """Experiment class for Calibrating gain."""
+    def __init__(self):
+        """Adds entry listings to superclass's self.entry dict"""
+        super(CAL, self).__init__('interface/calib.glade')
+        
+        self.entry['time'] = self.builder.get_object('time_entry')
+        self.entry['R100'] = self.builder.get_object('100_entry')
+        self.entry['R3k'] = self.builder.get_object('3k_entry')
+        self.entry['R30k'] = self.builder.get_object('30k_entry')
+        self.entry['R300k'] = self.builder.get_object('300k_entry')
+        self.entry['R3M'] = self.builder.get_object('3M_entry')
+        self.entry['R30M'] = self.builder.get_object('30M_entry')
+        self.entry['R100M'] = self.builder.get_object('100M_entry')
+        
+    def on_read_button_clicked(self, data=None):
+        __main__.MAIN.on_pot_stop_clicked()
+        
+        gobject.source_remove(__main__.MAIN.ocp_proc)
+        dstat_comm.read_settings()
+        self.entry['R100'].set_text(str(
+            dstat_comm.settings['r100_trim'][1]))
+        self.entry['R3k'].set_text(str(
+            dstat_comm.settings['r3k_trim'][1]))
+        self.entry['R30k'].set_text(str(
+            dstat_comm.settings['r30k_trim'][1]))
+        self.entry['R300k'].set_text(str(
+            dstat_comm.settings['r300k_trim'][1]))
+        self.entry['R3M'].set_text(str(
+            dstat_comm.settings['r3M_trim'][1]))
+        self.entry['R30M'].set_text(str(
+            dstat_comm.settings['r30M_trim'][1]))
+        self.entry['R100M'].set_text(str(
+            dstat_comm.settings['r100M_trim'][1]))
+   
+        __main__.MAIN.start_ocp()
+        
+    def on_write_button_clicked(self, data=None):
+        __main__.MAIN.on_pot_stop_clicked()
+        gobject.source_remove(__main__.MAIN.ocp_proc)
+        
+        dstat_comm.settings['r100_trim'][1] = self.entry['R100'].get_text()
+        dstat_comm.settings['r3k_trim'][1] = self.entry['R3k'].get_text()
+        dstat_comm.settings['r30k_trim'][1] = self.entry['R30k'].get_text()
+        dstat_comm.settings['r300k_trim'][1] = self.entry['R300k'].get_text()
+        dstat_comm.settings['r3M_trim'][1] = self.entry['R3M'].get_text()
+        dstat_comm.settings['r30M_trim'][1] = self.entry['R30M'].get_text()
+        dstat_comm.settings['r100M_trim'][1] = self.entry['R100M'].get_text()
+        dstat_comm.write_settings()        
+                            
+        __main__.MAIN.start_ocp()
