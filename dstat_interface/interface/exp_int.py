@@ -214,6 +214,7 @@ class PD(ExpInterface):
         self.builder.get_object('light_label').set_text(str(
             dstat_comm.read_light_sensor()))
         dstat_comm.read_settings()
+        
         self.builder.get_object('threshold_entry').set_text(str(
                                 dstat_comm.settings['tcs_clear_threshold'][1]))   
         __main__.MAIN.start_ocp()
@@ -266,6 +267,7 @@ class CAL(ExpInterface):
         
         gobject.source_remove(__main__.MAIN.ocp_proc)
         dstat_comm.read_settings()
+
         self.entry['R100'].set_text(str(
             dstat_comm.settings['r100_trim'][1]))
         self.entry['R3k'].set_text(str(

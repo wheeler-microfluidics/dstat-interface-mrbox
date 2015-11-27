@@ -134,13 +134,11 @@ class Main(object):
 
     def on_window1_destroy(self, object, data=None):
         """ Quit when main window closed."""
-        self.on_pot_stop_clicked()
         self.on_serial_disconnect_clicked()
         gtk.main_quit()
 
     def on_gtk_quit_activate(self, menuitem, data=None):
         """Quit when Quit selected from menu."""
-        self.on_pot_stop_clicked()
         self.on_serial_disconnect_clicked()
         gtk.main_quit()
 
@@ -168,42 +166,53 @@ class Main(object):
             
     def on_serial_connect_clicked(self, data=None):
         """Connect and retrieve DStat version."""
+        
         try:
-            self.on_pot_stop_clicked()
-        except AttributeError:
-            pass
-            
-        version_list = comm.version_check(self.serial_liststore.get_value(
-                                     self.serial_combobox.get_active_iter(), 0))
-                                     
-        self.version = version_list
-        
-        self.statusbar.remove_all(self.error_context_id)
-        
-        if not len(self.version) == 2:
-            self.statusbar.push(self.error_context_id, "Communication Error")
-            return
-        
-        else:
-            self.adc_pot.set_version(self.version)
-            self.statusbar.push(self.error_context_id,
-                                "".join(["DStat version: ", str(self.version[0]),
-                                ".", str(self.version[1])])
-                               )
-            comm.read_settings()
-            self.start_ocp()
-            self.connected = True
             self.serial_connect.set_sensitive(False)
-            self.serial_disconnect.set_sensitive(True)
+            self.version = comm.version_check(self.serial_liststore.get_value(
+                                    self.serial_combobox.get_active_iter(), 0))
+            
+            self.statusbar.remove_all(self.error_context_id)
+            
+            if not len(self.version) == 2:
+                self.statusbar.push(self.error_context_id, "Communication Error")
+                return
+            
+            else:
+                self.adc_pot.set_version(self.version)
+                self.statusbar.push(self.error_context_id,
+                                    "".join(["DStat version: ", str(self.version[0]),
+                                    ".", str(self.version[1])])
+                                )
+                                
+                comm.read_settings()
+
+                print "connect"
+                self.start_ocp()
+                self.connected = True
+                self.serial_connect.set_sensitive(False)
+                self.serial_disconnect.set_sensitive(True)
+        
+        except AttributeError as i:
+            print i
+            self.serial_connect.set_sensitive(True)
+        except TypeError as i:
+            print i
+            self.serial_connect.set_sensitive(True)
             
     def on_serial_disconnect_clicked(self, data=None):
         """Disconnect from DStat."""
+        if self.connected == False:
+            return
+        
         try:
             self.on_pot_stop_clicked()
             gobject.source_remove(self.ocp_proc) # Stop OCP measurements
-            comm.serial_instance.close()
+            comm.serial_instance.ctrl_pipe_p.send("DISCONNECT")
+            comm.serial_instance.proc.terminate()
             
-        except AttributeError:
+        except AttributeError as i:
+            print i
             pass
         
         self.connected = False
@@ -212,14 +221,9 @@ class Main(object):
 
     def start_ocp(self):
         """Start OCP measurements."""
-        if self.version[0] >= 1 and self.version[1] >= 2: 
-            self.recv_p, self.send_p = multiprocessing.Pipe(duplex=True)
-            self.ocp_exp = comm.OCPExp(self.send_p)
-            
-            self.ocp_exp.run_wrapper()
-                                
-            self.send_p.close()  # need for EOF signal to work
-            
+        if self.version[0] >= 1 and self.version[1] >= 2:
+            print "start OCP"
+            comm.serial_instance.proc_pipe_p.send(comm.OCPExp())
             self.ocp_proc = gobject.idle_add(self.ocp_running)
         else:
             print "OCP measurements not supported on v1.1 boards."
@@ -239,11 +243,14 @@ class Main(object):
             self.spinner.stop()
             self.startbutton.set_sensitive(True)
             self.stopbutton.set_sensitive(False)
+            print "exceptions"
             self.start_ocp()
         
         # Stop OCP measurements
         self.on_pot_stop_clicked()
-        gobject.source_remove(self.ocp_proc)
+        
+        while comm.serial_instance.data_pipe_p.poll(): # Clear data pipe
+            comm.serial_instance.data_pipe_p.recv()
         
         selection = self.expcombobox.get_active()
         parameters = {}
@@ -287,8 +294,8 @@ class Main(object):
                     raise InputError(parameters['potential'],
                                      "Step table is empty")
                 
-                self.recv_p, self.send_p = multiprocessing.Pipe(duplex=True)
-                self.current_exp = comm.Chronoamp(parameters, self.send_p)
+                
+                self.current_exp = comm.Chronoamp(parameters)
                 
                 self.plot.clearall()
                 self.plot.changetype(self.current_exp)
@@ -297,10 +304,8 @@ class Main(object):
                 
                 for i in self.current_exp.commands:
                     self.rawbuffer.insert_at_cursor(i)
-                
-                self.current_exp.run_wrapper()
-                                    
-                self.send_p.close()  # need for EOF signal to work
+                   
+                comm.serial_instance.proc_pipe_p.send(self.current_exp)
                 
                 self.plot_proc = gobject.timeout_add(200, 
                                                    self.experiment_running_plot)
@@ -338,15 +343,13 @@ class Main(object):
                     raise InputError(parameters['start'],
                                      "Start cannot equal Stop.")
 
-                self.recv_p, self.send_p = multiprocessing.Pipe(duplex=True)
-                self.current_exp = comm.LSVExp(parameters, self.send_p)
+                
+                self.current_exp = comm.LSVExp(parameters)
                 
                 self.plot.clearall()
                 self.plot.changetype(self.current_exp)
                 
-                self.current_exp.run_wrapper()
-                
-                self.send_p.close()
+                comm.serial_instance.proc_pipe_p.send(self.current_exp)
 
                 self.plot_proc = gobject.timeout_add(200, 
                                                    self.experiment_running_plot)
@@ -390,15 +393,13 @@ class Main(object):
                     raise InputError(parameters['v1'],
                                      "Vertex 1 cannot equal Vertex 2.")
                 
-                self.recv_p, self.send_p = multiprocessing.Pipe(duplex=True)
-                self.current_exp = comm.CVExp(parameters, self.send_p)
+                
+                self.current_exp = comm.CVExp(parameters)
                 
                 self.plot.clearall()
                 self.plot.changetype(self.current_exp)
                 
-                self.current_exp.run_wrapper()
-                
-                self.send_p.close()
+                comm.serial_instance.proc_pipe_p.send(self.current_exp)
                 
                 self.plot_proc = gobject.timeout_add(200, 
                                                    self.experiment_running_plot)
@@ -451,15 +452,13 @@ class Main(object):
                     raise InputError(parameters['start'],
                                      "Start cannot equal Stop.")
                     
-                self.recv_p, self.send_p = multiprocessing.Pipe(duplex=True)
-                self.current_exp = comm.SWVExp(parameters, self.send_p)
+                
+                self.current_exp = comm.SWVExp(parameters)
                 
                 self.plot.clearall()
                 self.plot.changetype(self.current_exp)
                 
-                self.current_exp.run_wrapper()
-                
-                self.send_p.close()
+                comm.serial_instance.proc_pipe_p.send(self.current_exp)
                 
                 self.plot_proc = gobject.timeout_add(200, 
                                                 self.experiment_running_plot)
@@ -508,15 +507,13 @@ class Main(object):
                     raise InputError(parameters['start'],
                                      "Start cannot equal Stop.")
                 
-                self.recv_p, self.send_p = multiprocessing.Pipe(duplex=True)
-                self.current_exp = comm.DPVExp(parameters, self.send_p)
+                
+                self.current_exp = comm.DPVExp(parameters)
                 
                 self.plot.clearall()
                 self.plot.changetype(self.current_exp)
 
-                self.current_exp.run_wrapper()
-
-                self.send_p.close()
+                comm.serial_instance.proc_pipe_p.send(self.current_exp)
 
                 self.plot_proc = gobject.timeout_add(200,
                                                    self.experiment_running_plot)
@@ -533,15 +530,13 @@ class Main(object):
                     raise InputError(parameters['clean_s'],
                                      "Time must fit in 16-bit counter.")
                 
-                self.recv_p, self.send_p = multiprocessing.Pipe(duplex=True)
-                self.current_exp = comm.PDExp(parameters, self.send_p)
+                
+                self.current_exp = comm.PDExp(parameters)
                 
                 self.plot.clearall()
                 self.plot.changetype(self.current_exp)
 
-                self.current_exp.run_wrapper()
-
-                self.send_p.close()
+                comm.serial_instance.proc_pipe_p.send(self.current_exp)
 
                 self.plot_proc = gobject.timeout_add(200,
                                                    self.experiment_running_plot)
@@ -564,15 +559,13 @@ class Main(object):
                     raise InputError(parameters['clean_s'],
                                      "Time must fit in 16-bit counter.")
                 
-                self.recv_p, self.send_p = multiprocessing.Pipe(duplex=True)
-                self.current_exp = comm.PotExp(parameters, self.send_p)
+                
+                self.current_exp = comm.PotExp(parameters)
                 
                 self.plot.clearall()
                 self.plot.changetype(self.current_exp)
 
-                self.current_exp.run_wrapper()
-
-                self.send_p.close()
+                comm.serial_instance.proc_pipe_p.send(self.current_exp)
 
                 self.plot_proc = gobject.timeout_add(200,
                                                    self.experiment_running_plot)
@@ -584,21 +577,25 @@ class Main(object):
                                     "Experiment not yet implemented.")
                 exceptions()
                 
-        except ValueError:
+        except ValueError as i:
+            print i
             self.statusbar.push(self.error_context_id, 
                                 "Experiment parameters must be integers.")
             exceptions()
         
         except InputError as err:
+            print err
             self.statusbar.push(self.error_context_id, err.msg)
             exceptions()
         
-        except SerialException:
+        except SerialException as err:
+            print err
             self.statusbar.push(self.error_context_id, 
                                 "Could not establish serial connection.")
             exceptions()
 
         except AssertionError as err:
+            print err
             self.statusbar.push(self.error_context_id, str(err))
             exceptions()
 
@@ -612,8 +609,8 @@ class Main(object):
             function from GTK's queue.
         """
         try:
-            if self.recv_p.poll():
-                incoming = self.recv_p.recv()
+            if comm.serial_instance.data_pipe_p.poll():
+                incoming = comm.serial_instance.data_pipe_p.recv()
                 if isinstance(incoming, basestring): #test if incoming is str
                     self.experiment_done()
                     self.on_serial_disconnect_clicked()
@@ -630,13 +627,37 @@ class Main(object):
                     if len(data) > 2:
                         self.current_exp.data_extra[2*self.line+i].append(
                                                                       data[i+2])
+                
+                return True
+                
+            elif comm.serial_instance.proc_pipe_p.poll():
+                proc_buffer = comm.serial_instance.proc_pipe_p.recv()
+                
+                if proc_buffer == ("DONE" or "SERIAL_ERROR" or "ABORT"):
+                    print proc_buffer
+                    if (proc_buffer == "DONE") and (comm.serial_instance.data_pipe_p.poll()):
+                        pass
+                    
+                    else:
+                        self.experiment_done()
+                        if proc_buffer == "SERIAL_ERROR":
+                            self.on_serial_disconnect_clicked()
+                        return False
+                    
+                else:
+                    print proc_buffer
+                    
+                return True
+            
             else:
                 time.sleep(.001)
-            return True
-        except EOFError:
+                return True
+        except EOFError as err:
+            print err
             self.experiment_done()
             return False
-        except IOError:
+        except IOError as err:
+            print err
             self.experiment_done()
             return False
             
@@ -648,10 +669,20 @@ class Main(object):
         False -- when experiment process signals EOFError or IOError to remove
             function from GTK's queue.
         """
+        
         try:
-            if self.recv_p.poll():
-                incoming = self.recv_p.recv()
+            if comm.serial_instance.proc_pipe_p.poll():
+                proc_buffer = comm.serial_instance.proc_pipe_p.recv()
                 
+                if proc_buffer == "DONE" or "SERIAL_ERROR" or "ABORT":                
+                    if proc_buffer == "SERIAL_ERROR":
+                        self.on_serial_disconnect_clicked()
+                        
+                    return False
+                    
+            if comm.serial_instance.data_pipe_p.poll():
+                incoming = comm.serial_instance.data_pipe_p.recv()
+
                 if isinstance(incoming, basestring): #test if incoming is str
                     self.on_serial_disconnect_clicked()
                     return False
@@ -660,6 +691,7 @@ class Main(object):
                                 "{0:.3f}".format(incoming),
                                 " V"])
                 self.ocp_disp.set_text(data)
+
 
             else:
                 time.sleep(.001)
@@ -720,7 +752,6 @@ class Main(object):
         if self.dropbot_enabled == True:
             if self.dropbot_triggered == True:
                 self.dropbot_triggered = False
-                print "expdone"
                 self.microdrop.reply(microdrop.EXPFINISHED)
             self.microdrop_proc = gobject.timeout_add(500,
                                                       self.microdrop_listen)
@@ -733,18 +764,15 @@ class Main(object):
     def on_pot_stop_clicked(self, data=None):
         """Stop current experiment. Signals experiment process to stop."""
         try:
-            print "stop"
-            self.recv_p.send('a')
-            while True:
-                if self.recv_p.poll():
-                    if self.recv_p.recv() == "ABORT":
-                        return
+            gobject.source_remove(self.ocp_proc)
+            time.sleep(.1)
+            comm.serial_instance.ctrl_pipe_p.send('a')
+            while not (comm.serial_instance.proc_pipe_p.recv() == "ABORT"):
+                pass
         except AttributeError:
             pass
-        except IOError:
-            pass
-        except EOFError:
-            pass
+        except:
+            print str(sys.exc_info())
     
     def on_file_save_exp_activate(self, menuitem, data=None):
         """Activate dialogue to save current experiment data. """
