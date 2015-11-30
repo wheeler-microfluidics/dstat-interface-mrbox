@@ -262,40 +262,100 @@ class CAL(ExpInterface):
         self.entry['R30M'] = self.builder.get_object('30M_entry')
         self.entry['R100M'] = self.builder.get_object('100M_entry')
         
-    def on_read_button_clicked(self, data=None):
-        __main__.MAIN.on_pot_stop_clicked()
+        self.buttons = [self.builder.get_object('read_button'),
+                        self.builder.get_object('write_button'),
+                        self.builder.get_object('measure_button')]
         
-        gobject.source_remove(__main__.MAIN.ocp_proc)
-        dstat_comm.read_settings()
-
-        self.entry['R100'].set_text(str(
-            dstat_comm.settings['r100_trim'][1]))
-        self.entry['R3k'].set_text(str(
-            dstat_comm.settings['r3k_trim'][1]))
-        self.entry['R30k'].set_text(str(
-            dstat_comm.settings['r30k_trim'][1]))
-        self.entry['R300k'].set_text(str(
-            dstat_comm.settings['r300k_trim'][1]))
-        self.entry['R3M'].set_text(str(
-            dstat_comm.settings['r3M_trim'][1]))
-        self.entry['R30M'].set_text(str(
-            dstat_comm.settings['r30M_trim'][1]))
-        self.entry['R100M'].set_text(str(
-            dstat_comm.settings['r100M_trim'][1]))
-   
-        __main__.MAIN.start_ocp()
+    def on_read_button_clicked(self, data=None):        
+        for i in self.buttons:
+            i.set_sensitive(False)
+        
+        try:
+            __main__.MAIN.on_pot_stop_clicked()
+            gobject.source_remove(__main__.MAIN.ocp_proc)
+            dstat_comm.read_settings()
+    
+            self.entry['R100'].set_text(str(
+                dstat_comm.settings['r100_trim'][1]))
+            self.entry['R3k'].set_text(str(
+                dstat_comm.settings['r3k_trim'][1]))
+            self.entry['R30k'].set_text(str(
+                dstat_comm.settings['r30k_trim'][1]))
+            self.entry['R300k'].set_text(str(
+                dstat_comm.settings['r300k_trim'][1]))
+            self.entry['R3M'].set_text(str(
+                dstat_comm.settings['r3M_trim'][1]))
+            self.entry['R30M'].set_text(str(
+                dstat_comm.settings['r30M_trim'][1]))
+            self.entry['R100M'].set_text(str(
+                dstat_comm.settings['r100M_trim'][1]))
+    
+            __main__.MAIN.start_ocp()
+            
+        finally:
+            for i in self.buttons:
+                i.set_sensitive(True)
         
     def on_write_button_clicked(self, data=None):
-        __main__.MAIN.on_pot_stop_clicked()
-        gobject.source_remove(__main__.MAIN.ocp_proc)
+        for i in self.buttons:
+            i.set_sensitive(False)
         
-        dstat_comm.settings['r100_trim'][1] = self.entry['R100'].get_text()
-        dstat_comm.settings['r3k_trim'][1] = self.entry['R3k'].get_text()
-        dstat_comm.settings['r30k_trim'][1] = self.entry['R30k'].get_text()
-        dstat_comm.settings['r300k_trim'][1] = self.entry['R300k'].get_text()
-        dstat_comm.settings['r3M_trim'][1] = self.entry['R3M'].get_text()
-        dstat_comm.settings['r30M_trim'][1] = self.entry['R30M'].get_text()
-        dstat_comm.settings['r100M_trim'][1] = self.entry['R100M'].get_text()
-        dstat_comm.write_settings()        
-                            
-        __main__.MAIN.start_ocp()
+        try:
+            __main__.MAIN.on_pot_stop_clicked()
+            gobject.source_remove(__main__.MAIN.ocp_proc)
+            
+            dstat_comm.settings['r100_trim'][1] = self.entry['R100'].get_text()
+            dstat_comm.settings['r3k_trim'][1] = self.entry['R3k'].get_text()
+            dstat_comm.settings['r30k_trim'][1] = self.entry['R30k'].get_text()
+            dstat_comm.settings['r300k_trim'][1] = self.entry['R300k'].get_text()
+            dstat_comm.settings['r3M_trim'][1] = self.entry['R3M'].get_text()
+            dstat_comm.settings['r30M_trim'][1] = self.entry['R30M'].get_text()
+            dstat_comm.settings['r100M_trim'][1] = self.entry['R100M'].get_text()
+            dstat_comm.write_settings()        
+                                
+            __main__.MAIN.start_ocp()
+            
+        finally:
+            for i in self.buttons:
+                i.set_sensitive(True)
+                
+    def on_measure_button_clicked(self, data=None):
+        if (int(self.entry['time'].get_text()) <= 0 or int(self.entry['time'].get_text()) > 65535):
+            print "ERR: Time out of range"
+            return
+        
+        for i in self.buttons:
+            i.set_sensitive(False)
+        
+        try:
+            __main__.MAIN.on_pot_stop_clicked()
+            gobject.source_remove(__main__.MAIN.ocp_proc)
+            __main__.MAIN.spinner.start()
+            
+            offset = dstat_comm.measure_offset(self.get_params()['time'])
+            
+            for i in offset:
+                print i
+                print str(-offset[i])
+                dstat_comm.settings[i][1] = str(-offset[i])
+            
+            self.entry['R100'].set_text(str(
+                dstat_comm.settings['r100_trim'][1]))
+            self.entry['R3k'].set_text(str(
+                dstat_comm.settings['r3k_trim'][1]))
+            self.entry['R30k'].set_text(str(
+                dstat_comm.settings['r30k_trim'][1]))
+            self.entry['R300k'].set_text(str(
+                dstat_comm.settings['r300k_trim'][1]))
+            self.entry['R3M'].set_text(str(
+                dstat_comm.settings['r3M_trim'][1]))
+            self.entry['R30M'].set_text(str(
+                dstat_comm.settings['r30M_trim'][1]))
+            self.entry['R100M'].set_text(str(
+                dstat_comm.settings['r100M_trim'][1]))
+            __main__.MAIN.start_ocp()
+        
+        finally:
+            for i in self.buttons:
+                i.set_sensitive(True)
+            __main__.MAIN.spinner.stop()

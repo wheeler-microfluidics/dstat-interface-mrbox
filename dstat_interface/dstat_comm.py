@@ -79,19 +79,6 @@ class SerialConnection(object):
         self.proc.start()
         
 
-def call_it(instance, name, args=(), kwargs=None):
-    """Indirect caller for instance methods and multiprocessing.
-    
-    Arguments:
-    instance -- instance to which the method belongs
-    name -- method to call
-    args -- passed to method
-    kwargs -- passed to method
-    """
-    if kwargs is None:
-        kwargs = {}
-    return getattr(instance, name)(*args, **kwargs)
-
 class VersionCheck:
     def __init__(self):
         pass
@@ -131,7 +118,31 @@ class VersionCheck:
         
         finally:
             return status
+
+def version_check(ser_port):
+    """Tries to contact DStat and get version. Returns a list of
+    [(major, minor), serial instance]. If no response, returns empty tuple.
         
+    Arguments:
+    ser_port -- address of serial port to use
+    """
+    try:        
+        global serial_instance
+        serial_instance = SerialConnection(ser_port)
+        
+        serial_instance.proc_pipe_p.send(VersionCheck())
+        result = serial_instance.proc_pipe_p.recv()
+        if result == "SERIAL_ERROR":
+            buffer = 1
+        else:
+            buffer = serial_instance.data_pipe_p.recv()
+        print result
+        
+        return buffer
+        
+    except:
+        pass
+
 class Settings:
     def __init__(self, task, settings=None):
         self.task = task
@@ -201,7 +212,39 @@ class Settings:
             self.ser.write(' ')
         
         return
-
+        
+def read_settings():
+    """Tries to contact DStat and get settings. Returns dict of
+    settings.
+    """
+    
+    global settings
+    settings = {}
+    
+    while serial_instance.data_pipe_p.poll():
+        serial_instance.data_pipe_p.recv()
+    
+    serial_instance.proc_pipe_p.send(Settings(task='r'))
+    settings = serial_instance.data_pipe_p.recv()
+    
+    print serial_instance.proc_pipe_p.recv()
+    
+    return
+    
+def write_settings():
+    """Tries to write settings to DStat from global settings var.
+    """
+    
+    while serial_instance.data_pipe_p.poll():
+        serial_instance.data_pipe_p.recv()
+    
+    serial_instance.proc_pipe_p.send(Settings(task='w', settings=settings))
+    
+    while serial_instance.proc_pipe_p.recv() != "DONE":
+        pass
+    
+    return
+    
 class LightSensor:
     def __init__(self):
         pass
@@ -238,69 +281,20 @@ class LightSensor:
         
         return status
 
-
-def version_check(ser_port):
-    """Tries to contact DStat and get version. Returns a list of
-    [(major, minor), serial instance]. If no response, returns empty tuple.
-        
-    Arguments:
-    ser_port -- address of serial port to use
-    """
-    try:
-        global serial_instance
-        serial_instance = SerialConnection(ser_port)
-        
-        serial_instance.proc_pipe_p.send(VersionCheck())
-        result = serial_instance.proc_pipe_p.recv()
-        if result == "SERIAL_ERROR":
-            buffer = 1
-        else:
-            buffer = serial_instance.data_pipe_p.recv()
-        print result
-        
-        return buffer
-        
-    except:
-        pass
-    
-    
 def read_light_sensor():
     """Tries to contact DStat and get light sensor reading. Returns uint of
     light sensor clear channel.
     """
     
+    while serial_instance.data_pipe_p.poll():
+        serial_instance.data_pipe_p.recv()
+        
     serial_instance.proc_pipe_p.send(LightSensor())
     
     while serial_instance.proc_pipe_p.recv() != "DONE":
         pass
     
     return serial_instance.data_pipe_p.recv()
-    
-def read_settings():
-    """Tries to contact DStat and get settings. Returns dict of
-    settings.
-    """
-    
-    global settings
-    settings = {}
-    serial_instance.proc_pipe_p.send(Settings(task='r'))
-    settings = serial_instance.data_pipe_p.recv()
-    
-    while serial_instance.proc_pipe_p.recv() != "DONE":
-        pass
-    
-    return
-    
-def write_settings():
-    """Tries to write settings to DStat from global settings var.
-    """
-    
-    serial_instance.proc_pipe_p.send(Settings(task='w'))
-    
-    while serial_instance.proc_pipe_p.recv() != "DONE":
-        pass
-    
-    return
     
 
 class delayedSerial(serial.Serial): 
@@ -329,12 +323,6 @@ class Experiment(object):
     """Store and acquire a potentiostat experiment. Meant to be subclassed
     to by different experiment types and not used instanced directly.
     """
-    # def run_wrapper(self, *argv):
-    #     """Execute experiment indirectly using call_it to bypass lack of fork()
-    #     on Windows for multiprocessing.
-    #     """
-    #     self.proc = mp.Process(target=call_it, args=(self, 'run', argv))
-    #     self.proc.start()
 
     def __init__(self, parameters):
         """Adds commands for gain and ADC."""
@@ -399,16 +387,14 @@ class Experiment(object):
                 self.serial.write(i)
                 if not self.serial_handler():
                     status = "ABORT"
-                    break
-                
+            
+            self.data_postprocessing()
         except serial.SerialException:
             status = "SERIAL_ERROR"
-            
         finally:
-            self.data_postprocessing()
             while self.ctrl_pipe.poll():
                 self.ctrl_pipe.recv()
-            return status
+        return status
     
     def serial_handler(self):
         """Handles incoming serial transmissions from DStat. Returns False
@@ -467,6 +453,91 @@ class Experiment(object):
         in subclass.
         """
         pass
+
+class CALExp(Experiment):
+    """Offset calibration experiment"""
+    def __init__(self, parameters):
+        self.parameters = parameters
+        self.databytes = 8
+        self.scan = 0
+        self.data = []
+
+        self.commands = ["EA2 3 1 ", "EG", "ER"]
+
+        self.commands[1] += str(self.parameters['gain'])
+        self.commands[1] += " "
+        self.commands[1] += "0 "
+        self.commands[2] += "1 32768 "
+        self.commands[2] += str(self.parameters['time'])
+        self.commands[2] += " "
+        self.commands[2] += "0 " # disable photodiode interlock
+        
+    def serial_handler(self):
+        """Handles incoming serial transmissions from DStat. Returns False
+        if stop button pressed and sends abort signal to instrument. Sends
+        data to self.data_pipe as result of self.data_handler).
+        """
+
+        try:
+            while True:
+                if self.ctrl_pipe.poll():
+                    print "serial_handler ctrl_pipe"
+                    input = self.ctrl_pipe.recv()
+                    print input
+                    if input == ('a' or "DISCONNECT"):
+                        self.serial.write('a')
+                        print "ABORT pressed!"
+                        return False
+                        
+                for line in self.serial:                    
+                    if self.ctrl_pipe.poll():
+                        if self.ctrl_pipe.recv() == 'a':
+                            self.serial.write('a')
+                            print "ABORT pressed"
+                            return False
+                            
+                    if line.startswith('B'):
+                        self.data.append(self.data_handler(
+                                        self.serial.read(size=self.databytes)))
+                        
+                    elif line.lstrip().startswith("#"):
+                        print line
+                        
+                    elif line.lstrip().startswith("no"):
+                        print line
+                        self.serial.flushInput()
+                        return True
+                        
+        except serial.SerialException:
+            return False
+            
+    def data_handler(self, data):
+        """Takes data_input as tuple -- (scan, data).
+        Returns:
+        current
+        """
+        
+        seconds, milliseconds, current = struct.unpack('<HHl', data)
+        return current
+    
+    def data_postprocessing(self):
+        """Averages data points
+        """
+        
+        sum = 0
+        self.data[0] = 0 # Skip first point
+        
+        for i in self.data:
+            sum += i
+        
+        sum /= len(self.data)
+        
+        if (sum > 32767):
+            sum = 32767
+        elif (sum < -32768):
+            sum = -32768
+        
+        self.data_pipe.send(sum)        
 
 class Chronoamp(Experiment):
     """Chronoamperometry experiment"""
@@ -755,3 +826,20 @@ class OCPExp(Experiment):
         # 2*uint16 + int32
         seconds, milliseconds, voltage = struct.unpack('<HHl', data)
         return (voltage/5.592405e6)
+        
+def measure_offset(time):
+    gain_trim_table = [None, 'r100_trim', 'r3k_trim', 'r30k_trim', 'r300k_trim',
+                        'r3M_trim', 'r30M_trim', 'r100M_trim']
+    
+    parameters = {}
+    parameters['time'] = time
+    
+    gain_offset = {}
+    
+    for i in range(1,8):
+        parameters['gain'] = i
+        serial_instance.proc_pipe_p.send(CALExp(parameters))
+        print serial_instance.proc_pipe_p.recv()
+        gain_offset[gain_trim_table[i]] = serial_instance.data_pipe_p.recv()
+        
+    return gain_offset

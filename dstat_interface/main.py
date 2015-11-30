@@ -731,6 +731,8 @@ class Main(object):
         for i in self.current_exp.commands:
             self.rawbuffer.insert_at_cursor(i)
 
+        self.rawbuffer.insert_at_cursor("\n")
+
         for col in zip(*self.current_exp.data):
             for row in col:
                 self.rawbuffer.insert_at_cursor(str(row)+ "    ")
@@ -769,6 +771,9 @@ class Main(object):
             comm.serial_instance.ctrl_pipe_p.send('a')
             while not (comm.serial_instance.proc_pipe_p.recv() == "ABORT"):
                 pass
+                
+            while comm.serial_instance.data_pipe_p.poll():
+                comm.serial_instance.data_pipe_p.recv() 
         except AttributeError:
             pass
         except:
