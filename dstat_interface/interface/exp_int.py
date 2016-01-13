@@ -208,28 +208,45 @@ class PD(ExpInterface):
         self.entry['time'] = self.builder.get_object('time_entry')
         self.entry['interlock'] = self.builder.get_object('interlock_button')
         
+        self.buttons = map(self.builder.get_object, ['light_button', 'threshold_button'])
+        
     def on_light_button_clicked(self, data=None):
         __main__.MAIN.on_pot_stop_clicked()
         gobject.source_remove(__main__.MAIN.ocp_proc)
-        self.builder.get_object('light_label').set_text(str(
-            dstat_comm.read_light_sensor()))
-        dstat_comm.read_settings()
         
-        self.builder.get_object('threshold_entry').set_text(str(
-                                dstat_comm.settings['tcs_clear_threshold'][1]))   
-        __main__.MAIN.start_ocp()
+        for i in self.buttons:
+            i.set_sensitive(False)
+            
+        try:
+            self.builder.get_object('light_label').set_text(str(
+                dstat_comm.read_light_sensor()))
+            dstat_comm.read_settings()
+            
+            self.builder.get_object('threshold_entry').set_text(str(
+                                    dstat_comm.settings['tcs_clear_threshold'][1]))   
+            __main__.MAIN.start_ocp()
+            
+        finally:
+            gobject.timeout_add(700, restore_buttons, self.buttons)
         
     def on_threshold_button_clicked(self, data=None):
         __main__.MAIN.on_pot_stop_clicked()
         gobject.source_remove(__main__.MAIN.ocp_proc)
-        dstat_comm.settings['tcs_clear_threshold'][1] = self.builder.get_object(
-                                                'threshold_entry').get_text()
-        dstat_comm.write_settings()
-        dstat_comm.read_settings()
-        self.builder.get_object('threshold_entry').set_text(
-                            str(dstat_comm.settings['tcs_clear_threshold'][1]))   
-        __main__.MAIN.start_ocp()
+        for i in self.buttons:
+            i.set_sensitive(False)
+            
+        try:
+            dstat_comm.settings['tcs_clear_threshold'][1] = self.builder.get_object(
+                                                    'threshold_entry').get_text()
+            dstat_comm.write_settings()
+            dstat_comm.read_settings()
+            self.builder.get_object('threshold_entry').set_text(
+                                str(dstat_comm.settings['tcs_clear_threshold'][1]))   
+            __main__.MAIN.start_ocp()
         
+        finally:
+            gobject.timeout_add(700, restore_buttons, self.buttons)
+                
     def get_params(self):
         """Returns a dict of parameters for experiment."""
         parameters = {}    
@@ -293,8 +310,7 @@ class CAL(ExpInterface):
             __main__.MAIN.start_ocp()
             
         finally:
-            for i in self.buttons:
-                i.set_sensitive(True)
+            gobject.timeout_add(700, restore_buttons, self.buttons)
         
     def on_write_button_clicked(self, data=None):
         for i in self.buttons:
@@ -316,8 +332,7 @@ class CAL(ExpInterface):
             __main__.MAIN.start_ocp()
             
         finally:
-            for i in self.buttons:
-                i.set_sensitive(True)
+            gobject.timeout_add(700, restore_buttons, self.buttons)
                 
     def on_measure_button_clicked(self, data=None):
         if (int(self.entry['time'].get_text()) <= 0 or int(self.entry['time'].get_text()) > 65535):
@@ -356,6 +371,12 @@ class CAL(ExpInterface):
             __main__.MAIN.start_ocp()
         
         finally:
-            for i in self.buttons:
-                i.set_sensitive(True)
+            gobject.timeout_add(700, restore_buttons, self.buttons)
             __main__.MAIN.spinner.stop()
+
+def restore_buttons(buttons):
+    """ Should be called with gobject callback """
+    for i in buttons:
+        i.set_sensitive(True)
+        
+    return False
