@@ -341,6 +341,25 @@ class Main(object):
             print "exceptions"
             self.start_ocp()
         
+        def run_experiment():
+            """ Starts experiment """
+            self.plot.clearall()
+            self.plot.changetype(self.current_exp)
+
+            comm.serial_instance.proc_pipe_p.send(self.current_exp)
+
+            self.plot_proc = gobject.timeout_add(200,
+                                                self.experiment_running_plot)
+            self.experiment_proc = (
+                    gobject.io_add_watch(comm.serial_instance.data_pipe_p,
+                                            gobject.IO_IN,
+                                            self.experiment_running_data),
+                    gobject.io_add_watch(comm.serial_instance.proc_pipe_p,
+                                            gobject.IO_IN,
+                                            self.experiment_running_proc)
+                                    )
+        
+        
         self.stop_ocp()
         
         while comm.serial_instance.data_pipe_p.poll(): # Clear data pipe
@@ -391,19 +410,14 @@ class Main(object):
                 
                 self.current_exp = comm.Chronoamp(parameters)
                 
-                self.plot.clearall()
-                self.plot.changetype(self.current_exp)
                 self.rawbuffer.set_text("")
                 self.rawbuffer.place_cursor(self.rawbuffer.get_start_iter())
                 
                 for i in self.current_exp.commands:
                     self.rawbuffer.insert_at_cursor(i)
                    
-                comm.serial_instance.proc_pipe_p.send(self.current_exp)
+                run_experiment()
                 
-                self.plot_proc = gobject.timeout_add(200, 
-                                                   self.experiment_running_plot)
-                gobject.idle_add(self.experiment_running)
                 return
         
             elif selection == 1: # LSV
@@ -439,15 +453,8 @@ class Main(object):
 
                 
                 self.current_exp = comm.LSVExp(parameters)
+                run_experiment()
                 
-                self.plot.clearall()
-                self.plot.changetype(self.current_exp)
-                
-                comm.serial_instance.proc_pipe_p.send(self.current_exp)
-
-                self.plot_proc = gobject.timeout_add(200, 
-                                                   self.experiment_running_plot)
-                gobject.idle_add(self.experiment_running)
                 return
             
             elif selection == 2: # CV
@@ -489,15 +496,8 @@ class Main(object):
                 
                 
                 self.current_exp = comm.CVExp(parameters)
+                run_experiment()
                 
-                self.plot.clearall()
-                self.plot.changetype(self.current_exp)
-                
-                comm.serial_instance.proc_pipe_p.send(self.current_exp)
-                
-                self.plot_proc = gobject.timeout_add(200, 
-                                                   self.experiment_running_plot)
-                gobject.idle_add(self.experiment_running)
                 return
                 
             elif selection == 3:  # SWV
@@ -548,15 +548,8 @@ class Main(object):
                     
                 
                 self.current_exp = comm.SWVExp(parameters)
+                run_experiment()
                 
-                self.plot.clearall()
-                self.plot.changetype(self.current_exp)
-                
-                comm.serial_instance.proc_pipe_p.send(self.current_exp)
-                
-                self.plot_proc = gobject.timeout_add(200, 
-                                                self.experiment_running_plot)
-                gobject.idle_add(self.experiment_running)
                 return
         
             elif selection == 4:  # DPV
@@ -603,15 +596,8 @@ class Main(object):
                 
                 
                 self.current_exp = comm.DPVExp(parameters)
+                run_experiment()
                 
-                self.plot.clearall()
-                self.plot.changetype(self.current_exp)
-
-                comm.serial_instance.proc_pipe_p.send(self.current_exp)
-
-                self.plot_proc = gobject.timeout_add(200,
-                                                   self.experiment_running_plot)
-                gobject.idle_add(self.experiment_running)
                 return
                 
             elif selection == 6:  # PD                    
@@ -626,15 +612,8 @@ class Main(object):
                 
                 
                 self.current_exp = comm.PDExp(parameters)
+                run_experiment()
                 
-                self.plot.clearall()
-                self.plot.changetype(self.current_exp)
-
-                comm.serial_instance.proc_pipe_p.send(self.current_exp)
-
-                self.plot_proc = gobject.timeout_add(200,
-                                                   self.experiment_running_plot)
-                gobject.idle_add(self.experiment_running)
                 return
                             
             elif selection == 7:  # POT
@@ -655,15 +634,8 @@ class Main(object):
                 
                 
                 self.current_exp = comm.PotExp(parameters)
+                run_experiment()
                 
-                self.plot.clearall()
-                self.plot.changetype(self.current_exp)
-
-                comm.serial_instance.proc_pipe_p.send(self.current_exp)
-
-                self.plot_proc = gobject.timeout_add(200,
-                                                   self.experiment_running_plot)
-                gobject.idle_add(self.experiment_running)
                 return
                 
             else:
@@ -672,6 +644,12 @@ class Main(object):
                 exceptions()
                 
         except ValueError as i:
+            print i
+            self.statusbar.push(self.error_context_id, 
+                                "Experiment parameters must be integers.")
+            exceptions()
+        
+        except KeyError as i:
             print i
             self.statusbar.push(self.error_context_id, 
                                 "Experiment parameters must be integers.")
@@ -693,7 +671,7 @@ class Main(object):
             self.statusbar.push(self.error_context_id, str(err))
             exceptions()
 
-    def experiment_running(self):
+    def experiment_running_data(self, source, condition):
         """Receive data from experiment process and add to current_exp.data.
         Run in GTK main loop.
         
@@ -703,49 +681,56 @@ class Main(object):
             function from GTK's queue.
         """
         try:
-            if comm.serial_instance.data_pipe_p.poll():
-                incoming = comm.serial_instance.data_pipe_p.recv()
-                if isinstance(incoming, basestring): #test if incoming is str
-                    self.experiment_done()
-                    self.on_serial_disconnect_clicked()
-                    return False
-                
-                self.line, data = incoming
-                if self.line > self.lastdataline:
-                    self.current_exp.data += [[], []]
-                    if len(data) > 2:
-                        self.current_exp.data_extra += [[], []]
-                    self.lastdataline = self.line
-                for i in range(2):
-                    self.current_exp.data[2*self.line+i].append(data[i])
-                    if len(data) > 2:
-                        self.current_exp.data_extra[2*self.line+i].append(
-                                                                      data[i+2])
-                
-                return True
-                
-            elif comm.serial_instance.proc_pipe_p.poll():
-                proc_buffer = comm.serial_instance.proc_pipe_p.recv()
-                
-                if proc_buffer in ["DONE", "SERIAL_ERROR", "ABORT"]:
-                    print proc_buffer
-                    if (proc_buffer == "DONE") and (comm.serial_instance.data_pipe_p.poll()):
-                        pass
-                    
-                    else:
-                        self.experiment_done()
-                        if proc_buffer == "SERIAL_ERROR":
-                            self.on_serial_disconnect_clicked()
-                        return False
-                    
-                else:
-                    print proc_buffer
-                    
-                return True
+            incoming = comm.serial_instance.data_pipe_p.recv()
+            if isinstance(incoming, basestring): #test if incoming is str
+                self.experiment_done()
+                self.on_serial_disconnect_clicked()
+                return False
             
+            self.line, data = incoming
+            if self.line > self.lastdataline:
+                self.current_exp.data += [[], []]
+                if len(data) > 2:
+                    self.current_exp.data_extra += [[], []]
+                self.lastdataline = self.line
+            for i in range(2):
+                self.current_exp.data[2*self.line+i].append(data[i])
+                if len(data) > 2:
+                    self.current_exp.data_extra[2*self.line+i].append(
+                                                                    data[i+2])
+            return True
+
+        except EOFError as err:
+            print err
+            self.experiment_done()
+            return False
+        except IOError as err:
+            print err
+            self.experiment_done()
+            return False
+            
+    def experiment_running_proc(self, source, condition):
+        """Receive proc signals from experiment process.
+        Run in GTK main loop.
+        
+        Returns:
+        True -- when experiment is continuing to keep function in GTK's queue.
+        False -- when experiment process signals EOFError or IOError to remove
+            function from GTK's queue.
+        """
+        try:
+            proc_buffer = comm.serial_instance.proc_pipe_p.recv()
+
+            if proc_buffer in ["DONE", "SERIAL_ERROR", "ABORT"]:
+                self.experiment_done()
+                if proc_buffer == "SERIAL_ERROR":
+                    self.on_serial_disconnect_clicked()
+                
             else:
-                time.sleep(.001)
-                return True
+                print "#WAR: Unrecognized experiment return code %s" % proc_buffer
+            
+            return False
+
         except EOFError as err:
             print err
             self.experiment_done()
@@ -773,6 +758,7 @@ class Main(object):
         """Clean up after data acquisition is complete. Update plot and
         copy data to raw data tab. Saves data if autosave enabled.
         """
+        gobject.source_remove(self.experiment_proc[0])
         gobject.source_remove(self.plot_proc)  # stop automatic plot update
         self.experiment_running_plot()  # make sure all data updated on plot
 
