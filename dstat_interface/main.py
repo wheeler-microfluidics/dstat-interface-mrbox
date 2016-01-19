@@ -206,8 +206,10 @@ class Main(object):
             return
         
         try:
-            self.on_pot_stop_clicked()
-            gobject.source_remove(self.ocp_proc) # Stop OCP measurements
+            if self.ocp_is_running:
+                self.stop_ocp()
+            else:
+                self.on_pot_stop_clicked()
             comm.serial_instance.ctrl_pipe_p.send("DISCONNECT")
             comm.serial_instance.proc.terminate()
             
@@ -222,13 +224,106 @@ class Main(object):
     def start_ocp(self):
         """Start OCP measurements."""
         if self.version[0] >= 1 and self.version[1] >= 2:
-            print "start OCP"
+            print "#INFO: start OCP"
             comm.serial_instance.proc_pipe_p.send(comm.OCPExp())
-            self.ocp_proc = gobject.idle_add(self.ocp_running)
+            self.ocp_proc = (gobject.io_add_watch(comm.serial_instance.data_pipe_p,
+                                                 gobject.IO_IN,
+                                                 self.ocp_running_data),
+                             gobject.io_add_watch(comm.serial_instance.proc_pipe_p,
+                                                  gobject.IO_IN,
+                                                  self.ocp_running_proc)
+                            )
+            self.ocp_is_running = True
+            
         else:
-            print "OCP measurements not supported on v1.1 boards."
+            print "#INFO: OCP measurements not supported on v1.1 boards."
         return
+        
+    def stop_ocp(self):
+        """Stop OCP measurements."""
+        if self.version[0] >= 1 and self.version[1] >= 2:
+            print "#INFO: Stop OCP"
+            comm.serial_instance.ctrl_pipe_p.send('a')
+            # while not (comm.serial_instance.proc_pipe_p.recv() == "ABORT_SENT"):
+            #     pass
+            for i in self.ocp_proc:
+                gobject.source_remove(i)
+            while self.ocp_running_proc(None, None):
+                pass
+            self.ocp_is_running = False
+            self.ocp_disp.set_text("")
+        else:
+            print "#INFO: OCP measurements not supported on v1.1 boards."
+        return
+        
+    def ocp_running_data(self, source, condition):
+        """Receive OCP value from experiment process and update ocp_disp field
+        
+        Returns:
+        True -- when experiment is continuing to keep function in GTK's queue.
+        False -- when experiment process signals EOFError or IOError to remove
+            function from GTK's queue.
+        """
+        
+        try:
+            # if comm.serial_instance.proc_pipe_p.poll():
+            #     proc_buffer = comm.serial_instance.proc_pipe_p.recv()
+            #     
+            #     if proc_buffer in ["DONE", "SERIAL_ERROR", "ABORT"]:                
+            #         if proc_buffer == "SERIAL_ERROR":
+            #             self.on_serial_disconnect_clicked()
+            #             
+            #         return False
+                    
+            incoming = comm.serial_instance.data_pipe_p.recv()
 
+            if isinstance(incoming, basestring): #test if incoming is str
+                self.on_serial_disconnect_clicked()
+                return False
+                
+            data = "".join(["OCP: ",
+                            "{0:.3f}".format(incoming),
+                            " V"])
+            self.ocp_disp.set_text(data)
+
+            return True
+            
+        except EOFError:
+            return False
+        except IOError:
+            return False
+
+    def ocp_running_proc(self, source, condition):
+        """Handles signals on proc_pipe_p for OCP.
+        
+        Returns:
+        True -- when experiment is continuing to keep function in GTK's queue.
+        False -- when experiment process signals EOFError or IOError to remove
+            function from GTK's queue.
+        """
+        print "#INFO: ocp_running_proc()"
+        
+        try:
+
+            proc_buffer = comm.serial_instance.proc_pipe_p.recv()
+            print proc_buffer
+            if proc_buffer in ["DONE", "SERIAL_ERROR", "ABORT"]:                
+                if proc_buffer == "SERIAL_ERROR":
+                    self.on_serial_disconnect_clicked()
+                
+                while comm.serial_instance.data_pipe_p.poll():
+                    comm.serial_instance.data_pipe_p.recv()
+                
+                gobject.source_remove(self.ocp_proc[0])
+                return False
+                    
+            return True
+            
+        except EOFError:
+            return False
+        except IOError:
+            return False
+            
     def on_pot_start_clicked(self, data=None):
         """Run currently visible experiment."""
         def exceptions():
@@ -246,8 +341,7 @@ class Main(object):
             print "exceptions"
             self.start_ocp()
         
-        # Stop OCP measurements
-        self.on_pot_stop_clicked()
+        self.stop_ocp()
         
         while comm.serial_instance.data_pipe_p.poll(): # Clear data pipe
             comm.serial_instance.data_pipe_p.recv()
@@ -661,46 +755,6 @@ class Main(object):
             self.experiment_done()
             return False
             
-    def ocp_running(self):
-        """Receive OCP value from experiment process and update ocp_disp field
-        
-        Returns:
-        True -- when experiment is continuing to keep function in GTK's queue.
-        False -- when experiment process signals EOFError or IOError to remove
-            function from GTK's queue.
-        """
-        
-        try:
-            if comm.serial_instance.proc_pipe_p.poll():
-                proc_buffer = comm.serial_instance.proc_pipe_p.recv()
-                
-                if proc_buffer in ["DONE", "SERIAL_ERROR", "ABORT"]:                
-                    if proc_buffer == "SERIAL_ERROR":
-                        self.on_serial_disconnect_clicked()
-                        
-                    return False
-                    
-            if comm.serial_instance.data_pipe_p.poll():
-                incoming = comm.serial_instance.data_pipe_p.recv()
-
-                if isinstance(incoming, basestring): #test if incoming is str
-                    self.on_serial_disconnect_clicked()
-                    return False
-                    
-                data = "".join(["OCP: ",
-                                "{0:.3f}".format(incoming),
-                                " V"])
-                self.ocp_disp.set_text(data)
-
-
-            else:
-                time.sleep(.001)
-            return True
-        except EOFError:
-            return False
-        except IOError:
-            return False
-            
     def experiment_running_plot(self):
         """Plot all data in current_exp.data.
         Run in GTK main loop. Always returns True so must be manually
@@ -766,14 +820,8 @@ class Main(object):
     def on_pot_stop_clicked(self, data=None):
         """Stop current experiment. Signals experiment process to stop."""
         try:
-            gobject.source_remove(self.ocp_proc)
-            time.sleep(.1)
             comm.serial_instance.ctrl_pipe_p.send('a')
-            while not (comm.serial_instance.proc_pipe_p.recv() == "ABORT"):
-                pass
-                
-            while comm.serial_instance.data_pipe_p.poll():
-                comm.serial_instance.data_pipe_p.recv() 
+
         except AttributeError:
             pass
         except:
