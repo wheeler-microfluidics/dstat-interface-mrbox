@@ -116,7 +116,7 @@ class Main(object):
         self.spinner = self.builder.get_object('spinner')
 
         self.mainwindow = self.builder.get_object('window1')
-        self.mainwindow.set_title("Dstat Interface 1.0")
+        self.mainwindow.set_title("DStat Interface 1.0")
         self.mainwindow.show_all()
         
         self.on_expcombobox_changed()
@@ -633,7 +633,7 @@ class Main(object):
             elif comm.serial_instance.proc_pipe_p.poll():
                 proc_buffer = comm.serial_instance.proc_pipe_p.recv()
                 
-                if proc_buffer == ("DONE" or "SERIAL_ERROR" or "ABORT"):
+                if proc_buffer in ["DONE", "SERIAL_ERROR", "ABORT"]:
                     print proc_buffer
                     if (proc_buffer == "DONE") and (comm.serial_instance.data_pipe_p.poll()):
                         pass
@@ -674,7 +674,7 @@ class Main(object):
             if comm.serial_instance.proc_pipe_p.poll():
                 proc_buffer = comm.serial_instance.proc_pipe_p.recv()
                 
-                if proc_buffer == "DONE" or "SERIAL_ERROR" or "ABORT":                
+                if proc_buffer in ["DONE", "SERIAL_ERROR", "ABORT"]:                
                     if proc_buffer == "SERIAL_ERROR":
                         self.on_serial_disconnect_clicked()
                         
