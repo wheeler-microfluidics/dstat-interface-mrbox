@@ -212,7 +212,7 @@ class PD(ExpInterface):
         
     def on_light_button_clicked(self, data=None):
         __main__.MAIN.on_pot_stop_clicked()
-        gobject.source_remove(__main__.MAIN.ocp_proc)
+        __main__.MAIN.stop_ocp()
         
         for i in self.buttons:
             i.set_sensitive(False)
@@ -231,7 +231,7 @@ class PD(ExpInterface):
         
     def on_threshold_button_clicked(self, data=None):
         __main__.MAIN.on_pot_stop_clicked()
-        gobject.source_remove(__main__.MAIN.ocp_proc)
+        __main__.MAIN.stop_ocp()
         for i in self.buttons:
             i.set_sensitive(False)
             
@@ -289,7 +289,7 @@ class CAL(ExpInterface):
         
         try:
             __main__.MAIN.on_pot_stop_clicked()
-            gobject.source_remove(__main__.MAIN.ocp_proc)
+            __main__.MAIN.stop_ocp()
             dstat_comm.read_settings()
     
             self.entry['R100'].set_text(str(
@@ -318,7 +318,7 @@ class CAL(ExpInterface):
         
         try:
             __main__.MAIN.on_pot_stop_clicked()
-            gobject.source_remove(__main__.MAIN.ocp_proc)
+            __main__.MAIN.stop_ocp()
             
             dstat_comm.settings['r100_trim'][1] = self.entry['R100'].get_text()
             dstat_comm.settings['r3k_trim'][1] = self.entry['R3k'].get_text()
@@ -343,8 +343,7 @@ class CAL(ExpInterface):
             i.set_sensitive(False)
         
         try:
-            __main__.MAIN.on_pot_stop_clicked()
-            gobject.source_remove(__main__.MAIN.ocp_proc)
+            __main__.MAIN.stop_ocp()
             __main__.MAIN.spinner.start()
             
             offset = dstat_comm.measure_offset(self.get_params()['time'])
