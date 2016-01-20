@@ -1,0 +1,6 @@
+Version 1.0.2
+    -Improved logging system: Log messages now print showing where they came from.
+    -Implemented gobject IO callbacks for experiments:
+        Process will not continuously poll for new data from serial process anymore.
+    -Stop button works again
+    -Buttons in Photodiode and Calibration modules remain insensitive until ready.
