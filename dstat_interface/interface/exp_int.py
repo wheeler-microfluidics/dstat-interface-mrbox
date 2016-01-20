@@ -22,6 +22,8 @@ import gtk
 import dstat_comm
 import __main__
 import gobject
+from errors import InputError, VarError, ErrorLogger
+_logger = ErrorLogger(sender="dstat-interface-exp_int")
 
 class ExpInterface(object):
     """Generic experiment interface class. Should be subclassed to implement
@@ -349,8 +351,7 @@ class CAL(ExpInterface):
             offset = dstat_comm.measure_offset(self.get_params()['time'])
             
             for i in offset:
-                print i
-                print str(-offset[i])
+                _logger.error(" ".join((i, str(-offset[i]))), "INFO")
                 dstat_comm.settings[i][1] = str(-offset[i])
             
             self.entry['R100'].set_text(str(

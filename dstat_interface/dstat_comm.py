@@ -22,12 +22,13 @@ from serial.tools import list_ports
 import time
 import struct
 import multiprocessing as mp
-from errors import VarError
+from errors import InputError, VarError, ErrorLogger
+_logger = ErrorLogger(sender="dstat_comm")
 
 def _serial_process(ser_port, proc_pipe, ctrl_pipe, data_pipe):
     ser = delayedSerial(ser_port, baudrate=1000000, timeout=1)
     
-    print "Connecting"
+    _logger.error("_serial_process() Connecting", 'INFO')
     
     ser.write("ck")
     
@@ -40,20 +41,19 @@ def _serial_process(ser_port, proc_pipe, ctrl_pipe, data_pipe):
             ser.write('!')
         else:
             break
-    
-    print "loop"
+
     while True:
-        if ctrl_pipe.poll():
+        # These can only be called when no experiment is running
+        if ctrl_pipe.poll(): 
             ctrl_buffer = ctrl_pipe.recv()
-            print ctrl_buffer
             
             if ctrl_buffer == ('a' or "DISCONNECT"):
-                ser.write('a')
-                print "ABORT!"
                 proc_pipe.send("ABORT")
+                ser.write('a')
+                _logger.error("_serial_process(): ABORT", 'INFO')
                 
                 if ctrl_buffer == "DISCONNECT":
-                    print "_serial_process DISCONNECT"
+                    _logger.error("_serial_process(): DISCONNECT", 'INFO')
                     ser.close()
                     proc_pipe.send("DISCONNECT")
                     return False
@@ -62,7 +62,16 @@ def _serial_process(ser_port, proc_pipe, ctrl_pipe, data_pipe):
         elif proc_pipe.poll():
             while ctrl_pipe.poll():
                 ctrl_pipe.recv()
-            proc_pipe.send(proc_pipe.recv().run(ser, ctrl_pipe, data_pipe))
+            
+            return_code = proc_pipe.recv().run(ser, ctrl_pipe, data_pipe)
+            e = "_serial_process: "
+            e += str(return_code)
+            _logger.error(e,'INFO')
+
+            proc_pipe.send(return_code)
+        
+        else:
+            time.sleep(.1)
             
 
 
@@ -72,7 +81,6 @@ class SerialConnection(object):
         self.ctrl_pipe_p, self.ctrl_pipe_c = mp.Pipe(duplex=True)
         self.data_pipe_p, self.data_pipe_c = mp.Pipe(duplex=True)
     
-        print "connect"
         self.proc = mp.Process(target=_serial_process, args=(ser_port,
                                 self.proc_pipe_c, self.ctrl_pipe_c,
                                 self.data_pipe_c))
@@ -96,24 +104,27 @@ class VersionCheck:
                 if line.startswith('V'):
                     input = line.lstrip('V')
                 elif line.startswith("#"):
-                    print line
+                    _logger.error("".join(
+                                ("DSTAT: ",line.lstrip().rstrip())), "INFO")
                 elif line.lstrip().startswith("no"):
-                    print line
+                    _logger.error("".join(
+                                ("DSTAT: ",line.lstrip().rstrip())), "DBG")
                     ser.flushInput()
                     break
                     
             parted = input.rstrip().split('.')
-            print "run()"
-            print parted
+            e = "DStat PCB version: "
+            e += str(input.rstrip())
+            _logger.error(e, "INFO")
             
             data_pipe.send((int(parted[0]), int(parted[1])))
             status = "DONE"
         
-        except UnboundLocalError as i:
-            print i
+        except UnboundLocalError as e:
+            _logger.error(e, "ERR")
             status = "SERIAL_ERROR"
-        except SerialException as i:
-            print i
+        except SerialException as e:
+            _logger.error(e, "ERR")
             status = "SERIAL_ERROR"
         
         finally:
@@ -136,7 +147,7 @@ def version_check(ser_port):
             buffer = 1
         else:
             buffer = serial_instance.data_pipe_p.recv()
-        print result
+        _logger.error("version_check done", "DBG")
         
         return buffer
         
@@ -180,9 +191,11 @@ class Settings:
             if line.lstrip().startswith('S'):
                 input = line.lstrip().lstrip('S')
             elif line.lstrip().startswith("#"):
-                print line
+                _logger.error("".join(
+                                ("DSTAT: ",line.lstrip().rstrip())), "INFO")
             elif line.lstrip().startswith("no"):
-                print line
+                _logger.error("".join(
+                                ("DSTAT: ",line.lstrip().rstrip())), "DBG")
                 self.ser.flushInput()
                 break
                 
@@ -227,7 +240,8 @@ def read_settings():
     serial_instance.proc_pipe_p.send(Settings(task='r'))
     settings = serial_instance.data_pipe_p.recv()
     
-    print serial_instance.proc_pipe_p.recv()
+    _logger.error("".join(("read_settings: ",
+                     serial_instance.proc_pipe_p.recv())),'DBG')
     
     return
     
@@ -240,8 +254,8 @@ def write_settings():
     
     serial_instance.proc_pipe_p.send(Settings(task='w', settings=settings))
     
-    while serial_instance.proc_pipe_p.recv() != "DONE":
-        pass
+    _logger.error("".join(("write_settings: ",
+                     serial_instance.proc_pipe_p.recv())),'DBG')
     
     return
     
@@ -267,9 +281,11 @@ class LightSensor:
             if line.lstrip().startswith('T'):
                 input = line.lstrip().lstrip('T')
             elif line.lstrip().startswith("#"):
-                print line
+                _logger.error("".join(
+                                ("DSTAT: ",line.lstrip().rstrip())), "INFO")
             elif line.lstrip().startswith("no"):
-                print line
+                _logger.error("".join(
+                                ("DSTAT: ",line.lstrip().rstrip())), "DBG")
                 ser.flushInput()
                 break
                 
@@ -291,8 +307,8 @@ def read_light_sensor():
         
     serial_instance.proc_pipe_p.send(LightSensor())
     
-    while serial_instance.proc_pipe_p.recv() != "DONE":
-        pass
+    _logger.error("".join(("read_light_sensor: ",
+                     serial_instance.proc_pipe_p.recv())),'DBG')
     
     return serial_instance.data_pipe_p.recv()
     
@@ -313,7 +329,7 @@ class SerialDevices(object):
             self.ports, _, _ = zip(*list_ports.comports())
         except ValueError:
             self.ports = []
-            print "No serial ports found"
+            _logger.error("No serial ports found", "ERR")
     
     def refresh(self):
         """Refreshes list of ports."""
@@ -371,14 +387,14 @@ class Experiment(object):
         self.ctrl_pipe = ctrl_pipe
         self.data_pipe = data_pipe
         
-        print "run"
+        _logger.error("Experiment running", "INFO")
         
         try:
             self.serial.flushInput()
             status = "DONE"
             
             for i in self.commands:
-                print i
+                _logger.error("".join(("Command: ",i)), "INFO")
                 self.serial.write('!')
                 
                 while not self.serial.read().startswith("C"):
@@ -405,19 +421,18 @@ class Experiment(object):
         try:
             while True:
                 if self.ctrl_pipe.poll():
-                    print "serial_handler ctrl_pipe"
                     input = self.ctrl_pipe.recv()
-                    print input
+                    _logger.error("".join(("serial_handler: ", input)),"DBG")
                     if input == ('a' or "DISCONNECT"):
                         self.serial.write('a')
-                        print "ABORT pressed!"
+                        _logger.error("serial_handler: ABORT pressed!","INFO")
                         return False
                             
                 for line in self.serial:
                     if self.ctrl_pipe.poll():
                         if self.ctrl_pipe.recv() == 'a':
                             self.serial.write('a')
-                            print "ABORT pressed"
+                            _logger.error("serial_handler: ABORT pressed!","INFO")
                             return False
                             
                     if line.startswith('B'):
@@ -427,9 +442,11 @@ class Experiment(object):
                     elif line.startswith('S'):
                         self.scan += 1
                     elif line.lstrip().startswith("#"):
-                        print line
+                        _logger.error("".join(
+                                        ("DSTAT: ",line.lstrip().rstrip())), "INFO")
                     elif line.lstrip().startswith("no"):
-                        print line
+                        _logger.error("".join(
+                                        ("DSTAT: ",line.lstrip().rstrip())), "DBG")
                         self.serial.flushInput()
                         return True
                         
@@ -481,19 +498,18 @@ class CALExp(Experiment):
         try:
             while True:
                 if self.ctrl_pipe.poll():
-                    print "serial_handler ctrl_pipe"
                     input = self.ctrl_pipe.recv()
-                    print input
+                    _logger.error("".join(("serial_handler: ", input)))
                     if input == ('a' or "DISCONNECT"):
                         self.serial.write('a')
-                        print "ABORT pressed!"
+                        _logger.error("serial_handler: ABORT pressed!","INFO")
                         return False
                         
                 for line in self.serial:                    
                     if self.ctrl_pipe.poll():
                         if self.ctrl_pipe.recv() == 'a':
                             self.serial.write('a')
-                            print "ABORT pressed"
+                            _logger.error("serial_handler: ABORT pressed!","INFO")
                             return False
                             
                     if line.startswith('B'):
@@ -501,10 +517,12 @@ class CALExp(Experiment):
                                         self.serial.read(size=self.databytes)))
                         
                     elif line.lstrip().startswith("#"):
-                        print line
+                        _logger.error("".join(
+                                    ("DSTAT: ",line.lstrip().rstrip())), "INFO")
                         
                     elif line.lstrip().startswith("no"):
-                        print line
+                        _logger.error("".join(
+                                    ("DSTAT: ",line.lstrip().rstrip())), "DBG")
                         self.serial.flushInput()
                         return True
                         
@@ -839,7 +857,9 @@ def measure_offset(time):
     for i in range(1,8):
         parameters['gain'] = i
         serial_instance.proc_pipe_p.send(CALExp(parameters))
-        print serial_instance.proc_pipe_p.recv()
+        _logger.error("".join(
+            ("measure_offset: ", serial_instance.proc_pipe_p.recv())),
+            "INFO")
         gain_offset[gain_trim_table[i]] = serial_instance.data_pipe_p.recv()
         
     return gain_offset
