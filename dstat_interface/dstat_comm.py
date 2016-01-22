@@ -290,7 +290,6 @@ class LightSensor:
                 break
                 
         parted = input.rstrip().split('.')
-        print parted
         
         data_pipe.send(parted[0])
         status = "DONE"
