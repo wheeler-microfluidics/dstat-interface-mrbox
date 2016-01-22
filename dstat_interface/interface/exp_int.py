@@ -223,6 +223,8 @@ class PD(ExpInterface):
             self.builder.get_object('light_label').set_text(str(
                 dstat_comm.read_light_sensor()))
             dstat_comm.read_settings()
+            dstat_comm.settings['tcs_enabled'][1] = '1' # Make sure TCS enabled
+            dstat_comm.write_settings()
             
             self.builder.get_object('threshold_entry').set_text(str(
                                     dstat_comm.settings['tcs_clear_threshold'][1]))   
