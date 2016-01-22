@@ -380,8 +380,18 @@ class Main(object):
                self.adc_pot.srate_combobox.get_active_iter(), 2)  # third column
         parameters['adc_pga'] = pga_model.get_value(
                                  self.adc_pot.pga_combobox.get_active_iter(), 2)
-        parameters['gain'] = gain_model.get_value(
+                                 
+        try:
+            parameters['gain'] = gain_model.get_value(
                                 self.adc_pot.gain_combobox.get_active_iter(), 2)
+        except TypeError as err:
+            print "TypeError"
+            _logger.error(err, "INFO")
+            self.statusbar.push(self.error_context_id, 
+                                "Select a potentiostat gain.")
+            exceptions()
+            return
+            
         
         self.line = 0
         self.lastline = 0
@@ -637,32 +647,33 @@ class Main(object):
                 exceptions()
                 
         except ValueError as i:
-            print i
+            _logger.error(i, "INFO")
             self.statusbar.push(self.error_context_id, 
                                 "Experiment parameters must be integers.")
             exceptions()
         
         except KeyError as i:
-            print i
+            _logger.error(i, "INFO")
             self.statusbar.push(self.error_context_id, 
                                 "Experiment parameters must be integers.")
             exceptions()
         
         except InputError as err:
-            print err
+            _logger.error(err, "INFO")
             self.statusbar.push(self.error_context_id, err.msg)
             exceptions()
         
         except SerialException as err:
-            print err
+            _logger.error(err, "INFO")
             self.statusbar.push(self.error_context_id, 
                                 "Could not establish serial connection.")
             exceptions()
 
         except AssertionError as err:
-            print err
+            _logger.error(err, "INFO")
             self.statusbar.push(self.error_context_id, str(err))
             exceptions()
+        
 
     def experiment_running_data(self):
         """Receive data from experiment process and add to current_exp.data.
