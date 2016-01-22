@@ -4,3 +4,8 @@ Version 1.0.2
         Process will not continuously poll for new data from serial process anymore.
     -Stop button works again
     -Buttons in Photodiode and Calibration modules remain insensitive until ready.
+
+Version 1.0.2a
+    -Hotfix #12: Restored measurement ability on Windows
+    -Minor logging changes
+    -Automatically enable TCS on DStat when measure light sensor button clicked.
