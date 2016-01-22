@@ -117,7 +117,7 @@ class Main(object):
         self.spinner = self.builder.get_object('spinner')
 
         self.mainwindow = self.builder.get_object('window1')
-        self.mainwindow.set_title("DStat Interface 1.0.1")
+        self.mainwindow.set_title("DStat Interface 1.0.2a")
         self.mainwindow.show_all()
         
         self.on_expcombobox_changed()
@@ -224,14 +224,14 @@ class Main(object):
     def start_ocp(self):
         """Start OCP measurements."""
         if self.version[0] >= 1 and self.version[1] >= 2:
+            # Flush data pipe
+            while comm.serial_instance.data_pipe_p.poll():
+                comm.serial_instance.data_pipe_p.recv()
+            
             _logger.error("Start OCP", "INFO")
             comm.serial_instance.proc_pipe_p.send(comm.OCPExp())
-            self.ocp_proc = (gobject.io_add_watch(comm.serial_instance.data_pipe_p,
-                                                 gobject.IO_IN,
-                                                 self.ocp_running_data),
-                             gobject.io_add_watch(comm.serial_instance.proc_pipe_p,
-                                                  gobject.IO_IN,
-                                                  self.ocp_running_proc)
+            self.ocp_proc = (gobject.idle_add(self.ocp_running_data),
+                             gobject.idle_add(self.ocp_running_proc)
                             )
             self.ocp_is_running = True
             
@@ -247,7 +247,7 @@ class Main(object):
 
             for i in self.ocp_proc:
                 gobject.source_remove(i)
-            while self.ocp_running_proc(None, None):
+            while self.ocp_running_proc():
                 pass
             self.ocp_is_running = False
             self.ocp_disp.set_text("")
@@ -255,7 +255,7 @@ class Main(object):
             logger.error("OCP measurements not supported on v1.1 boards.",'INFO')
         return
         
-    def ocp_running_data(self, source, condition):
+    def ocp_running_data(self):
         """Receive OCP value from experiment process and update ocp_disp field
         
         Returns:
@@ -264,18 +264,21 @@ class Main(object):
             function from GTK's queue.
         """
         
-        try:                    
-            incoming = comm.serial_instance.data_pipe_p.recv()
-
-            if isinstance(incoming, basestring): # test if incoming is str
-                self.on_serial_disconnect_clicked()
-                return False
-                
-            data = "".join(["OCP: ",
-                            "{0:.3f}".format(incoming),
-                            " V"])
-            self.ocp_disp.set_text(data)
-
+        try:
+            if comm.serial_instance.data_pipe_p.poll():                   
+                incoming = comm.serial_instance.data_pipe_p.recv()
+    
+                if isinstance(incoming, basestring): # test if incoming is str
+                    self.on_serial_disconnect_clicked()
+                    return False
+                    
+                data = "".join(["OCP: ",
+                                "{0:.3f}".format(incoming),
+                                " V"])
+                self.ocp_disp.set_text(data)
+    
+                return True
+            
             return True
             
         except EOFError:
@@ -283,7 +286,7 @@ class Main(object):
         except IOError:
             return False
 
-    def ocp_running_proc(self, source, condition):
+    def ocp_running_proc(self):
         """Handles signals on proc_pipe_p for OCP.
         
         Returns:
@@ -291,21 +294,23 @@ class Main(object):
         False -- when experiment process signals EOFError or IOError to remove
             function from GTK's queue.
         """
-        _logger.error("ocp_running_proc()",'DBG')
         
         try:
-            proc_buffer = comm.serial_instance.proc_pipe_p.recv()
-            _logger.error("".join(("ocp_running_proc: ", proc_buffer)), 'DBG')
-            if proc_buffer in ["DONE", "SERIAL_ERROR", "ABORT"]:                
-                if proc_buffer == "SERIAL_ERROR":
-                    self.on_serial_disconnect_clicked()
-                
-                while comm.serial_instance.data_pipe_p.poll():
-                    comm.serial_instance.data_pipe_p.recv()
-                
-                gobject.source_remove(self.ocp_proc[0])
-                return False
+            if comm.serial_instance.proc_pipe_p.poll(): 
+                proc_buffer = comm.serial_instance.proc_pipe_p.recv()
+                _logger.error("".join(("ocp_running_proc: ", proc_buffer)), 'DBG')
+                if proc_buffer in ["DONE", "SERIAL_ERROR", "ABORT"]:                
+                    if proc_buffer == "SERIAL_ERROR":
+                        self.on_serial_disconnect_clicked()
                     
+                    while comm.serial_instance.data_pipe_p.poll():
+                        comm.serial_instance.data_pipe_p.recv()
+                    
+                    gobject.source_remove(self.ocp_proc[0])
+                    return False
+                        
+                return True
+            
             return True
             
         except EOFError:
@@ -334,20 +339,21 @@ class Main(object):
             self.plot.changetype(self.current_exp)
 
             comm.serial_instance.proc_pipe_p.send(self.current_exp)
+            
+            # Flush data pipe
+            while comm.serial_instance.data_pipe_p.poll():
+                comm.serial_instance.data_pipe_p.recv()
 
             self.plot_proc = gobject.timeout_add(200,
                                                 self.experiment_running_plot)
             self.experiment_proc = (
-                    gobject.io_add_watch(comm.serial_instance.data_pipe_p,
-                                            gobject.IO_IN,
-                                            self.experiment_running_data),
-                    gobject.io_add_watch(comm.serial_instance.proc_pipe_p,
-                                            gobject.IO_IN,
-                                            self.experiment_running_proc)
+                    gobject.idle_add(self.experiment_running_data),
+                    gobject.idle_add(self.experiment_running_proc)
                                     )
         
         
         self.stop_ocp()
+        self.statusbar.remove_all(self.error_context_id)
         
         while comm.serial_instance.data_pipe_p.poll(): # Clear data pipe
             comm.serial_instance.data_pipe_p.recv()
@@ -374,8 +380,18 @@ class Main(object):
                self.adc_pot.srate_combobox.get_active_iter(), 2)  # third column
         parameters['adc_pga'] = pga_model.get_value(
                                  self.adc_pot.pga_combobox.get_active_iter(), 2)
-        parameters['gain'] = gain_model.get_value(
+                                 
+        try:
+            parameters['gain'] = gain_model.get_value(
                                 self.adc_pot.gain_combobox.get_active_iter(), 2)
+        except TypeError as err:
+            print "TypeError"
+            _logger.error(err, "INFO")
+            self.statusbar.push(self.error_context_id, 
+                                "Select a potentiostat gain.")
+            exceptions()
+            return
+            
         
         self.line = 0
         self.lastline = 0
@@ -631,34 +647,35 @@ class Main(object):
                 exceptions()
                 
         except ValueError as i:
-            print i
+            _logger.error(i, "INFO")
             self.statusbar.push(self.error_context_id, 
                                 "Experiment parameters must be integers.")
             exceptions()
         
         except KeyError as i:
-            print i
+            _logger.error(i, "INFO")
             self.statusbar.push(self.error_context_id, 
                                 "Experiment parameters must be integers.")
             exceptions()
         
         except InputError as err:
-            print err
+            _logger.error(err, "INFO")
             self.statusbar.push(self.error_context_id, err.msg)
             exceptions()
         
         except SerialException as err:
-            print err
+            _logger.error(err, "INFO")
             self.statusbar.push(self.error_context_id, 
                                 "Could not establish serial connection.")
             exceptions()
 
         except AssertionError as err:
-            print err
+            _logger.error(err, "INFO")
             self.statusbar.push(self.error_context_id, str(err))
             exceptions()
+        
 
-    def experiment_running_data(self, source, condition):
+    def experiment_running_data(self):
         """Receive data from experiment process and add to current_exp.data.
         Run in GTK main loop.
         
@@ -668,23 +685,26 @@ class Main(object):
             function from GTK's queue.
         """
         try:
-            incoming = comm.serial_instance.data_pipe_p.recv()
-            if isinstance(incoming, basestring): # Test if incoming is str
-                self.experiment_done()
-                self.on_serial_disconnect_clicked()
-                return False
-            
-            self.line, data = incoming
-            if self.line > self.lastdataline:
-                self.current_exp.data += [[], []]
-                if len(data) > 2:
-                    self.current_exp.data_extra += [[], []]
-                self.lastdataline = self.line
-            for i in range(2):
-                self.current_exp.data[2*self.line+i].append(data[i])
-                if len(data) > 2:
-                    self.current_exp.data_extra[2*self.line+i].append(
+            if comm.serial_instance.data_pipe_p.poll(): 
+                incoming = comm.serial_instance.data_pipe_p.recv()
+                if isinstance(incoming, basestring): # Test if incoming is str
+                    self.experiment_done()
+                    self.on_serial_disconnect_clicked()
+                    return False
+                
+                self.line, data = incoming
+                if self.line > self.lastdataline:
+                    self.current_exp.data += [[], []]
+                    if len(data) > 2:
+                        self.current_exp.data_extra += [[], []]
+                    self.lastdataline = self.line
+                for i in range(2):
+                    self.current_exp.data[2*self.line+i].append(data[i])
+                    if len(data) > 2:
+                        self.current_exp.data_extra[2*self.line+i].append(
                                                                     data[i+2])
+                return True
+            
             return True
 
         except EOFError as err:
@@ -696,7 +716,7 @@ class Main(object):
             self.experiment_done()
             return False
             
-    def experiment_running_proc(self, source, condition):
+    def experiment_running_proc(self):
         """Receive proc signals from experiment process.
         Run in GTK main loop.
         
@@ -706,19 +726,22 @@ class Main(object):
             function from GTK's queue.
         """
         try:
-            proc_buffer = comm.serial_instance.proc_pipe_p.recv()
-
-            if proc_buffer in ["DONE", "SERIAL_ERROR", "ABORT"]:
-                self.experiment_done()
-                if proc_buffer == "SERIAL_ERROR":
-                    self.on_serial_disconnect_clicked()
+            if comm.serial_instance.proc_pipe_p.poll(): 
+                proc_buffer = comm.serial_instance.proc_pipe_p.recv()
+    
+                if proc_buffer in ["DONE", "SERIAL_ERROR", "ABORT"]:
+                    self.experiment_done()
+                    if proc_buffer == "SERIAL_ERROR":
+                        self.on_serial_disconnect_clicked()
+                    
+                else:
+                    e = "Unrecognized experiment return code "
+                    e += proc_buffer
+                    _logger.error(e, 'WAR')
                 
-            else:
-                e = "Unrecognized experiment return code "
-                e += proc_buffer
-                _logger.error(e, 'WAR')
+                return False
             
-            return False
+            return True
 
         except EOFError as err:
             _logger.error(err, 'WAR')
