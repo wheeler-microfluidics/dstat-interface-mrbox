@@ -64,8 +64,8 @@
     <property name="border_width">5</property>
     <property name="destroy_with_parent">True</property>
     <property name="type_hint">dialog</property>
-    <property name="program_name">Dstat Interface</property>
-    <property name="version">1.0</property>
+    <property name="program_name">DStat-interface</property>
+    <property name="version">1.0.2a</property>
     <property name="copyright" translatable="yes">© Michael Dryden 2014</property>
     <property name="comments" translatable="yes">This software is licensed under the GNU GPL v3</property>
     <property name="website">http://microfluidics.utoronto.ca/dstat</property>

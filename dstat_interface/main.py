@@ -117,7 +117,7 @@ class Main(object):
         self.spinner = self.builder.get_object('spinner')
 
         self.mainwindow = self.builder.get_object('window1')
-        self.mainwindow.set_title("DStat Interface 1.0.1")
+        self.mainwindow.set_title("DStat Interface 1.0.2a")
         self.mainwindow.show_all()
         
         self.on_expcombobox_changed()
