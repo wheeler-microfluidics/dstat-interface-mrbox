@@ -94,6 +94,7 @@ class Main(object):
         
         #fill serial
         self.serial_connect = self.builder.get_object('serial_connect')
+        self.serial_pmt_connect = self.builder.get_object('pmt_mode')
         self.serial_disconnect = self.builder.get_object('serial_disconnect')
         self.serial_disconnect.set_sensitive(False)
         self.serial_combobox = self.builder.get_object('serial_combobox')
@@ -125,6 +126,7 @@ class Main(object):
         self.expnumber = 0
         
         self.connected = False
+        self.pmt_mode = False
         
         self.menu_dropbot_connect = self.builder.get_object(
                                                          'menu_dropbot_connect')
@@ -187,10 +189,11 @@ class Main(object):
                                 )
                                 
                 comm.read_settings()
-
+                
                 self.start_ocp()
                 self.connected = True
                 self.serial_connect.set_sensitive(False)
+                self.serial_pmt_connect.set_sensitive(False)
                 self.serial_disconnect.set_sensitive(True)
         
         except AttributeError as err:
@@ -217,19 +220,36 @@ class Main(object):
             _logger.error(err, 'WAR')
             pass
         
+        self.pmt_mode = False
         self.connected = False
         self.serial_connect.set_sensitive(True)
+        self.serial_pmt_connect.set_sensitive(True)
         self.serial_disconnect.set_sensitive(False)
+        self.adc_pot.short_toggle.set_sensitive(True)
+    
+    def on_pmt_mode_clicked(self, data=None):
+        """Connect in PMT mode"""
+        self.pmt_mode = True
+        self.adc_pot.short_toggle.set_active(True)
+        self.adc_pot.short_toggle.set_sensitive(False)
+        self.on_serial_connect_clicked()
 
     def start_ocp(self):
         """Start OCP measurements."""
+        
         if self.version[0] >= 1 and self.version[1] >= 2:
             # Flush data pipe
             while comm.serial_instance.data_pipe_p.poll():
                 comm.serial_instance.data_pipe_p.recv()
             
-            _logger.error("Start OCP", "INFO")
-            comm.serial_instance.proc_pipe_p.send(comm.OCPExp())
+            if self.pmt_mode == True:
+                _logger.error("Start PMT idle mode", "INFO")
+                comm.serial_instance.proc_pipe_p.send(comm.PMTIdle())
+            
+            else:
+                _logger.error("Start OCP", "INFO")
+                comm.serial_instance.proc_pipe_p.send(comm.OCPExp())
+                
             self.ocp_proc = (gobject.timeout_add(300, self.ocp_running_data),
                              gobject.timeout_add(250, self.ocp_running_proc)
                             )
@@ -241,8 +261,12 @@ class Main(object):
         
     def stop_ocp(self):
         """Stop OCP measurements."""
+
         if self.version[0] >= 1 and self.version[1] >= 2:
-            _logger.error("Stop OCP",'INFO')
+            if self.pmt_mode == True:
+                _logger.error("Stop PMT idle mode",'INFO')
+            else:
+                _logger.error("Stop OCP",'INFO')
             comm.serial_instance.ctrl_pipe_p.send('a')
 
             for i in self.ocp_proc:
