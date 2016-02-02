@@ -230,8 +230,8 @@ class Main(object):
             
             _logger.error("Start OCP", "INFO")
             comm.serial_instance.proc_pipe_p.send(comm.OCPExp())
-            self.ocp_proc = (gobject.idle_add(self.ocp_running_data),
-                             gobject.idle_add(self.ocp_running_proc)
+            self.ocp_proc = (gobject.timeout_add(300, self.ocp_running_data),
+                             gobject.timeout_add(250, self.ocp_running_proc)
                             )
             self.ocp_is_running = True
             
@@ -276,7 +276,9 @@ class Main(object):
                                 "{0:.3f}".format(incoming),
                                 " V"])
                 self.ocp_disp.set_text(data)
-    
+                
+                if comm.serial_instance.data_pipe_p.poll():
+                    self.ocp_running_data()
                 return True
             
             return True
