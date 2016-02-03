@@ -844,6 +844,17 @@ class OCPExp(Experiment):
         seconds, milliseconds, voltage = struct.unpack('<HHl', data)
         return (voltage/5.592405e6)
         
+class PMTIdle(Experiment):
+    """Open circuit potential measumement in statusbar."""
+    def __init__(self):
+        self.databytes = 8
+    
+        self.commands = ["EA", "EM"]
+    
+        self.commands[0] += "2 " # input buffer
+        self.commands[0] += "3 " # 2.5 Hz sample rate
+        self.commands[0] += "1 " # 2x PGA
+        
 def measure_offset(time):
     gain_trim_table = [None, 'r100_trim', 'r3k_trim', 'r30k_trim', 'r300k_trim',
                         'r3M_trim', 'r30M_trim', 'r100M_trim']
