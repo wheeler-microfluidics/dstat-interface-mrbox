@@ -9,3 +9,7 @@ Version 1.0.2a
     -Hotfix #12: Restored measurement ability on Windows
     -Minor logging changes
     -Automatically enable TCS on DStat when measure light sensor button clicked.
+    
+Version 1.0.3
+    -Fixed #14: Added support for PMT idle mode
+    -Reduced CPU usage when running OCP by reducing polling frequency
