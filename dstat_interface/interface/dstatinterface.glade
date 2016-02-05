@@ -777,7 +777,7 @@ Thanks to Christian Fobel for help with Dropbot Plugin</property>
                     </child>
                     <child>
                       <object class="GtkImageMenuItem" id="file_save_plot">
-                        <property name="label">Save Plot…</property>
+                        <property name="label">Save Plots…</property>
                         <property name="visible">True</property>
                         <property name="can_focus">False</property>
                         <property name="image">image3</property>

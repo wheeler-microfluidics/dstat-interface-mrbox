@@ -131,6 +131,7 @@ class ft_box(plotbox):
         x, y = plotSpectrum(Experiment.data[1+line_number*2], Experiment.parameters['adc_rate_hz'])
         self.lines[line_number].set_ydata(y)
         self.lines[line_number].set_xdata(x)
+        Experiment.ftdata = (x, y)
         
     def changetype(self, Experiment):
         """Change plot type. Set axis labels and x bounds to those stored

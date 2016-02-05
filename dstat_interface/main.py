@@ -53,6 +53,7 @@ import microdrop
 from serial import SerialException
 import multiprocessing
 import time
+from datetime import datetime
 
 class Main(object):
     """Main program """
@@ -367,8 +368,9 @@ class Main(object):
             """ Starts experiment """
             self.plot.clearall()
             self.plot.changetype(self.current_exp)
-            self.ft_plot.clearall()
-            self.ft_plot.changetype(self.current_exp)
+            if (parameters['sync'] and parameters['shutter']):
+                self.ft_plot.clearall()
+                self.ft_plot.changetype(self.current_exp)
 
             comm.serial_instance.proc_pipe_p.send(self.current_exp)
             
@@ -819,11 +821,13 @@ class Main(object):
         """Clean up after data acquisition is complete. Update plot and
         copy data to raw data tab. Saves data if autosave enabled.
         """
+        self.current_exp.time = datetime.now()
         gobject.source_remove(self.experiment_proc[0])
         gobject.source_remove(self.plot_proc)  # stop automatic plot update
         self.experiment_running_plot()  # make sure all data updated on plot
         
-        if self.current_exp.parameters['sync']:
+        if (self.current_exp.parameters['shutter'] and
+            self.current_exp.parameters['sync']):
             self.ft_plot.updateline(self.current_exp, 0) 
             self.ft_plot.redraw()
 
@@ -852,7 +856,13 @@ class Main(object):
         if self.autosave_checkbox.get_active():
             save.autoSave(self.current_exp, self.autosavedir_button,
                           self.autosavename.get_text(), self.expnumber)
-            save.autoPlot(self.plot, self.autosavedir_button,
+            plots = {'data':self.plot}
+            
+            if (self.current_exp.parameters['shutter'] and
+                self.current_exp.parameters['sync']):
+                plots['ft'] = self.ft_plot
+            
+            save.autoPlot(plots, self.autosavedir_button,
                           self.autosavename.get_text(), self.expnumber)
             self.expnumber += 1
         
@@ -885,7 +895,13 @@ class Main(object):
     
     def on_file_save_plot_activate(self, menuitem, data=None):
         """Activate dialogue to save current plot."""
-        save.plotSave(self.plot)
+        plots = {'data':self.plot}
+        
+        if (self.current_exp.parameters['shutter'] and
+            self.current_exp.parameters['sync']):
+            plots['ft'] = self.ft_plot
+        
+        save.plotSave(plots)
     
     def on_menu_dropbot_connect_activate(self, menuitem, data=None):
         """Listen for remote control connection from µDrop."""

@@ -344,6 +344,7 @@ class Experiment(object):
         self.parameters = parameters
         self.databytes = 8
         self.scan = 0
+        self.time = 0
 
         self.data_extra = []  # must be defined even when not needed
         
