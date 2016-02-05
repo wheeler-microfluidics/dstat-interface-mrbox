@@ -77,6 +77,8 @@ class Main(object):
         self.message_context_id = self.statusbar.get_context_id("message")
         
         self.plotwindow = self.builder.get_object('plotbox')
+        self.ft_window = self.builder.get_object('ft_box')
+        self.period_window = self.builder.get_object('period_box')
         
         self.exp_window = exp_window.Experiments(self.builder)
         
@@ -86,6 +88,8 @@ class Main(object):
         self.autosavename = self.builder.get_object('autosavename')
         
         self.plot = plot.plotbox(self.plotwindow)
+        self.ft_plot = plot.ft_box(self.ft_window)
+        
         
         #fill adc_pot_box
         self.adc_pot_box = self.builder.get_object('gain_adc_box')
@@ -363,6 +367,8 @@ class Main(object):
             """ Starts experiment """
             self.plot.clearall()
             self.plot.changetype(self.current_exp)
+            self.ft_plot.clearall()
+            self.ft_plot.changetype(self.current_exp)
 
             comm.serial_instance.proc_pipe_p.send(self.current_exp)
             
@@ -404,6 +410,16 @@ class Main(object):
         
         parameters['adc_rate'] = srate_model.get_value(
                self.adc_pot.srate_combobox.get_active_iter(), 2)  # third column
+        
+        srate = srate_model.get_value(
+               self.adc_pot.srate_combobox.get_active_iter(), 1)   
+        
+        if srate.endswith("kHz"):
+            sample_rate = float(srate.rstrip(" kHz"))*1000
+        else:
+            sample_rate = float(srate.rstrip(" Hz"))
+        
+        parameters['adc_rate_hz'] = sample_rate
         parameters['adc_pga'] = pga_model.get_value(
                                  self.adc_pot.pga_combobox.get_active_iter(), 2)
                                  
@@ -638,6 +654,11 @@ class Main(object):
                 if (parameters['time'] > 65535):
                     raise InputError(parameters['clean_s'],
                                      "Time must fit in 16-bit counter.")
+                if (parameters['sync'] and parameters['shutter']):
+                    if (parameters['sync_freq'] > 30 or
+                        parameters['sync_freq'] <= 0):
+                        raise InputError(parameters['sync_freq'],
+                                        "Frequency must be between 0 and 30 Hz.")
                 
                 
                 self.current_exp = comm.PDExp(parameters)
@@ -713,10 +734,10 @@ class Main(object):
         try:
             if comm.serial_instance.data_pipe_p.poll(): 
                 incoming = comm.serial_instance.data_pipe_p.recv()
-                if isinstance(incoming, basestring): # Test if incoming is str
-                    self.experiment_done()
-                    self.on_serial_disconnect_clicked()
-                    return False
+                # if isinstance(incoming, basestring): # Test if incoming is str
+                #     self.experiment_done()
+                #     self.on_serial_disconnect_clicked()
+                #     return False
                 
                 self.line, data = incoming
                 if self.line > self.lastdataline:
@@ -729,6 +750,8 @@ class Main(object):
                     if len(data) > 2:
                         self.current_exp.data_extra[2*self.line+i].append(
                                                                     data[i+2])
+                if comm.serial_instance.data_pipe_p.poll():
+                    self.experiment_running_data()
                 return True
             
             return True
@@ -799,6 +822,10 @@ class Main(object):
         gobject.source_remove(self.experiment_proc[0])
         gobject.source_remove(self.plot_proc)  # stop automatic plot update
         self.experiment_running_plot()  # make sure all data updated on plot
+        
+        if self.current_exp.parameters['sync']:
+            self.ft_plot.updateline(self.current_exp, 0) 
+            self.ft_plot.redraw()
 
         self.databuffer.set_text("")
         self.databuffer.place_cursor(self.databuffer.get_start_iter())
