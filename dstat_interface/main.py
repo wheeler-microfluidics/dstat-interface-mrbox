@@ -43,6 +43,7 @@ except ImportError:
 
 os.chdir(os.path.dirname(os.path.abspath(sys.argv[0])))
 
+from version import getVersion
 import interface.save as save
 import dstat_comm as comm
 import interface.exp_window as exp_window
@@ -118,7 +119,12 @@ class Main(object):
         self.spinner = self.builder.get_object('spinner')
 
         self.mainwindow = self.builder.get_object('window1')
-        self.mainwindow.set_title("DStat Interface 1.0.3")
+        
+        # Set Version Strings
+        ver = getVersion()
+        self.mainwindow.set_title(" ".join(("DStat Interface", ver)))
+        self.aboutdialog.set_version(ver)
+        
         self.mainwindow.show_all()
         
         self.on_expcombobox_changed()
