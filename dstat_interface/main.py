@@ -63,7 +63,7 @@ class Main(object):
         self.builder.connect_signals(self)
         self.cell = gtk.CellRendererText()
 
-        #create instance of interface components
+        # Create instance of interface components
         self.statusbar = self.builder.get_object('statusbar')
         self.ocp_disp = self.builder.get_object('ocp_disp')
         self.window = self.builder.get_object('window1')
@@ -83,14 +83,16 @@ class Main(object):
         
         self.exp_window = exp_window.Experiments(self.builder)
         
-        #setup autosave
+        # Setup Autosave
         self.autosave_checkbox = self.builder.get_object('autosave_checkbutton')
         self.autosavedir_button = self.builder.get_object('autosavedir_button')
         self.autosavename = self.builder.get_object('autosavename')
         
+        # Setup Plots
+        self.plot_notebook = self.builder.get_object('plot_notebook')
+        
         self.plot = plot.plotbox(self.plotwindow)
         self.ft_plot = plot.ft_box(self.ft_window)
-        
         
         #fill adc_pot_box
         self.adc_pot_box = self.builder.get_object('gain_adc_box')
@@ -139,6 +141,11 @@ class Main(object):
                                                       'menu_dropbot_disconnect')
         self.dropbot_enabled = False
         self.dropbot_triggered = False
+        
+        self.plot_notebook.get_nth_page(
+                        self.plot_notebook.page_num(self.ft_window)).hide()
+        self.plot_notebook.get_nth_page(
+                        self.plot_notebook.page_num(self.period_window)).hide()
 
     def on_window1_destroy(self, object, data=None):
         """ Quit when main window closed."""
@@ -368,9 +375,20 @@ class Main(object):
             """ Starts experiment """
             self.plot.clearall()
             self.plot.changetype(self.current_exp)
+            
+            nb = self.plot_notebook
+            
             if (parameters['sync'] and parameters['shutter']):
+                nb.get_nth_page(
+                    nb.page_num(self.ft_window)).show()
+                # nb.get_nth_page(
+                #     nb.page_num(self.period_window)).show()
                 self.ft_plot.clearall()
                 self.ft_plot.changetype(self.current_exp)
+            else:
+                nb.get_nth_page(nb.page_num(self.ft_window)).hide()
+                # nb.get_nth_page(nb.page_num(self.period_window)).hide()
+
 
             comm.serial_instance.proc_pipe_p.send(self.current_exp)
             
