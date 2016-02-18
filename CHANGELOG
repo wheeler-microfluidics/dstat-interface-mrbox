@@ -13,3 +13,7 @@ Version 1.0.2a
 Version 1.0.3
     -Fixed #14: Added support for PMT idle mode
     -Reduced CPU usage when running OCP by reducing polling frequency
+
+Version 1.0.4
+    -Adds support for synchronous electromechanical shutter detection (added in dstat/dstat-firmware@29d4c86)
+    -New version string system

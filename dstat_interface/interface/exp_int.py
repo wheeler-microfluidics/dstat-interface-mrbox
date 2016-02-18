@@ -209,8 +209,15 @@ class PD(ExpInterface):
         self.entry['voltage'] = self.builder.get_object('voltage_adjustment')
         self.entry['time'] = self.builder.get_object('time_entry')
         self.entry['interlock'] = self.builder.get_object('interlock_button')
+        self.entry['shutter'] = self.builder.get_object('shutter_button')
+        self.entry['sync'] = self.builder.get_object('sync_button')
+        self.entry['sync_freq'] = self.builder.get_object('sync_freq')
         
-        self.buttons = map(self.builder.get_object, ['light_button', 'threshold_button'])
+        self.buttons = map(self.builder.get_object,
+                           ['light_button', 'threshold_button'])
+                           
+        self.shutter_buttons = map(self.builder.get_object,
+                                   ['sync_button', 'sync_freq'])
         
     def on_light_button_clicked(self, data=None):
         __main__.MAIN.on_pot_stop_clicked()
@@ -236,6 +243,7 @@ class PD(ExpInterface):
     def on_threshold_button_clicked(self, data=None):
         __main__.MAIN.on_pot_stop_clicked()
         __main__.MAIN.stop_ocp()
+        
         for i in self.buttons:
             i.set_sensitive(False)
             
@@ -250,6 +258,14 @@ class PD(ExpInterface):
         
         finally:
             gobject.timeout_add(700, restore_buttons, self.buttons)
+            
+    def on_shutter_button_toggled(self, widget):
+        if self.entry['shutter'].get_active():
+            for i in self.shutter_buttons:
+                i.set_sensitive(True)
+        else:
+            for i in self.shutter_buttons:
+                i.set_sensitive(False)
                 
     def get_params(self):
         """Returns a dict of parameters for experiment."""
@@ -257,6 +273,9 @@ class PD(ExpInterface):
         parameters['voltage'] = int(self.entry['voltage'].get_value())
         parameters['time'] = int(self.entry['time'].get_text())
         parameters['interlock'] = self.entry['interlock'].get_active()
+        parameters['shutter'] = self.entry['shutter'].get_active()
+        parameters['sync'] = self.entry['sync'].get_active()
+        parameters['sync_freq'] = float(self.entry['sync_freq'].get_text())
             
         return parameters
         

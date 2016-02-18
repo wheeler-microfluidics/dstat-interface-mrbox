@@ -20,9 +20,11 @@
 
 """ GUI Interface for Wheeler Lab DStat """
 
-import sys,os
-from errors import InputError, VarError, ErrorLogger
-_logger = ErrorLogger(sender="dstat-interface-main")
+import sys
+import os
+import multiprocessing
+import time
+from datetime import datetime
 
 try:
     import pygtk
@@ -40,19 +42,21 @@ try:
 except ImportError:
     _logger.error('gobject not available', 'ERR')
     sys.exit(1)
+from serial import SerialException
 
 os.chdir(os.path.dirname(os.path.abspath(sys.argv[0])))
 
+from version import getVersion
 import interface.save as save
 import dstat_comm as comm
 import interface.exp_window as exp_window
 import interface.adc_pot as adc_pot
 import plot
 import microdrop
+from errors import InputError, VarError, ErrorLogger
+_logger = ErrorLogger(sender="dstat-interface-main")
 
-from serial import SerialException
-import multiprocessing
-import time
+from datetime import datetime
 
 class Main(object):
     """Main program """
@@ -62,7 +66,7 @@ class Main(object):
         self.builder.connect_signals(self)
         self.cell = gtk.CellRendererText()
 
-        #create instance of interface components
+        # Create instance of interface components
         self.statusbar = self.builder.get_object('statusbar')
         self.ocp_disp = self.builder.get_object('ocp_disp')
         self.window = self.builder.get_object('window1')
@@ -77,15 +81,21 @@ class Main(object):
         self.message_context_id = self.statusbar.get_context_id("message")
         
         self.plotwindow = self.builder.get_object('plotbox')
+        self.ft_window = self.builder.get_object('ft_box')
+        self.period_window = self.builder.get_object('period_box')
         
         self.exp_window = exp_window.Experiments(self.builder)
         
-        #setup autosave
+        # Setup Autosave
         self.autosave_checkbox = self.builder.get_object('autosave_checkbutton')
         self.autosavedir_button = self.builder.get_object('autosavedir_button')
         self.autosavename = self.builder.get_object('autosavename')
         
+        # Setup Plots
+        self.plot_notebook = self.builder.get_object('plot_notebook')
+        
         self.plot = plot.plotbox(self.plotwindow)
+        self.ft_plot = plot.ft_box(self.ft_window)
         
         #fill adc_pot_box
         self.adc_pot_box = self.builder.get_object('gain_adc_box')
@@ -118,7 +128,12 @@ class Main(object):
         self.spinner = self.builder.get_object('spinner')
 
         self.mainwindow = self.builder.get_object('window1')
-        self.mainwindow.set_title("DStat Interface 1.0.3")
+        
+        # Set Version Strings
+        ver = getVersion()
+        self.mainwindow.set_title(" ".join(("DStat Interface", ver)))
+        self.aboutdialog.set_version(ver)
+        
         self.mainwindow.show_all()
         
         self.on_expcombobox_changed()
@@ -134,6 +149,11 @@ class Main(object):
                                                       'menu_dropbot_disconnect')
         self.dropbot_enabled = False
         self.dropbot_triggered = False
+        
+        self.plot_notebook.get_nth_page(
+                        self.plot_notebook.page_num(self.ft_window)).hide()
+        self.plot_notebook.get_nth_page(
+                        self.plot_notebook.page_num(self.period_window)).hide()
 
     def on_window1_destroy(self, object, data=None):
         """ Quit when main window closed."""
@@ -363,6 +383,20 @@ class Main(object):
             """ Starts experiment """
             self.plot.clearall()
             self.plot.changetype(self.current_exp)
+            
+            nb = self.plot_notebook
+            
+            if (parameters['sync'] and parameters['shutter']):
+                nb.get_nth_page(
+                    nb.page_num(self.ft_window)).show()
+                # nb.get_nth_page(
+                #     nb.page_num(self.period_window)).show()
+                self.ft_plot.clearall()
+                self.ft_plot.changetype(self.current_exp)
+            else:
+                nb.get_nth_page(nb.page_num(self.ft_window)).hide()
+                # nb.get_nth_page(nb.page_num(self.period_window)).hide()
+
 
             comm.serial_instance.proc_pipe_p.send(self.current_exp)
             
@@ -384,9 +418,14 @@ class Main(object):
         while comm.serial_instance.data_pipe_p.poll(): # Clear data pipe
             comm.serial_instance.data_pipe_p.recv()
         
+        
         selection = self.expcombobox.get_active()
         parameters = {}
         parameters['version'] = self.version
+        
+        # Make sure these are defined
+        parameters['sync'] = False
+        parameters['shutter'] = False
         
         if self.adc_pot.buffer_toggle.get_active(): # True if box checked
             parameters['adc_buffer'] = "2"
@@ -404,6 +443,16 @@ class Main(object):
         
         parameters['adc_rate'] = srate_model.get_value(
                self.adc_pot.srate_combobox.get_active_iter(), 2)  # third column
+        
+        srate = srate_model.get_value(
+               self.adc_pot.srate_combobox.get_active_iter(), 1)   
+        
+        if srate.endswith("kHz"):
+            sample_rate = float(srate.rstrip(" kHz"))*1000
+        else:
+            sample_rate = float(srate.rstrip(" Hz"))
+        
+        parameters['adc_rate_hz'] = sample_rate
         parameters['adc_pga'] = pga_model.get_value(
                                  self.adc_pot.pga_combobox.get_active_iter(), 2)
                                  
@@ -638,6 +687,11 @@ class Main(object):
                 if (parameters['time'] > 65535):
                     raise InputError(parameters['clean_s'],
                                      "Time must fit in 16-bit counter.")
+                if (parameters['sync'] and parameters['shutter']):
+                    if (parameters['sync_freq'] > 30 or
+                        parameters['sync_freq'] <= 0):
+                        raise InputError(parameters['sync_freq'],
+                                        "Frequency must be between 0 and 30 Hz.")
                 
                 
                 self.current_exp = comm.PDExp(parameters)
@@ -713,10 +767,10 @@ class Main(object):
         try:
             if comm.serial_instance.data_pipe_p.poll(): 
                 incoming = comm.serial_instance.data_pipe_p.recv()
-                if isinstance(incoming, basestring): # Test if incoming is str
-                    self.experiment_done()
-                    self.on_serial_disconnect_clicked()
-                    return False
+                # if isinstance(incoming, basestring): # Test if incoming is str
+                #     self.experiment_done()
+                #     self.on_serial_disconnect_clicked()
+                #     return False
                 
                 self.line, data = incoming
                 if self.line > self.lastdataline:
@@ -729,6 +783,8 @@ class Main(object):
                     if len(data) > 2:
                         self.current_exp.data_extra[2*self.line+i].append(
                                                                     data[i+2])
+                if comm.serial_instance.data_pipe_p.poll():
+                    self.experiment_running_data()
                 return True
             
             return True
@@ -796,9 +852,15 @@ class Main(object):
         """Clean up after data acquisition is complete. Update plot and
         copy data to raw data tab. Saves data if autosave enabled.
         """
+        self.current_exp.time = datetime.now()
         gobject.source_remove(self.experiment_proc[0])
         gobject.source_remove(self.plot_proc)  # stop automatic plot update
         self.experiment_running_plot()  # make sure all data updated on plot
+        
+        if (self.current_exp.parameters['shutter'] and
+            self.current_exp.parameters['sync']):
+            self.ft_plot.updateline(self.current_exp, 0) 
+            self.ft_plot.redraw()
 
         self.databuffer.set_text("")
         self.databuffer.place_cursor(self.databuffer.get_start_iter())
@@ -825,7 +887,13 @@ class Main(object):
         if self.autosave_checkbox.get_active():
             save.autoSave(self.current_exp, self.autosavedir_button,
                           self.autosavename.get_text(), self.expnumber)
-            save.autoPlot(self.plot, self.autosavedir_button,
+            plots = {'data':self.plot}
+            
+            if (self.current_exp.parameters['shutter'] and
+                self.current_exp.parameters['sync']):
+                plots['ft'] = self.ft_plot
+            
+            save.autoPlot(plots, self.autosavedir_button,
                           self.autosavename.get_text(), self.expnumber)
             self.expnumber += 1
         
@@ -858,7 +926,13 @@ class Main(object):
     
     def on_file_save_plot_activate(self, menuitem, data=None):
         """Activate dialogue to save current plot."""
-        save.plotSave(self.plot)
+        plots = {'data':self.plot}
+        
+        if (self.current_exp.parameters['shutter'] and
+            self.current_exp.parameters['sync']):
+            plots['ft'] = self.ft_plot
+        
+        save.plotSave(plots)
     
     def on_menu_dropbot_connect_activate(self, menuitem, data=None):
         """Listen for remote control connection from µDrop."""

@@ -20,10 +20,11 @@
 
 import gtk, io, os
 import numpy as np
-from datetime import datetime
+
+from errors import InputError, VarError, ErrorLogger
+_logger = ErrorLogger(sender="dstat-interface-save")
 
 def manSave(current_exp):
-    exp = current_exp
     fcd = gtk.FileChooserDialog("Save...", None, gtk.FILE_CHOOSER_ACTION_SAVE,
                                 (gtk.STOCK_CANCEL, gtk.RESPONSE_CANCEL,
                                  gtk.STOCK_SAVE, gtk.RESPONSE_OK))
@@ -43,19 +44,27 @@ def manSave(current_exp):
     
     if response == gtk.RESPONSE_OK:
         path = fcd.get_filename()
-        print "Selected filepath: %s" % path
+        logger.error(" ".join(("Selected filepath:", path)),'INFO')
         filter_selection = fcd.get_filter().get_name()
         
         if filter_selection.endswith("(.npy)"):
-            npy(exp, path)
+            if (current_exp.parameters['shutter'] and current_exp.parameters['sync']):
+                npy(current_exp, current_exp.data, "-".join((path,'data')))
+                npy(current_exp, current_exp.ftdata, "-".join((path,'ft')))
+            else:
+                npy(current_exp, current_exp.data, path, auto=True)
         elif filter_selection.endswith("(.txt)"):
-            text(exp, path)
+            if (current_exp.parameters['shutter'] and current_exp.parameters['sync']):
+                text(current_exp, current_exp.data, "-".join((path,'data')))
+                text(current_exp, current_exp.ftdata, "-".join((path,'ft')))
+            else:
+                text(current_exp, current_exp.data, path, auto=True)
         fcd.destroy()
         
     elif response == gtk.RESPONSE_CANCEL:
         fcd.destroy()
 
-def plotSave(plot):
+def plotSave(plots):
     fcd = gtk.FileChooserDialog("Save Plot…", None,
                                 gtk.FILE_CHOOSER_ACTION_SAVE,
                                 (gtk.STOCK_CANCEL, gtk.RESPONSE_CANCEL,
@@ -76,18 +85,22 @@ def plotSave(plot):
     
     if response == gtk.RESPONSE_OK:
         path = fcd.get_filename()
-        print "Selected filepath: %s" % path
+        logger.error(" ".join(("Selected filepath:", path)),'INFO')
         filter_selection = fcd.get_filter().get_name()
         
-        if filter_selection.endswith("(.pdf)"):
-            if not path.endswith(".pdf"):
-                path += ".pdf"
+        for i in plots:
+            path += '-'
+            path += i
         
-        elif filter_selection.endswith("(.png)"):
-            if not path.endswith(".png"):
-                path += ".png"
-
-        plot.figure.savefig(path)  # determines format from file extension
+            if filter_selection.endswith("(.pdf)"):
+                if not path.endswith(".pdf"):
+                    path += ".pdf"
+            
+            elif filter_selection.endswith("(.png)"):
+                if not path.endswith(".png"):
+                    path += ".png"
+    
+            plots[i].figure.savefig(path)  # determines format from file extension
         fcd.destroy()
     
     elif response == gtk.RESPONSE_CANCEL:
@@ -99,38 +112,44 @@ def autoSave(current_exp, dir_button, name, expnumber):
     path = dir_button.get_filename()
     path += '/'
     path += name
-    path += str(expnumber)
-
-    text(current_exp, path, auto=True)
-
-def autoPlot(plot, dir_button, name, expnumber):
-    if name == "":
-        name = "file"
-    
-    path = dir_button.get_filename()
-    path += '/'
-    path += name
+    path += '-'
     path += str(expnumber)
     
-    if path.endswith(".pdf"):
-        path = path.rstrip(".pdf")
+    if (current_exp.parameters['shutter'] and current_exp.parameters['sync']):
+        text(current_exp, current_exp.data, "-".join((path,'data')), auto=True)
+        text(current_exp, current_exp.ftdata, "-".join((path,'ft')), auto=True)
+    else:
+        text(current_exp, current_exp.data, path, auto=True)
 
-    j = 1
-    while os.path.exists("".join([path, ".pdf"])):
-        if j > 1:
-            path = path[:-len(str(j))]
-        path += str(j)
-        j += 1
+def autoPlot(plots, dir_button, name, expnumber):
+    for i in plots:
+        if name == "":
+            name = "file"
+        
+        path = dir_button.get_filename()
+        path += '/'
+        path += name
+        path += '-'
+        path += str(expnumber)
+        path += '-'
+        path += i
+        
+        if path.endswith(".pdf"):
+            path = path.rstrip(".pdf")
+    
+        j = 1
+        while os.path.exists("".join([path, ".pdf"])):
+            if j > 1:
+                path = path[:-len(str(j))]
+            path += str(j)
+            j += 1
+    
+        path += ".pdf"
+        plots[i].figure.savefig(path)
 
-    path += ".pdf"
-    plot.figure.savefig(path)
-
-
-def npy(exp, path, auto=False):
+def npy(exp, data, path, auto=False):
     if path.endswith(".npy"):
         path = path.rstrip(".npy")
-
-    data = np.array(exp.data)
 
     if auto == True:
         j = 1
@@ -142,7 +161,7 @@ def npy(exp, path, auto=False):
 
     np.save(path, data)
 
-def text(exp, path, auto=False):
+def text(exp, data, path, auto=False):
     if path.endswith(".txt"):
         path = path.rstrip(".txt")
     
@@ -158,19 +177,16 @@ def text(exp, path, auto=False):
     path += ".txt"
     file = open(path, 'w')
     
-    time = datetime.now()
+    time = exp.time
 
-    data = np.array(exp.data)
     header = "".join(['#', time.isoformat(), "\n#"])
     for i in exp.commands:
         header += i
 
     file.write("".join([header, '\n']))
-    for col in zip(*exp.data):
+    for col in zip(*data):
         for row in col:
             file.write(str(row)+ "    ")
         file.write('\n')
     
     file.close()
-
-
