@@ -410,9 +410,14 @@ class Main(object):
         while comm.serial_instance.data_pipe_p.poll(): # Clear data pipe
             comm.serial_instance.data_pipe_p.recv()
         
+        
         selection = self.expcombobox.get_active()
         parameters = {}
         parameters['version'] = self.version
+        
+        # Make sure these are defined
+        parameters['sync'] = False
+        parameters['shutter'] = False
         
         if self.adc_pot.buffer_toggle.get_active(): # True if box checked
             parameters['adc_buffer'] = "2"
