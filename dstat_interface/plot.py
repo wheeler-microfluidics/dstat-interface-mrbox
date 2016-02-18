@@ -31,6 +31,27 @@ from matplotlib.backends.backend_gtkagg \
     import FigureCanvasGTKAgg as FigureCanvas
 from matplotlib.backends.backend_gtkagg \
     import NavigationToolbar2GTKAgg as NavigationToolbar
+    
+from numpy import sin, linspace, pi, mean
+from scipy import fft, arange
+from scipy.signal import blackman
+
+def plotSpectrum(y,Fs):
+    """
+    Plots a Single-Sided Amplitude Spectrum of y(t)
+    """
+    y = y-mean(y)
+    n = len(y) # length of the signal
+    k = arange(n)
+    T = n/Fs
+    frq = k/T # two sides frequency range
+    frq = frq[range(n/2)] # one side frequency range
+    W = blackman(n)
+    Y = fft(y*W)/n # fft computing and normalization
+    Y = abs(Y[range(n/2)])
+    
+    
+    return (frq, Y)
 
 class plotbox(object):
     """Contains main data plot and associated methods."""
@@ -104,4 +125,22 @@ class plotbox(object):
         self.figure.canvas.draw()
 
         return True
+
+class ft_box(plotbox):
+    def updateline(self, Experiment, line_number):
+        x, y = plotSpectrum(Experiment.data[1+line_number*2], Experiment.parameters['adc_rate_hz'])
+        self.lines[line_number].set_ydata(y)
+        self.lines[line_number].set_xdata(x)
+        Experiment.ftdata = (x, y)
+        
+    def changetype(self, Experiment):
+        """Change plot type. Set axis labels and x bounds to those stored
+        in the Experiment instance.
+        """
+        self.axe1.set_xlabel("Freq (Hz)")
+        self.axe1.set_ylabel("|Y| (A/Hz)")
+        self.axe1.set_xlim(0, Experiment.parameters['adc_rate_hz']/2)
+
+        self.figure.canvas.draw()
+                                
         

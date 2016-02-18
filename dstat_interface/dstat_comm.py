@@ -344,6 +344,7 @@ class Experiment(object):
         self.parameters = parameters
         self.databytes = 8
         self.scan = 0
+        self.time = 0
 
         self.data_extra = []  # must be defined even when not needed
         
@@ -608,24 +609,35 @@ class PDExp(Chronoamp):
         self.xmin = 0
         self.xmax = self.parameters['time']
         
-        self.commands += "E"
-        self.commands[2] += "R"
-        self.commands[2] += "1"
-        self.commands[2] += " "
+        if self.parameters['shutter']:
+            if self.parameters['sync']:
+                self.commands.append("EZ")
+                self.commands[-1] += str(self.parameters['sync_freq'])
+                self.commands[-1] += " "
+            else:
+                self.commands.append("E2")        
+        
+        self.commands.append("ER1 ")
         
         if self.parameters['voltage'] == 0: # Special case where V=0
-            self.commands[2] += "65535"
+            self.commands[-1] += "65535"
         else:
-            self.commands[2] += str(int(
+            self.commands[-1] += str(int(
                             65535-(self.parameters['voltage']*(65536./3000))))
-        self.commands[2] += " "
-        self.commands[2] += str(self.parameters['time'])
-        self.commands[2] += " "
+        self.commands[-1] += " "
+        self.commands[-1] += str(self.parameters['time'])
+        self.commands[-1] += " "
         if self.parameters['interlock']:
-            self.commands[2] += "1"
+            self.commands[-1] += "1"
         else:
-            self.commands[2] += "0"
-        self.commands[2] += " "
+            self.commands[-1] += "0"
+        self.commands[-1] += " "
+
+        if self.parameters['shutter']:
+            if self.parameters['sync']:
+                self.commands.append("Ez")
+            else:
+                self.commands.append("E1")
 
 class PotExp(Experiment):
     """Potentiometry experiment"""
