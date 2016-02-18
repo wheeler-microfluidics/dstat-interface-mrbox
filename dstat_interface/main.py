@@ -20,9 +20,11 @@
 
 """ GUI Interface for Wheeler Lab DStat """
 
-import sys,os
-from errors import InputError, VarError, ErrorLogger
-_logger = ErrorLogger(sender="dstat-interface-main")
+import sys
+import os
+import multiprocessing
+import time
+from datetime import datetime
 
 try:
     import pygtk
@@ -40,6 +42,7 @@ try:
 except ImportError:
     _logger.error('gobject not available', 'ERR')
     sys.exit(1)
+from serial import SerialException
 
 os.chdir(os.path.dirname(os.path.abspath(sys.argv[0])))
 
@@ -50,10 +53,9 @@ import interface.exp_window as exp_window
 import interface.adc_pot as adc_pot
 import plot
 import microdrop
+from errors import InputError, VarError, ErrorLogger
+_logger = ErrorLogger(sender="dstat-interface-main")
 
-from serial import SerialException
-import multiprocessing
-import time
 
 class Main(object):
     """Main program """
