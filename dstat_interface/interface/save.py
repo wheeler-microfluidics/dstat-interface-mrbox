@@ -44,7 +44,7 @@ def manSave(current_exp):
     
     if response == gtk.RESPONSE_OK:
         path = fcd.get_filename()
-        logger.error(" ".join(("Selected filepath:", path)),'INFO')
+        _logger.error(" ".join(("Selected filepath:", path)),'INFO')
         filter_selection = fcd.get_filter().get_name()
         
         if filter_selection.endswith("(.npy)"):
@@ -85,7 +85,7 @@ def plotSave(plots):
     
     if response == gtk.RESPONSE_OK:
         path = fcd.get_filename()
-        logger.error(" ".join(("Selected filepath:", path)),'INFO')
+        _logger.error(" ".join(("Selected filepath:", path)),'INFO')
         filter_selection = fcd.get_filter().get_name()
         
         for i in plots:
