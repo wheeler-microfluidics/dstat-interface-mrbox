@@ -17,3 +17,6 @@ Version 1.0.3
 Version 1.0.4
     -Adds support for synchronous electromechanical shutter detection (added in dstat/dstat-firmware@29d4c86)
     -New version string system
+
+Version 1.0.5
+    -Bugfix for saving error introduced by new logging system
