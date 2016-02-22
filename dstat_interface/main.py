@@ -694,6 +694,11 @@ class Main(object):
                         parameters['fft_start'] > parameters['time']-1):
                         raise InputError(parameters['fft_start'],
                                         "FFT must start between 0 and time-1.")
+                    if parameters['fft_int'] < 0:
+                        raise InputError(
+                            parameters['fft_int'],
+                            "Integral bandwidth must be greater than 0"
+                        )
                 
                 self.current_exp = comm.PDExp(parameters)
                 run_experiment()
@@ -863,6 +868,11 @@ class Main(object):
             self.ft_plot.updateline(self.current_exp, 0) 
             self.ft_plot.redraw()
             self.current_exp.data_extra = self.current_exp.ftdata
+            self.statusbar.push(
+                self.message_context_id, " ".join(
+                    ("Integral:",str(self.current_exp.ft_int))
+                    )
+                )
 
         self.databuffer.set_text("")
         self.databuffer.place_cursor(self.databuffer.get_start_iter())

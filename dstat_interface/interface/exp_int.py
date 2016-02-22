@@ -213,13 +213,15 @@ class PD(ExpInterface):
         self.entry['sync'] = self.builder.get_object('sync_button')
         self.entry['sync_freq'] = self.builder.get_object('sync_freq')
         self.entry['fft_start'] = self.builder.get_object('fft_entry')
+        self.entry['fft_int'] = self.builder.get_object('fft_int_entry')
         
         self.buttons = map(self.builder.get_object,
                            ['light_button', 'threshold_button'])
                            
         self.shutter_buttons = map(
             self.builder.get_object,
-            ['sync_button', 'sync_freq', 'fft_label', 'fft_entry']
+            ['sync_button', 'sync_freq', 'fft_label', 'fft_entry', 'fft_label2',
+                'fft_int_entry']
             )
         
     def on_light_button_clicked(self, data=None):
@@ -280,6 +282,7 @@ class PD(ExpInterface):
         parameters['sync'] = self.entry['sync'].get_active()
         parameters['sync_freq'] = float(self.entry['sync_freq'].get_text())
         parameters['fft_start'] = float(self.entry['fft_start'].get_text())
+        parameters['fft_int'] = float(self.entry['fft_int'].get_text())
             
         return parameters
         

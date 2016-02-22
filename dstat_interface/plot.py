@@ -32,14 +32,14 @@ from matplotlib.backends.backend_gtkagg \
 from matplotlib.backends.backend_gtkagg \
     import NavigationToolbar2GTKAgg as NavigationToolbar
     
-from numpy import sin, linspace, pi, mean
+from numpy import sin, linspace, pi, mean, trapz
 from scipy import fft, arange
 from scipy.signal import blackman
 
 def plotSpectrum(y,Fs):
     """
     Plots a Single-Sided Amplitude Spectrum of y(t)
-    """
+    """    
     y = y-mean(y)
     n = len(y) # length of the signal
     k = arange(n)
@@ -50,9 +50,28 @@ def plotSpectrum(y,Fs):
     Y = fft(y*W)/n # fft computing and normalization
     Y = abs(Y[range(n/2)])
     
-    
     return (frq, Y)
 
+def integrateSpectrum(x, y, target, bandwidth):
+    """
+    Returns integral of range of bandwidth centered on target (both in Hz).
+    """
+    j = 0
+    k = len(x)
+    
+    for i in range(len(x)):
+        if x[i] >= target-bandwidth/2:
+            j = i
+            break
+            
+    for i in range(j,len(x)):
+        if x[i] >= target+bandwidth/2:
+            k = i
+            break
+        
+    return trapz(y=y[j:k], x=x[j:k])
+    
+    
 class plotbox(object):
     """Contains main data plot and associated methods."""
     def __init__(self, plotwindow_instance):
@@ -137,9 +156,14 @@ class ft_box(plotbox):
         x = Experiment.data[line_number*2]
         freq = Experiment.parameters['adc_rate_hz']
         i = search_value(x, Experiment.parameters['fft_start'])
-        print i
         
         f, Y = plotSpectrum(y[i:],freq)
+        Experiment.ft_int = integrateSpectrum(
+                                f,
+                                Y,
+                                Experiment.parameters['sync_freq'],
+                                Experiment.parameters['fft_int']
+                                )
         self.lines[line_number].set_ydata(Y)
         self.lines[line_number].set_xdata(f)
         Experiment.ftdata = (f, Y)
