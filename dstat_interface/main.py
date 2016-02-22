@@ -623,7 +623,6 @@ class Main(object):
                 if parameters['start'] == parameters['stop']:
                     raise InputError(parameters['start'],
                                      "Start cannot equal Stop.")
-                    
                 
                 self.current_exp = comm.SWVExp(parameters)
                 run_experiment()
@@ -672,7 +671,6 @@ class Main(object):
                     raise InputError(parameters['start'],
                                      "Start cannot equal Stop.")
                 
-                
                 self.current_exp = comm.DPVExp(parameters)
                 run_experiment()
                 
@@ -692,7 +690,10 @@ class Main(object):
                         parameters['sync_freq'] <= 0):
                         raise InputError(parameters['sync_freq'],
                                         "Frequency must be between 0 and 30 Hz.")
-                
+                    if (parameters['fft_start'] < 0 or
+                        parameters['fft_start'] > parameters['time']-1):
+                        raise InputError(parameters['fft_start'],
+                                        "FFT must start between 0 and time-1.")
                 
                 self.current_exp = comm.PDExp(parameters)
                 run_experiment()
@@ -861,6 +862,7 @@ class Main(object):
             self.current_exp.parameters['sync']):
             self.ft_plot.updateline(self.current_exp, 0) 
             self.ft_plot.redraw()
+            self.current_exp.data_extra = self.current_exp.ftdata
 
         self.databuffer.set_text("")
         self.databuffer.place_cursor(self.databuffer.get_start_iter())

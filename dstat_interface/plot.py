@@ -128,10 +128,21 @@ class plotbox(object):
 
 class ft_box(plotbox):
     def updateline(self, Experiment, line_number):
-        x, y = plotSpectrum(Experiment.data[1+line_number*2], Experiment.parameters['adc_rate_hz'])
-        self.lines[line_number].set_ydata(y)
-        self.lines[line_number].set_xdata(x)
-        Experiment.ftdata = (x, y)
+        def search_value(data, target):
+            for i in range(len(data)):
+                if data[i] > target:
+                    return i
+        
+        y = Experiment.data[1+line_number*2]
+        x = Experiment.data[line_number*2]
+        freq = Experiment.parameters['adc_rate_hz']
+        i = search_value(x, Experiment.parameters['fft_start'])
+        print i
+        
+        f, Y = plotSpectrum(y[i:],freq)
+        self.lines[line_number].set_ydata(Y)
+        self.lines[line_number].set_xdata(f)
+        Experiment.ftdata = (f, Y)
         
     def changetype(self, Experiment):
         """Change plot type. Set axis labels and x bounds to those stored
