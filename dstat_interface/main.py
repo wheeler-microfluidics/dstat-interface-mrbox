@@ -870,7 +870,7 @@ class Main(object):
             self.current_exp.data_extra = self.current_exp.ftdata
             self.statusbar.push(
                 self.message_context_id, " ".join(
-                    ("Integral:",str(self.current_exp.ft_int))
+                    ("Integral:", str(self.current_exp.ft_int), " A")
                     )
                 )
 

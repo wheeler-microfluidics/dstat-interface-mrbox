@@ -182,6 +182,23 @@ def text(exp, data, path, auto=False):
     header = "".join(['#', time.isoformat(), "\n#"])
     for i in exp.commands:
         header += i
+    
+    try:
+        if exp.ft_int:
+            header += "\n"
+            header += "".join(
+                (
+                    "# FT Integral (",
+                    str(exp.parameters['sync_freq']),
+                    "±",
+                    str(exp.parameters['fft_int']/2),
+                    " Hz): ",
+                    str(exp.ft_int),
+                    " A"
+                )
+            )
+    except AttributeError:
+        pass
 
     file.write("".join([header, '\n']))
     for col in zip(*data):
