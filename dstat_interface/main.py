@@ -30,17 +30,17 @@ try:
     import pygtk
     pygtk.require('2.0')
 except ImportError:
-    _logger.error('PyGTK 2.0 not available', 'ERR')
+    print "ERR: PyGTK 2.0 not available"
     sys.exit(1)
 try:
     import gtk
 except ImportError:
-    _logger.error('GTK not available', 'ERR')
+    print "ERR: GTK not available"
     sys.exit(1)
 try:
     import gobject
 except ImportError:
-    _logger.error('gobject not available', 'ERR')
+    print "ERR: gobject not available"
     sys.exit(1)
 from serial import SerialException
 
