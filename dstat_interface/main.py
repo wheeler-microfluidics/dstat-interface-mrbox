@@ -130,7 +130,11 @@ class Main(object):
         self.mainwindow = self.builder.get_object('window1')
         
         # Set Version Strings
-        ver = getVersion()
+        try:
+            ver = getVersion()
+        except ValueError:
+            ver = "1.x"
+            _logger.error("Could not fetch version number", "WAR")
         self.mainwindow.set_title(" ".join(("DStat Interface", ver)))
         self.aboutdialog.set_version(ver)
         
