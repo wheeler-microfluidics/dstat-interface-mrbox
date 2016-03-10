@@ -34,7 +34,6 @@ from matplotlib.backends.backend_gtkagg \
     
 from numpy import sin, linspace, pi, mean, trapz
 from scipy import fft, arange
-from scipy.signal import blackman
 
 def plotSpectrum(y,Fs):
     """
@@ -46,8 +45,7 @@ def plotSpectrum(y,Fs):
     T = n/Fs
     frq = k/T # two sides frequency range
     frq = frq[range(n/2)] # one side frequency range
-    W = blackman(n)
-    Y = fft(y*W)/n # fft computing and normalization
+    Y = fft(y)/n # fft computing and normalization
     Y = abs(Y[range(n/2)])
     
     return (frq, Y)
@@ -70,6 +68,22 @@ def integrateSpectrum(x, y, target, bandwidth):
             break
         
     return trapz(y=y[j:k], x=x[j:k])
+    
+def findBounds(y):
+    start_index = 0;
+    stop_index = len(y)-1;
+    
+    for i in range(len(y)):
+        if (y[i] <= mean(y) and y[i+1] > mean(y)):
+            start_index = i
+            break
+    
+    for i in range(len(y)):
+        if (y[-(i+1)] <= mean(y) and y[-i] > mean(y)):
+            stop_index = len(y)-1-i  # len(y) is last index + 1
+            break
+    
+    return (start_index, stop_index)
     
     
 class plotbox(object):
@@ -156,8 +170,13 @@ class ft_box(plotbox):
         x = Experiment.data[line_number*2]
         freq = Experiment.parameters['adc_rate_hz']
         i = search_value(x, Experiment.parameters['fft_start'])
-        
-        f, Y = plotSpectrum(y[i:],freq)
+        y1 = y[i:]
+        x1 = x[i:]
+        avg = mean(y1)
+        min_index, max_index = findBounds(y1)
+        y1[min_index] = avg
+        y1[max_index] = avg
+        f, Y = plotSpectrum(y1[min_index:max_index],freq)
         Experiment.ft_int = integrateSpectrum(
                                 f,
                                 Y,
