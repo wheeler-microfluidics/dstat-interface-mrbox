@@ -20,3 +20,11 @@ Version 1.0.4
 
 Version 1.0.5
     -Bugfix for saving error introduced by new logging system
+    
+Version 1.0.6
+    -Automatically integrates shutter FFT peak and saves to data file
+    -Adds option to offset start of FFT to avoid PMT startup delay
+    
+Version 1.0.7
+    -Fixed a few bugs for systems without git
+    -Implements mean crossing detection instead of windowing for shutter FFT
