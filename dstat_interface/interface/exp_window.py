@@ -61,4 +61,7 @@ class Experiments:
         return True
         
     def get_params(self, experiment):
-        return self.classes[experiment].get_params()
+        return self.classes[experiment].param_group.parameters
+    
+    def set_params(self, experiment, parameters):
+        self.classes[experiment].param_group.parameters = parameters

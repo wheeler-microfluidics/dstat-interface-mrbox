@@ -17,33 +17,35 @@
 #     You should have received a copy of the GNU General Public License
 #     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-import os, sys
+import os
+import sys
+
 import gtk
+import gobject
+
 import dstat_comm
 import __main__
-import gobject
 from errors import InputError, VarError, ErrorLogger
 _logger = ErrorLogger(sender="dstat-interface-exp_int")
+from parameters import ParametersGroup
 
 class ExpInterface(object):
     """Generic experiment interface class. Should be subclassed to implement
-    experiment interfaces by populating self.entry.
-    
-    Public methods:
-    get_params(self)
+    experiment interfaces by populating self.entry and calling _init_params().
     """
     def __init__(self, glade_path):
         self.builder = gtk.Builder()
         self.builder.add_from_file(glade_path)
         self.builder.connect_signals(self)
-        self.entry = {}
+        self.entry = {} # to be used only for str parameters
 
-    def get_params(self):
-        """Returns a dict of parameters for experiment."""
-        parameters = {}    
+    def _init_params(self, param_keys=[]):
+        """Initializes a dict of parameters for experiment.""" 
         for key, value in self.entry.iteritems():
-            parameters[key] = int(value.get_text())    
-        return parameters
+            param_keys.append((key, value.get_text, value.set_text))
+        
+        keys, getters, setters = zip(*param_keys)
+        self.param_group = ParametersGroup(keys, getters, setters)
         
 class Chronoamp(ExpInterface):
     """Experiment class for chronoamperometry. Extends ExpInterface class to
@@ -114,6 +116,18 @@ class Chronoamp(ExpInterface):
         parameters['time'] = [int(r[1]) for r in self.model]
         
         return parameters
+        
+    def set_params(self, parameters):
+        """Loads a dict of parameters for experiment. Overrides superclass
+        method.
+        """
+        
+        self.model.clear()
+        
+        table = zip(parameters['potential'], parameters['time'])
+        
+        for i in table:
+            self.model.append(i)
               
 class LSV(ExpInterface):
     """Experiment class for LSV."""
@@ -128,6 +142,8 @@ class LSV(ExpInterface):
         self.entry['start'] = self.builder.get_object('start_entry')
         self.entry['stop'] = self.builder.get_object('stop_entry')
         self.entry['slope'] = self.builder.get_object('slope_entry')
+        
+        self._init_params()
         
 class CV(ExpInterface):
     """Experiment class for CV."""
@@ -144,6 +160,8 @@ class CV(ExpInterface):
         self.entry['v2'] = self.builder.get_object('v2_entry')
         self.entry['slope'] = self.builder.get_object('slope_entry')
         self.entry['scans'] = self.builder.get_object('scans_entry')
+        
+        self._init_params()
 
 class SWV(ExpInterface):
     """Experiment class for SWV."""
@@ -162,14 +180,15 @@ class SWV(ExpInterface):
         self.entry['freq'] = self.builder.get_object('freq_entry')
         self.entry['scans'] = self.builder.get_object('scans_entry')
         
-    def get_params(self):
-        """Extends superclass method to pass status of cyclic_checkbutton"""
-        parameters = {}
-        parameters['cyclic_checkbutton'] = self.builder.get_object(
-                                              'cyclic_checkbutton').get_active()
-        parameters.update(super(SWV, self).get_params())
-        
-        return parameters
+        param_keys = [
+                      ('cyclic_checkbutton',
+                       self.builder.get_object(    
+                           'cyclic_checkbutton').get_active,
+                       self.builder.get_object(    
+                           'cyclic_checkbutton').set_active
+                       )
+                     ]
+        self._init_params(param_keys)
         
 class DPV(ExpInterface):
     """Experiment class for DPV."""
@@ -188,6 +207,8 @@ class DPV(ExpInterface):
         self.entry['period'] = self.builder.get_object('period_entry')
         self.entry['width'] = self.builder.get_object('width_entry')
         
+        self._init_params()
+        
 class ACV(ExpInterface):
     """Experiment class for ACV."""
     def __init__(self):
@@ -199,6 +220,8 @@ class ACV(ExpInterface):
         self.entry['slope'] = self.builder.get_object('slope_entry')
         self.entry['amplitude'] = self.builder.get_object('amplitude_entry')
         self.entry['freq'] = self.builder.get_object('freq_entry')
+        
+        self._init_params()
 
 class PD(ExpInterface):
     """Experiment class for PD."""
@@ -206,11 +229,7 @@ class PD(ExpInterface):
         """Adds entry listings to superclass's self.entry dict"""
         super(PD, self).__init__('interface/pd.glade')
         
-        self.entry['voltage'] = self.builder.get_object('voltage_adjustment')
         self.entry['time'] = self.builder.get_object('time_entry')
-        self.entry['interlock'] = self.builder.get_object('interlock_button')
-        self.entry['shutter'] = self.builder.get_object('shutter_button')
-        self.entry['sync'] = self.builder.get_object('sync_button')
         self.entry['sync_freq'] = self.builder.get_object('sync_freq')
         self.entry['fft_start'] = self.builder.get_object('fft_entry')
         self.entry['fft_int'] = self.builder.get_object('fft_int_entry')
@@ -223,6 +242,35 @@ class PD(ExpInterface):
             ['sync_button', 'sync_freq', 'fft_label', 'fft_entry', 'fft_label2',
                 'fft_int_entry']
             )
+            
+        param_keys = [
+                      ('voltage',
+                       self.builder.get_object(         
+                           'voltage_adjustment').get_value,
+                       self.builder.get_object(    
+                           'voltage_adjustment').set_value
+                       ),
+                      ('interlock',
+                       self.builder.get_object(
+                           'interlock_button').get_active,
+                       self.builder.get_object(
+                           'interlock_button').set_active
+                       ),
+                      ('shutter',
+                       self.builder.get_object(
+                           'shutter_button').get_active,
+                       self.builder.get_object(
+                           'shutter_button').set_active
+                       ),
+                      ('sync',
+                       self.builder.get_object(
+                           'sync_button').get_active,
+                       self.builder.get_object(
+                           'sync_button').set_active
+                       )
+                     ]
+                
+        self._init_params(param_keys)
         
     def on_light_button_clicked(self, data=None):
         __main__.MAIN.on_pot_stop_clicked()
@@ -272,19 +320,6 @@ class PD(ExpInterface):
             for i in self.shutter_buttons:
                 i.set_sensitive(False)
                 
-    def get_params(self):
-        """Returns a dict of parameters for experiment."""
-        parameters = {}    
-        parameters['voltage'] = int(self.entry['voltage'].get_value())
-        parameters['time'] = int(self.entry['time'].get_text())
-        parameters['interlock'] = self.entry['interlock'].get_active()
-        parameters['shutter'] = self.entry['shutter'].get_active()
-        parameters['sync'] = self.entry['sync'].get_active()
-        parameters['sync_freq'] = float(self.entry['sync_freq'].get_text())
-        parameters['fft_start'] = float(self.entry['fft_start'].get_text())
-        parameters['fft_int'] = float(self.entry['fft_int'].get_text())
-            
-        return parameters
         
 class POT(ExpInterface):
     """Experiment class for Potentiometry."""
@@ -293,6 +328,8 @@ class POT(ExpInterface):
         super(POT, self).__init__('interface/potexp.glade')
         
         self.entry['time'] = self.builder.get_object('time_entry')
+        
+        self._init_params()
         
 class CAL(ExpInterface):
     """Experiment class for Calibrating gain."""
