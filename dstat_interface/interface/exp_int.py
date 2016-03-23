@@ -27,25 +27,47 @@ import dstat_comm
 import __main__
 from errors import InputError, VarError, ErrorLogger
 _logger = ErrorLogger(sender="dstat-interface-exp_int")
-from parameters import ParametersGroup
 
 class ExpInterface(object):
     """Generic experiment interface class. Should be subclassed to implement
-    experiment interfaces by populating self.entry and calling _init_params().
+    experiment interfaces by populating self.entry.
     """
     def __init__(self, glade_path):
         self.builder = gtk.Builder()
         self.builder.add_from_file(glade_path)
         self.builder.connect_signals(self)
         self.entry = {} # to be used only for str parameters
+        self._params = None
+    
+    @property
+    def params(self):
+        """Dict of parameters"""
+        if self._params is None:
+            self._params = dict.fromkeys(self.entry.keys())
+        self._get_params()
+        return self._params
+    
+    def _get_params(self):
+        """Updates self._params from UI."""
+        for i in self.entry:
+            self._params[i] = self.entry[i].get_text()
+    
+    @params.setter
+    def params(self, params):
+        if self._params is None:
+            self._params = dict.fromkeys(self.entry.keys())
+            
+        for i in self._params:
+            try:
+                self._params[i] = params[i]
+            except IndexError as e:
+                _logger.error("Invalid parameter key: %s" % e, "WAR")
+        self._set_params()
 
-    def _init_params(self, param_keys=[]):
-        """Initializes a dict of parameters for experiment.""" 
-        for key, value in self.entry.iteritems():
-            param_keys.append((key, value.get_text, value.set_text))
-        
-        keys, getters, setters = zip(*param_keys)
-        self.param_group = ParametersGroup(keys, getters, setters)
+    def _set_params(self):
+        """Updates UI with new parameters."""
+        for i in self.entry:
+            self.entry.set_text(self._params[i])
         
 class Chronoamp(ExpInterface):
     """Experiment class for chronoamperometry. Extends ExpInterface class to
@@ -107,24 +129,20 @@ class Chronoamp(ExpInterface):
         for i in referencelist:
             self.model.remove(self.model.get_iter(i.get_path()))
 
-    def get_params(self):
-        """Returns a dict of parameters for experiment. Overrides superclass
-        method.
-        """
-        parameters = {}
-        parameters['potential'] = [int(r[0]) for r in self.model]
-        parameters['time'] = [int(r[1]) for r in self.model]
+   
+
+    def _get_params(self):
+        """Updates self._params from UI. Overrides superclass method."""
+
+        self._params['potential'] = [int(r[0]) for r in self.model]
+        self._params['time'] = [int(r[1]) for r in self.model]
         
-        return parameters
-        
-    def set_params(self, parameters):
-        """Loads a dict of parameters for experiment. Overrides superclass
-        method.
-        """
+    def _set_params(self):
+        """Updates UI from self._params. Overrides superclass method."""
         
         self.model.clear()
         
-        table = zip(parameters['potential'], parameters['time'])
+        table = zip(self._params['potential'], self._params['time'])
         
         for i in table:
             self.model.append(i)
@@ -143,8 +161,6 @@ class LSV(ExpInterface):
         self.entry['stop'] = self.builder.get_object('stop_entry')
         self.entry['slope'] = self.builder.get_object('slope_entry')
         
-        self._init_params()
-        
 class CV(ExpInterface):
     """Experiment class for CV."""
     def __init__(self):
@@ -160,8 +176,6 @@ class CV(ExpInterface):
         self.entry['v2'] = self.builder.get_object('v2_entry')
         self.entry['slope'] = self.builder.get_object('slope_entry')
         self.entry['scans'] = self.builder.get_object('scans_entry')
-        
-        self._init_params()
 
 class SWV(ExpInterface):
     """Experiment class for SWV."""
@@ -179,16 +193,20 @@ class SWV(ExpInterface):
         self.entry['pulse'] = self.builder.get_object('pulse_entry')
         self.entry['freq'] = self.builder.get_object('freq_entry')
         self.entry['scans'] = self.builder.get_object('scans_entry')
+
+    def _get_params(self):
+        """Updates self._params from UI."""
+        super(SWV, self)._get_params()
         
-        param_keys = [
-                      ('cyclic_checkbutton',
-                       self.builder.get_object(    
-                           'cyclic_checkbutton').get_active,
-                       self.builder.get_object(    
-                           'cyclic_checkbutton').set_active
-                       )
-                     ]
-        self._init_params(param_keys)
+        self._params['cyclic_true'] = self.builder.get_object(    
+                           'cyclic_checkbutton').get_active()
+    
+    def _set_params(self):
+        """Updates UI with new parameters."""
+        super(SWV, self)._set_params()
+    
+        self.builder.get_object('cyclic_checkbutton').set_active(
+                                                self._params['cyclic_true']) 
         
 class DPV(ExpInterface):
     """Experiment class for DPV."""
@@ -207,8 +225,6 @@ class DPV(ExpInterface):
         self.entry['period'] = self.builder.get_object('period_entry')
         self.entry['width'] = self.builder.get_object('width_entry')
         
-        self._init_params()
-        
 class ACV(ExpInterface):
     """Experiment class for ACV."""
     def __init__(self):
@@ -220,8 +236,6 @@ class ACV(ExpInterface):
         self.entry['slope'] = self.builder.get_object('slope_entry')
         self.entry['amplitude'] = self.builder.get_object('amplitude_entry')
         self.entry['freq'] = self.builder.get_object('freq_entry')
-        
-        self._init_params()
 
 class PD(ExpInterface):
     """Experiment class for PD."""
@@ -242,35 +256,34 @@ class PD(ExpInterface):
             ['sync_button', 'sync_freq', 'fft_label', 'fft_entry', 'fft_label2',
                 'fft_int_entry']
             )
-            
-        param_keys = [
-                      ('voltage',
-                       self.builder.get_object(         
-                           'voltage_adjustment').get_value,
-                       self.builder.get_object(    
-                           'voltage_adjustment').set_value
-                       ),
-                      ('interlock',
-                       self.builder.get_object(
-                           'interlock_button').get_active,
-                       self.builder.get_object(
-                           'interlock_button').set_active
-                       ),
-                      ('shutter',
-                       self.builder.get_object(
-                           'shutter_button').get_active,
-                       self.builder.get_object(
-                           'shutter_button').set_active
-                       ),
-                      ('sync',
-                       self.builder.get_object(
-                           'sync_button').get_active,
-                       self.builder.get_object(
-                           'sync_button').set_active
-                       )
-                     ]
-                
-        self._init_params(param_keys)
+        
+        bool_keys = ['interlock_true', 'shutter_true', 'sync_true']
+        bool_cont = map(self.builder.get_object,
+                             ['interlock_button',
+                              'shutter_button',
+                              'sync_button']
+                        )
+        self.bool = dict(zip(bool_keys, bool_cont))
+
+    def _get_params(self):
+        """Updates self._params from UI."""
+        super(PD, self)._get_params()
+        
+        for i in self.bool:
+            self._params[i] = self.bool[i].get_active()
+        
+        self._params['voltage'] = self.builder.get_object(         
+                                     'voltage_adjustment').get_value()
+    
+    def _set_params(self):
+        """Updates UI with new parameters."""
+        super(PD, self)._set_params()
+        
+        for i in self.bool:
+            self.bool[i].set_active(self._params[i])
+        
+        self.builder.get_object('voltage_adjustment').set_value(
+                                                          self._params['voltage']                                                    )
         
     def on_light_button_clicked(self, data=None):
         __main__.MAIN.on_pot_stop_clicked()
@@ -313,7 +326,7 @@ class PD(ExpInterface):
             gobject.timeout_add(700, restore_buttons, self.buttons)
             
     def on_shutter_button_toggled(self, widget):
-        if self.entry['shutter'].get_active():
+        if self.bool['shutter_true'].get_active():
             for i in self.shutter_buttons:
                 i.set_sensitive(True)
         else:
@@ -328,8 +341,6 @@ class POT(ExpInterface):
         super(POT, self).__init__('interface/potexp.glade')
         
         self.entry['time'] = self.builder.get_object('time_entry')
-        
-        self._init_params()
         
 class CAL(ExpInterface):
     """Experiment class for Calibrating gain."""

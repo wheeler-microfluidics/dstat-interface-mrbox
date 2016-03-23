@@ -169,7 +169,7 @@ class ft_box(plotbox):
         y = Experiment.data[1+line_number*2]
         x = Experiment.data[line_number*2]
         freq = Experiment.parameters['adc_rate_hz']
-        i = search_value(x, Experiment.parameters['fft_start'])
+        i = search_value(x, float(Experiment.parameters['fft_start']))
         y1 = y[i:]
         x1 = x[i:]
         avg = mean(y1)
@@ -180,8 +180,8 @@ class ft_box(plotbox):
         Experiment.ft_int = integrateSpectrum(
                                 f,
                                 Y,
-                                Experiment.parameters['sync_freq'],
-                                Experiment.parameters['fft_int']
+                                float(Experiment.parameters['sync_freq']),
+                                float(Experiment.parameters['fft_int'])
                                 )
         self.lines[line_number].set_ydata(Y)
         self.lines[line_number].set_xdata(f)

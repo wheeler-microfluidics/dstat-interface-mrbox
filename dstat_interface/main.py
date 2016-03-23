@@ -43,6 +43,7 @@ except ImportError:
     print "ERR: gobject not available"
     sys.exit(1)
 from serial import SerialException
+from datetime import datetime
 
 os.chdir(os.path.dirname(os.path.abspath(sys.argv[0])))
 
@@ -53,10 +54,9 @@ import interface.exp_window as exp_window
 import interface.adc_pot as adc_pot
 import plot
 import microdrop
+import parameter_test
 from errors import InputError, VarError, ErrorLogger
 _logger = ErrorLogger(sender="dstat-interface-main")
-
-from datetime import datetime
 
 class Main(object):
     """Main program """
@@ -249,13 +249,13 @@ class Main(object):
         self.serial_connect.set_sensitive(True)
         self.serial_pmt_connect.set_sensitive(True)
         self.serial_disconnect.set_sensitive(False)
-        self.adc_pot.short_toggle.set_sensitive(True)
+        self.adc_pot.ui['short_true'].set_sensitive(True)
     
     def on_pmt_mode_clicked(self, data=None):
         """Connect in PMT mode"""
         self.pmt_mode = True
-        self.adc_pot.short_toggle.set_active(True)
-        self.adc_pot.short_toggle.set_sensitive(False)
+        self.adc_pot.ui['short_true'].set_active(True)
+        self.adc_pot.ui['short_true'].set_sensitive(False)
         self.on_serial_connect_clicked()
 
     def start_ocp(self):
@@ -390,7 +390,7 @@ class Main(object):
             
             nb = self.plot_notebook
             
-            if (parameters['sync'] and parameters['shutter']):
+            if (parameters['sync_true'] and parameters['shutter_true']):
                 nb.get_nth_page(
                     nb.page_num(self.ft_window)).show()
                 # nb.get_nth_page(
@@ -400,7 +400,6 @@ class Main(object):
             else:
                 nb.get_nth_page(nb.page_num(self.ft_window)).hide()
                 # nb.get_nth_page(nb.page_num(self.period_window)).hide()
-
 
             comm.serial_instance.proc_pipe_p.send(self.current_exp)
             
@@ -428,28 +427,28 @@ class Main(object):
         parameters['version'] = self.version
         
         # Make sure these are defined
-        parameters['sync'] = False
-        parameters['shutter'] = False
+        parameters['sync_true'] = False
+        parameters['shutter_true'] = False
         
-        if self.adc_pot.buffer_toggle.get_active(): # True if box checked
+        if self.adc_pot.ui['buffer_true'].get_active(): # True if box checked
             parameters['adc_buffer'] = "2"
         else:
             parameters['adc_buffer'] = "0"
             
-        if self.adc_pot.short_toggle.get_active():
+        if self.adc_pot.ui['short_true'].get_active():
             parameters['re_short'] = "1"
         else:
             parameters['re_short'] = "0"
         
-        srate_model = self.adc_pot.srate_combobox.get_model()
-        pga_model = self.adc_pot.pga_combobox.get_model()
-        gain_model = self.adc_pot.gain_combobox.get_model()
+        srate_model = self.adc_pot.ui['srate_index'].get_model()
+        pga_model = self.adc_pot.ui['pga_index'].get_model()
+        gain_model = self.adc_pot.ui['gain_index'].get_model()
         
         parameters['adc_rate'] = srate_model.get_value(
-               self.adc_pot.srate_combobox.get_active_iter(), 2)  # third column
+               self.adc_pot.ui['srate_index'].get_active_iter(), 2)  # third column
         
         srate = srate_model.get_value(
-               self.adc_pot.srate_combobox.get_active_iter(), 1)   
+               self.adc_pot.ui['srate_index'].get_active_iter(), 1)   
         
         if srate.endswith("kHz"):
             sample_rate = float(srate.rstrip(" kHz"))*1000
@@ -458,11 +457,11 @@ class Main(object):
         
         parameters['adc_rate_hz'] = sample_rate
         parameters['adc_pga'] = pga_model.get_value(
-                                 self.adc_pot.pga_combobox.get_active_iter(), 2)
+                                 self.adc_pot.ui['pga_index'].get_active_iter(), 2)
                                  
         try:
             parameters['gain'] = gain_model.get_value(
-                                self.adc_pot.gain_combobox.get_active_iter(), 2)
+                                self.adc_pot.ui['gain_index'].get_active_iter(), 2)
         except TypeError as err:
             print "TypeError"
             _logger.error(err, "INFO")
@@ -504,78 +503,16 @@ class Main(object):
         
             elif selection == 1: # LSV
                 parameters.update(self.exp_window.get_params('lsv'))
-                
-                #check parameters are within hardware limits
-                if (parameters['clean_mV'] > 1499 or 
-                        parameters['clean_mV'] < -1500):
-                    raise InputError(parameters['clean_mV'],
-                                     "Clean potential exceeds hardware limits.")
-                if (parameters['dep_mV'] > 1499 or
-                        parameters['dep_mV'] < -1500):
-                    raise InputError(parameters['dep_mV'],
-                                "Deposition potential exceeds hardware limits.")
-                if (parameters['clean_s'] < 0):
-                    raise InputError(parameters['clean_s'],
-                                     "Clean time cannot be negative.")
-                if (parameters['dep_s'] < 0):
-                    raise InputError(parameters['dep_s'],
-                                     "Deposition time cannot be negative.")
-                if (parameters['start'] > 1499 or parameters['start'] < -1500):
-                    raise InputError(parameters['start'],
-                                     "Start parameter exceeds hardware limits.")
-                if (parameters['stop'] > 1499 or parameters['stop'] < -1500):
-                    raise InputError(parameters['stop'],
-                                     "Stop parameter exceeds hardware limits.")
-                if (parameters['slope'] > 2000 or parameters['slope'] < 1):
-                    raise InputError(parameters['slope'],
-                                     "Slope parameter exceeds hardware limits.")
-                if parameters['start'] == parameters['stop']:
-                    raise InputError(parameters['start'],
-                                     "Start cannot equal Stop.")
-
+                parameter_test.lsv_test(parameters)
                 
                 self.current_exp = comm.LSVExp(parameters)
                 run_experiment()
-                
+
                 return
             
             elif selection == 2: # CV
                 parameters.update(self.exp_window.get_params('cve'))
-                
-                # check parameters are within hardware limits
-                if (parameters['clean_mV'] > 1499 or
-                        parameters['clean_mV'] < -1500):
-                    raise InputError(parameters['clean_mV'],
-                                     "Clean potential exceeds hardware limits.")
-                if (parameters['dep_mV'] > 1499 or
-                        parameters['dep_mV'] < -1500):
-                    raise InputError(parameters['dep_mV'],
-                                "Deposition potential exceeds hardware limits.")
-                if (parameters['clean_s'] < 0):
-                    raise InputError(parameters['clean_s'],
-                                     "Clean time cannot be negative.")
-                if (parameters['dep_s'] < 0):
-                    raise InputError(parameters['dep_s'],
-                                     "Deposition time cannot be negative.")
-                if (parameters['start'] > 1499 or parameters['start'] < -1500):
-                    raise InputError(parameters['start'],
-                                     "Start parameter exceeds hardware limits.")
-                if (parameters['slope'] > 2000 or parameters['slope'] < 1):
-                    raise InputError(parameters['slope'],
-                                     "Slope parameter exceeds hardware limits.")
-                if (parameters['v1'] > 1499 or parameters['v1'] < -1500):
-                    raise InputError(parameters['v1'],
-                                  "Vertex 1 parameter exceeds hardware limits.")
-                if (parameters['v2'] > 1499 or parameters['v2'] < -1500):
-                    raise InputError(parameters['v2'],
-                                  "Vertex 2 parameter exceeds hardware limits.")
-                if (parameters['scans'] < 1 or parameters['scans'] > 255):
-                    raise InputError(parameters['scans'], 
-                                     "Scans parameter outside limits.")
-                if parameters['v1'] == parameters['v2']:
-                    raise InputError(parameters['v1'],
-                                     "Vertex 1 cannot equal Vertex 2.")
-                
+                parameter_test.cv_test(parameters)    
                 
                 self.current_exp = comm.CVExp(parameters)
                 run_experiment()
@@ -584,49 +521,7 @@ class Main(object):
                 
             elif selection == 3:  # SWV
                 parameters.update(self.exp_window.get_params('swv'))
-                
-                if parameters['cyclic_checkbutton'] :
-                    if parameters['scans'] < 1:
-                        raise InputError(parameters['scans'],
-                                        "Must have at least one scan.")
-                else:
-                    parameters['scans'] = 0
-                
-                # check parameters are within hardware limits (doesn't
-                # check if pulse will go out of bounds, but instrument
-                # checks this (I think))
-                if (parameters['clean_mV'] > 1499 or
-                        parameters['clean_mV'] < -1500):
-                    raise InputError(parameters['clean_mV'],
-                                     "Clean potential exceeds hardware limits.")
-                if (parameters['dep_mV'] > 1499 or
-                        parameters['dep_mV'] < -1500):
-                    raise InputError(parameters['dep_mV'],
-                                "Deposition potential exceeds hardware limits.")
-                if (parameters['clean_s'] < 0):
-                    raise InputError(parameters['clean_s'],
-                                     "Clean time cannot be negative.")
-                if (parameters['dep_s'] < 0):
-                    raise InputError(parameters['dep_s'],
-                                     "Deposition time cannot be negative.")
-                if (parameters['start'] > 1499 or parameters['start'] < -1500):
-                    raise InputError(parameters['start'],
-                                     "Start parameter exceeds hardware limits.")
-                if (parameters['step'] > 200 or parameters['step'] < 1):
-                    raise InputError(parameters['step'],
-                               "Step height parameter exceeds hardware limits.")
-                if (parameters['stop'] > 1499 or parameters['stop'] < -1500):
-                    raise InputError(parameters['stop'],
-                                      "Stop parameter exceeds hardware limits.")
-                if (parameters['pulse'] > 150 or parameters['pulse'] < 1):
-                    raise InputError(parameters['pulse'],
-                              "Pulse height parameter exceeds hardware limits.")
-                if (parameters['freq'] < 1 or parameters['freq'] > 1000):
-                    raise InputError(parameters['freq'],
-                                     "Frequency parameter outside limits.")
-                if parameters['start'] == parameters['stop']:
-                    raise InputError(parameters['start'],
-                                     "Start cannot equal Stop.")
+                parameter_test.swv_test(parameters)
                 
                 self.current_exp = comm.SWVExp(parameters)
                 run_experiment()
@@ -635,45 +530,7 @@ class Main(object):
         
             elif selection == 4:  # DPV
                 parameters.update(self.exp_window.get_params('dpv'))
-                
-                if (parameters['clean_mV'] > 1499 or
-                        parameters['clean_mV'] < -1500):
-                    raise InputError(parameters['clean_mV'],
-                                     "Clean potential exceeds hardware limits.")
-                if (parameters['dep_mV'] > 1499 or
-                        parameters['dep_mV'] < -1500):
-                    raise InputError(parameters['dep_mV'],
-                                "Deposition potential exceeds hardware limits.")
-                if (parameters['clean_s'] < 0):
-                    raise InputError(parameters['clean_s'],
-                                     "Clean time cannot be negative.")
-                if (parameters['dep_s'] < 0):
-                    raise InputError(parameters['dep_s'],
-                                     "Deposition time cannot be negative.")
-                if (parameters['start'] > 1499 or parameters['start'] < -1500):
-                    raise InputError(parameters['start'],
-                                     "Start parameter exceeds hardware limits.")
-                if (parameters['step'] > 200 or parameters['step'] < 1):
-                    raise InputError(parameters['step'],
-                               "Step height parameter exceeds hardware limits.")
-                if (parameters['stop'] > 1499 or parameters['stop'] < -1500):
-                    raise InputError(parameters['stop'],
-                                     "Stop parameter exceeds hardware limits.")
-                if (parameters['pulse'] > 150 or parameters['pulse'] < 1):
-                    raise InputError(parameters['pulse'],
-                        "Pulse height parameter exceeds hardware limits.")
-                if (parameters['period'] < 1 or parameters['period'] > 1000):
-                    raise InputError(parameters['period'], 
-                                    "Period parameter outside limits.")
-                if (parameters['width'] < 1 or parameters['width'] > 1000):
-                    raise InputError(parameters['width'],
-                                     "Width parameter outside limits.")
-                if parameters['period'] <= parameters['width']:
-                    raise InputError(parameters['width'],
-                                     "Width must be less than period.")
-                if parameters['start'] == parameters['stop']:
-                    raise InputError(parameters['start'],
-                                     "Start cannot equal Stop.")
+                parameter_test.dpv_test(parameters)
                 
                 self.current_exp = comm.DPVExp(parameters)
                 run_experiment()
@@ -682,27 +539,7 @@ class Main(object):
                 
             elif selection == 6:  # PD                    
                 parameters.update(self.exp_window.get_params('pde'))
-                
-                if (parameters['time'] <= 0):
-                    raise InputError(parameters['clean_s'],
-                                     "Time must be greater than zero.")
-                if (parameters['time'] > 65535):
-                    raise InputError(parameters['clean_s'],
-                                     "Time must fit in 16-bit counter.")
-                if (parameters['sync'] and parameters['shutter']):
-                    if (parameters['sync_freq'] > 30 or
-                        parameters['sync_freq'] <= 0):
-                        raise InputError(parameters['sync_freq'],
-                                        "Frequency must be between 0 and 30 Hz.")
-                    if (parameters['fft_start'] < 0 or
-                        parameters['fft_start'] > parameters['time']-1):
-                        raise InputError(parameters['fft_start'],
-                                        "FFT must start between 0 and time-1.")
-                    if parameters['fft_int'] < 0:
-                        raise InputError(
-                            parameters['fft_int'],
-                            "Integral bandwidth must be greater than 0"
-                        )
+                parameter_test.pd_test(parameters)
                 
                 self.current_exp = comm.PDExp(parameters)
                 run_experiment()
@@ -717,14 +554,7 @@ class Main(object):
                     return
                     
                 parameters.update(self.exp_window.get_params('pot'))
-                
-                if (parameters['time'] <= 0):
-                    raise InputError(parameters['clean_s'],
-                                     "Time must be greater than zero.")
-                if (parameters['time'] > 65535):
-                    raise InputError(parameters['clean_s'],
-                                     "Time must fit in 16-bit counter.")
-                
+                parameter_test.pot_test(parameters)
                 
                 self.current_exp = comm.PotExp(parameters)
                 run_experiment()
@@ -743,7 +573,7 @@ class Main(object):
             exceptions()
         
         except KeyError as i:
-            _logger.error(i, "INFO")
+            _logger.error("KeyError: %s" % i, "INFO")
             self.statusbar.push(self.error_context_id, 
                                 "Experiment parameters must be integers.")
             exceptions()
@@ -867,8 +697,8 @@ class Main(object):
         gobject.source_remove(self.plot_proc)  # stop automatic plot update
         self.experiment_running_plot()  # make sure all data updated on plot
         
-        if (self.current_exp.parameters['shutter'] and
-            self.current_exp.parameters['sync']):
+        if (self.current_exp.parameters['shutter_true'] and
+            self.current_exp.parameters['sync_true']):
             self.ft_plot.updateline(self.current_exp, 0) 
             self.ft_plot.redraw()
             self.current_exp.data_extra = self.current_exp.ftdata
@@ -905,8 +735,8 @@ class Main(object):
                           self.autosavename.get_text(), self.expnumber)
             plots = {'data':self.plot}
             
-            if (self.current_exp.parameters['shutter'] and
-                self.current_exp.parameters['sync']):
+            if (self.current_exp.parameters['shutter_true'] and
+                self.current_exp.parameters['sync_true']):
                 plots['ft'] = self.ft_plot
             
             save.autoPlot(plots, self.autosavedir_button,
@@ -944,8 +774,8 @@ class Main(object):
         """Activate dialogue to save current plot."""
         plots = {'data':self.plot}
         
-        if (self.current_exp.parameters['shutter'] and
-            self.current_exp.parameters['sync']):
+        if (self.current_exp.parameters['shutter_true'] and
+            self.current_exp.parameters['sync_true']):
             plots['ft'] = self.ft_plot
         
         save.plotSave(plots)

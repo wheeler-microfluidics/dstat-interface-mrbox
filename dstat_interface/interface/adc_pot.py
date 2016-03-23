@@ -19,7 +19,6 @@
 #     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import gtk
-from parameters import ParametersGroup
 
 v1_1_gain = [(0, "100 Ω (15 mA FS)", 0),
              (1, "300 Ω (5 mA FS)", 1),
@@ -47,47 +46,65 @@ class adc_pot(object):
         self.builder.connect_signals(self)
         self.cell = gtk.CellRendererText()
         
-        # list of options
-        param_keys = []
-        
-        self.buffer_toggle = self.builder.get_object('buffer_checkbutton')
-        param_keys.append(('adc_buffer_true',
-                          self.buffer_toggle.get_active,
-                          self.buffer_toggle.set_active))
-        self.short_toggle = self.builder.get_object('short_checkbutton')
-        param_keys.append(('pot_short_true',
-                          self.short_toggle.get_active,
-                          self.short_toggle.set_active))
+        ui_keys = ['buffer_true',
+                   'short_true',
+                   'pga_index',
+                   'srate_index',
+                   'gain_index'
+                   ]
+        ui_cont = map(self.builder.get_object, ['buffer_checkbutton',
+                                                'short_checkbutton',
+                                                'pga_combobox',
+                                                'srate_combobox',
+                                                'gain_combobox'
+                                                ]
+                      )
+        self.ui = dict(zip(ui_keys, ui_cont))
         
         #initialize comboboxes
-        self.pga_combobox = self.builder.get_object('pga_combobox')
-        self.pga_combobox.pack_start(self.cell, True)
-        self.pga_combobox.add_attribute(self.cell, 'text', 1)
-        self.pga_combobox.set_active(1)
-        param_keys.append(('adc_pga_index',
-                          self.pga_combobox.get_active,
-                          self.pga_combobox.set_active))
+        self.ui['pga_index'].pack_start(self.cell, True)
+        self.ui['pga_index'].add_attribute(self.cell, 'text', 1)
+        self.ui['pga_index'].set_active(1)
 
-        self.srate_combobox = self.builder.get_object('srate_combobox')
-        self.srate_combobox.pack_start(self.cell, True)
-        self.srate_combobox.add_attribute(self.cell, 'text', 1)
-        self.srate_combobox.set_active(7)
-        param_keys.append(('adc_srate_index',
-                          self.srate_combobox.get_active,
-                          self.srate_combobox.set_active))
+        self.ui['srate_index'].pack_start(self.cell, True)
+        self.ui['srate_index'].add_attribute(self.cell, 'text', 1)
+        self.ui['srate_index'].set_active(7)
         
-        self.gain_combobox = self.builder.get_object('gain_combobox')
         self.gain_liststore = self.builder.get_object('gain_liststore')
-        self.gain_combobox.pack_start(self.cell, True)
-        self.gain_combobox.add_attribute(self.cell, 'text', 1)
-        self.gain_combobox.set_active(2)
-        param_keys.append(('pot_gain_index',
-                          self.gain_combobox.get_active,
-                          self.gain_combobox.set_active))
+        self.ui['gain_index'].pack_start(self.cell, True)
+        self.ui['gain_index'].add_attribute(self.cell, 'text', 1)
+        self.ui['gain_index'].set_active(2)
         
-        keys, getters, setters = zip(*param_keys)
-        self.param_group = ParametersGroup(keys, getters, setters)
+        self._params = None
+    
+    @property
+    def params(self):
+        """Dict of parameters."""
+        self._get_params()
+        return self._params
+    
+    def _get_params(self):
+        """Updates self._params from UI."""
+        for i in self.ui:
+            self._params[i] = self.ui[i].get_active()
+            
+    @params.setter
+    def params(self, params):
+        if self._params is None:
+            self._params = dict.fromkeys(self.ui.keys())
         
+        for i in self._params:
+            try:
+                self._params[i] = params[i]
+            except IndexError as e:
+                _logger.error("Invalid parameter key: %s" % e, "WAR")
+        self._set_params()
+
+    def _set_params(self):
+        """Updates UI with new parameters."""
+        for i in self.ui:
+            self.ui.set_active(self._params[i])
+            
     def set_version(self, version):
         """ Sets menus for DStat version. """
         self.gain_liststore.clear()

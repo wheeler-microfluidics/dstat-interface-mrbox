@@ -607,10 +607,10 @@ class PDExp(Chronoamp):
         self.datalength = 2
         self.databytes = 8
         self.xmin = 0
-        self.xmax = self.parameters['time']
+        self.xmax = int(self.parameters['time'])
         
-        if self.parameters['shutter']:
-            if self.parameters['sync']:
+        if self.parameters['shutter_true']:
+            if self.parameters['sync_true']:
                 self.commands.append("EZ")
                 self.commands[-1] += str(self.parameters['sync_freq'])
                 self.commands[-1] += " "
@@ -627,14 +627,14 @@ class PDExp(Chronoamp):
         self.commands[-1] += " "
         self.commands[-1] += str(self.parameters['time'])
         self.commands[-1] += " "
-        if self.parameters['interlock']:
+        if self.parameters['interlock_true']:
             self.commands[-1] += "1"
         else:
             self.commands[-1] += "0"
         self.commands[-1] += " "
 
-        if self.parameters['shutter']:
-            if self.parameters['sync']:
+        if self.parameters['shutter_true']:
+            if self.parameters['sync_true']:
                 self.commands.append("Ez")
             else:
                 self.commands.append("E1")
@@ -677,8 +677,8 @@ class LSVExp(Experiment):
         self.data = [[], []]
         self.datalength = 2
         self.databytes = 6  # uint16 + int32
-        self.xmin = self.parameters['start']
-        self.xmax = self.parameters['stop']
+        self.xmin = int(self.parameters['start'])
+        self.xmax = int(self.parameters['stop'])
         
         self.commands += "E"
         self.commands[2] += "L"
@@ -686,10 +686,10 @@ class LSVExp(Experiment):
         self.commands[2] += " "
         self.commands[2] += str(self.parameters['dep_s'])
         self.commands[2] += " "
-        self.commands[2] += str(int(self.parameters['clean_mV']*
+        self.commands[2] += str(int(int(self.parameters['clean_mV'])*
                                 (65536./3000)+32768))
         self.commands[2] += " "
-        self.commands[2] += str(int(self.parameters['dep_mV']*
+        self.commands[2] += str(int(int(self.parameters['dep_mV'])*
                                 (65536./3000)+32768))
         self.commands[2] += " "
         self.commands[2] += str(self.parameters['start'])
@@ -710,8 +710,8 @@ class CVExp(Experiment):
         self.data = [[], []]
         self.datalength = 2 * self.parameters['scans']  # x and y for each scan
         self.databytes = 6  # uint16 + int32
-        self.xmin = self.parameters['v1']
-        self.xmax = self.parameters['v2']
+        self.xmin = int(self.parameters['v1'])
+        self.xmax = int(self.parameters['v2'])
         
         self.commands += "E"
         self.commands[2] += "C"
@@ -719,10 +719,10 @@ class CVExp(Experiment):
         self.commands[2] += " "
         self.commands[2] += str(self.parameters['dep_s'])
         self.commands[2] += " "
-        self.commands[2] += str(int(self.parameters['clean_mV']*
+        self.commands[2] += str(int(int(self.parameters['clean_mV'])*
                                 (65536./3000)+32768))
         self.commands[2] += " "
-        self.commands[2] += str(int(self.parameters['dep_mV']*
+        self.commands[2] += str(int(int(self.parameters['dep_mV'])*
                                 (65536./3000)+32768))
         self.commands[2] += " "
         self.commands[2] += str(self.parameters['v1'])
@@ -748,8 +748,8 @@ class SWVExp(Experiment):
         self.datalength = 2 * self.parameters['scans']
         self.databytes = 10
         
-        self.xmin = self.parameters['start']
-        self.xmax = self.parameters['stop']
+        self.xmin = int(self.parameters['start'])
+        self.xmax = int(self.parameters['stop'])
 
         self.data_extra = [[], []]  
         
@@ -759,11 +759,11 @@ class SWVExp(Experiment):
         self.commands[2] += " "
         self.commands[2] += str(self.parameters['dep_s'])
         self.commands[2] += " "
-        self.commands[2] += str(int(self.parameters['clean_mV']*
-                                    (65536./3000)+32768))
+        self.commands[2] += str(int(int(self.parameters['clean_mV'])*
+                                (65536./3000)+32768))
         self.commands[2] += " "
-        self.commands[2] += str(int(self.parameters['dep_mV']*
-                                    (65536./3000)+32768))
+        self.commands[2] += str(int(int(self.parameters['dep_mV'])*
+                                (65536./3000)+32768))
         self.commands[2] += " "
         self.commands[2] += str(self.parameters['start'])
         self.commands[2] += " "
@@ -805,8 +805,8 @@ class DPVExp(SWVExp):
         self.datalength = 2
         self.databytes = 10
         
-        self.xmin = self.parameters['start']
-        self.xmax = self.parameters['stop']
+        self.xmin = int(self.parameters['start'])
+        self.xmax = int(self.parameters['stop'])
 
         self.data_extra = [[], []]
         
@@ -816,11 +816,11 @@ class DPVExp(SWVExp):
         self.commands[2] += " "
         self.commands[2] += str(self.parameters['dep_s'])
         self.commands[2] += " "
-        self.commands[2] += str(int(self.parameters['clean_mV']*
-                                    (65536./3000)+32768))
+        self.commands[2] += str(int(int(self.parameters['clean_mV'])*
+                                (65536./3000)+32768))
         self.commands[2] += " "
-        self.commands[2] += str(int(self.parameters['dep_mV']*
-                                    (65536./3000)+32768))
+        self.commands[2] += str(int(int(self.parameters['dep_mV'])*
+                                (65536./3000)+32768))
         self.commands[2] += " "
         self.commands[2] += str(self.parameters['start'])
         self.commands[2] += " "
