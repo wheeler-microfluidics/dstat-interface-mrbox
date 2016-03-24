@@ -187,8 +187,8 @@ class ft_box(plotbox):
                                 Experiment.parameters['sync_freq'],
                                 Experiment.parameters['fft_int']
                                 )
-        self.lines[line_number].set_ydata(Y)
-        self.lines[line_number].set_xdata(f)
+        self.axe1.lines[line_number].set_ydata(Y)
+        self.axe1.lines[line_number].set_xdata(f)
         Experiment.ftdata = (f, Y)
         
     def changetype(self, Experiment):
