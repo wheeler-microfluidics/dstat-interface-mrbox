@@ -31,6 +31,10 @@ from matplotlib.backends.backend_gtkagg \
     import FigureCanvasGTKAgg as FigureCanvas
 from matplotlib.backends.backend_gtkagg \
     import NavigationToolbar2GTKAgg as NavigationToolbar
+try:
+    import seaborn as sns
+except ImportError:
+    pass
     
 from numpy import sin, linspace, pi, mean, trapz
 from scipy import fft, arange
@@ -100,7 +104,7 @@ class plotbox(object):
                                     right=0.96, top=0.96)
         self.axe1 = self.figure.add_subplot(111)
         
-        self.lines = self.axe1.plot([0, 1], [0, 1])
+        self.axe1.plot([0, 1], [0, 1])
         
         self.axe1.ticklabel_format(style='sci', scilimits=(0, 3),
                                    useOffset=False, axis='y')
@@ -116,9 +120,9 @@ class plotbox(object):
     
     def clearall(self):
         """Remove all lines on plot. """
-        for i in self.lines:
-            i.remove()
-        self.lines = self.axe1.plot([0, 1], [0, 1])
+        for i in range(len(self.axe1.lines)):
+            self.axe1.lines.pop(0)
+        self.addline()
     
     def clearline(self, line_number):
         """Remove a line specified by line_number."""
@@ -127,7 +131,10 @@ class plotbox(object):
     
     def addline(self):
         """Add a new line to plot. (initialized with dummy data)))"""
-        self.lines.append(self.axe1.plot([0, 1], [0, 1])[0])
+        # self.lines.extend(self.axe1.plot([0, 1], [0, 1]))
+        print self.axe1.lines
+        self.axe1.plot([0, 1], [0, 1])
+        print self.axe1.lines
     
     def updateline(self, Experiment, line_number):
         """Update a line specified by line_number with data stored in
@@ -136,9 +143,9 @@ class plotbox(object):
         # limits display to 2000 data points per line
         divisor = len(Experiment.data[1+line_number*2]) // 2000 + 1
         
-        self.lines[line_number].set_ydata(
+        self.axe1.lines[line_number].set_ydata(
                                    Experiment.data[1+line_number*2][1::divisor])
-        self.lines[line_number].set_xdata(
+        self.axe1.lines[line_number].set_xdata(
                                    Experiment.data[line_number*2][1::divisor])
 
     def changetype(self, Experiment):
