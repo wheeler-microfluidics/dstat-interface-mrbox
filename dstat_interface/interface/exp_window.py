@@ -23,28 +23,33 @@ class Experiments:
     def __init__(self, builder):
         self.builder = builder
         
+        # (experiment index in UI, experiment)
         self.classes = {}
-        self.classes['cae'] = exp.Chronoamp()
-        self.classes['lsv'] = exp.LSV()
-        self.classes['cve'] = exp.CV()
-        self.classes['swv'] = exp.SWV()
-        self.classes['dpv'] = exp.DPV()
-        self.classes['acv'] = exp.ACV()
-        self.classes['pde'] = exp.PD()
-        self.classes['pot'] = exp.POT()
-        self.classes['cal'] = exp.CAL()
+        self.classes['cae'] = (0, exp.Chronoamp())
+        self.classes['lsv'] = (1, exp.LSV())
+        self.classes['cve'] = (2, exp.CV())
+        self.classes['swv'] = (3, exp.SWV())
+        self.classes['dpv'] = (4, exp.DPV())
+        self.classes['acv'] = (5, exp.ACV())
+        self.classes['pde'] = (6, exp.PD())
+        self.classes['pot'] = (7, exp.POT())
+        self.classes['cal'] = (8, exp.CAL())
+        
+        # Create reverse lookup
+        self.select_to_key = {}
+        for key, value in self.classes.iteritems():
+            self.select_to_key[value[0]] = key
  
         #fill exp_section
         exp_section = self.builder.get_object('exp_section_box')
         self.containers = {}
         
         for key, cls in self.classes.iteritems():
-            self.containers[key] = cls.builder.get_object('scrolledwindow1')
+            self.containers[key] = cls[1].builder.get_object('scrolledwindow1')
 
         for key in self.containers:
             self.containers[key].reparent(exp_section)
             self.containers[key].hide()
-            
         
     def set_exp(self, selection):
         """Changes parameter tab to selected experiment. Returns True if 
@@ -57,11 +62,12 @@ class Experiments:
             self.containers[key].hide()
 
         self.containers[selection].show()
+        self.selected_exp = selection
         
         return True
         
     def get_params(self, experiment):
-        return self.classes[experiment].params
+        return self.classes[experiment][1].params
     
     def set_params(self, experiment, parameters):
-        self.classes[experiment].params = parameters
+        self.classes[experiment][1].params = parameters

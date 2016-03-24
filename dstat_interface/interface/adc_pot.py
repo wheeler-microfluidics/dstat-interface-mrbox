@@ -20,6 +20,9 @@
 
 import gtk
 
+from errors import InputError, VarError, ErrorLogger
+_logger = ErrorLogger(sender="dstat_adc_pot")
+
 v1_1_gain = [(0, "100 Ω (15 mA FS)", 0),
              (1, "300 Ω (5 mA FS)", 1),
              (2, "3 kΩ (500 µA FS)", 2),
@@ -75,7 +78,7 @@ class adc_pot(object):
         self.ui['gain_index'].add_attribute(self.cell, 'text', 1)
         self.ui['gain_index'].set_active(2)
         
-        self._params = None
+        self._params = {}
     
     @property
     def params(self):
@@ -87,7 +90,27 @@ class adc_pot(object):
         """Updates self._params from UI."""
         for i in self.ui:
             self._params[i] = self.ui[i].get_active()
-            
+        
+        srate_model = self.ui['srate_index'].get_model()
+        self._params['adc_rate'] = srate_model[self._params['srate_index']][2]
+        srate = srate_model[self._params['srate_index']][1]
+        
+        if srate.endswith("kHz"):
+            sample_rate = float(srate.rstrip(" kHz"))*1000
+        else:
+            sample_rate = float(srate.rstrip(" Hz"))
+        
+        self._params['adc_rate_hz'] = sample_rate
+        
+        pga_model = self.ui['srate_index'].get_model()
+        self._params['adc_pga'] = pga_model[self._params['pga_index']][2]
+        
+        gain_model = self.ui['gain_index'].get_model()
+        self._params['gain'] = gain_model[self._params['gain_index']][2]
+        if self._params['gain_index'] not in range(len(gain_model)):
+            raise InputError(self._params['gain_index'],
+                             "Select a potentiostat gain.")
+        
     @params.setter
     def params(self, params):
         if self._params is None:

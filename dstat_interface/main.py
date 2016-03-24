@@ -161,11 +161,14 @@ class Main(object):
 
     def on_window1_destroy(self, object, data=None):
         """ Quit when main window closed."""
-        self.on_serial_disconnect_clicked()
-        gtk.main_quit()
+        self.quit()
 
     def on_gtk_quit_activate(self, menuitem, data=None):
         """Quit when Quit selected from menu."""
+        self.quit()
+        
+    def quit(self):
+        """Disconnect and save parameters on quit."""
         self.on_serial_disconnect_clicked()
         gtk.main_quit()
 
@@ -429,58 +432,18 @@ class Main(object):
         # Make sure these are defined
         parameters['sync_true'] = False
         parameters['shutter_true'] = False
-        
-        if self.adc_pot.ui['buffer_true'].get_active(): # True if box checked
-            parameters['adc_buffer'] = "2"
-        else:
-            parameters['adc_buffer'] = "0"
-            
-        if self.adc_pot.ui['short_true'].get_active():
-            parameters['re_short'] = "1"
-        else:
-            parameters['re_short'] = "0"
-        
-        srate_model = self.adc_pot.ui['srate_index'].get_model()
-        pga_model = self.adc_pot.ui['pga_index'].get_model()
-        gain_model = self.adc_pot.ui['gain_index'].get_model()
-        
-        parameters['adc_rate'] = srate_model.get_value(
-               self.adc_pot.ui['srate_index'].get_active_iter(), 2)  # third column
-        
-        srate = srate_model.get_value(
-               self.adc_pot.ui['srate_index'].get_active_iter(), 1)   
-        
-        if srate.endswith("kHz"):
-            sample_rate = float(srate.rstrip(" kHz"))*1000
-        else:
-            sample_rate = float(srate.rstrip(" Hz"))
-        
-        parameters['adc_rate_hz'] = sample_rate
-        parameters['adc_pga'] = pga_model.get_value(
-                                 self.adc_pot.ui['pga_index'].get_active_iter(), 2)
-                                 
         try:
-            parameters['gain'] = gain_model.get_value(
-                                self.adc_pot.ui['gain_index'].get_active_iter(), 2)
-        except TypeError as err:
-            print "TypeError"
-            _logger.error(err, "INFO")
-            self.statusbar.push(self.error_context_id, 
-                                "Select a potentiostat gain.")
-            exceptions()
-            return
-            
+            parameters.update(self.adc_pot.params)
+
+            self.line = 0
+            self.lastline = 0
+            self.lastdataline = 0
         
-        self.line = 0
-        self.lastline = 0
-        self.lastdataline = 0
-        
-        self.spinner.start()
-        self.startbutton.set_sensitive(False)
-        self.stopbutton.set_sensitive(True)
-        self.statusbar.remove_all(self.error_context_id)
-        
-        try:
+            self.spinner.start()
+            self.startbutton.set_sensitive(False)
+            self.stopbutton.set_sensitive(True)
+            self.statusbar.remove_all(self.error_context_id)
+
             if selection == 0:  # CA
                 # Add experiment parameters to existing
                 parameters.update(self.exp_window.get_params('cae'))
@@ -574,7 +537,7 @@ class Main(object):
         
         except KeyError as i:
             _logger.error("KeyError: %s" % i, "INFO")
-            self.statusbar.push(self.error_context_id, 
+            self.statusbar.push(self.error_context_id,
                                 "Experiment parameters must be integers.")
             exceptions()
         

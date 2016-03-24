@@ -355,7 +355,7 @@ class Experiment(object):
                 self.__gaintable = [1e2, 3e2, 3e3, 3e4, 3e5, 3e6, 3e7, 5e8]
             elif minor >= 2:
                 self.__gaintable = [1, 1e2, 3e3, 3e4, 3e5, 3e6, 3e7, 1e8]
-                self.__gain_trim_table = [None, 'r100_trim', 'r3k_trim',
+                self.__gain_trim_table = ['r100_trim', 'r100_trim', 'r3k_trim',
                                         'r30k_trim', 'r300k_trim', 'r3M_trim',
                                         'r30M_trim', 'r100M_trim']
         else:
@@ -366,8 +366,11 @@ class Experiment(object):
             settings[self.__gain_trim_table[int(self.parameters['gain'])]][1])
 
         self.commands = ["EA", "EG"]
-    
-        self.commands[0] += (self.parameters['adc_buffer'])
+        
+        if self.parameters['buffer_true']:            
+            self.commands[0] += "2"
+        else:
+            self.commands[0] += "0"
         self.commands[0] += " "
         self.commands[0] += (self.parameters['adc_rate'])
         self.commands[0] += " "
@@ -375,7 +378,7 @@ class Experiment(object):
         self.commands[0] += " "
         self.commands[1] += (self.parameters['gain'])
         self.commands[1] += " "
-        self.commands[1] += (self.parameters['re_short'])
+        self.commands[1] += (str(int(self.parameters['short_true'])))
         self.commands[1] += " "
 
     def run(self, ser, ctrl_pipe, data_pipe):
