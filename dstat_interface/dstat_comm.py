@@ -439,11 +439,14 @@ class Experiment(object):
                         data = self.data_handler(
                                 (scan, self.serial.read(size=self.databytes)))
                         self.data_pipe.send(data)
-                    elif line.startswith('S'):
-                        self.scan += 1
+                        
+                    elif line.lstrip().startswith('S'):
+                        scan += 1
+                        
                     elif line.lstrip().startswith("#"):
                         _logger.error("".join(
                                         ("DSTAT: ",line.lstrip().rstrip())), "INFO")
+                                        
                     elif line.lstrip().startswith("no"):
                         _logger.error("".join(
                                         ("DSTAT: ",line.lstrip().rstrip())), "DBG")
