@@ -131,10 +131,7 @@ class plotbox(object):
     
     def addline(self):
         """Add a new line to plot. (initialized with dummy data)))"""
-        # self.lines.extend(self.axe1.plot([0, 1], [0, 1]))
-        print self.axe1.lines
         self.axe1.plot([0, 1], [0, 1])
-        print self.axe1.lines
     
     def updateline(self, Experiment, line_number):
         """Update a line specified by line_number with data stored in
