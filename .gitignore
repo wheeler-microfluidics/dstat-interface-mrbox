@@ -11,3 +11,4 @@ paver-minilib.zip
 dist
 setup.py
 *.egg-info
+last_params

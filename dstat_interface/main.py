@@ -44,6 +44,7 @@ except ImportError:
     sys.exit(1)
 from serial import SerialException
 from datetime import datetime
+import yaml
 
 os.chdir(os.path.dirname(os.path.abspath(sys.argv[0])))
 
@@ -54,6 +55,7 @@ import interface.exp_window as exp_window
 import interface.adc_pot as adc_pot
 import plot
 import microdrop
+import params
 import parameter_test
 from errors import InputError, VarError, ErrorLogger
 _logger = ErrorLogger(sender="dstat-interface-main")
@@ -169,6 +171,11 @@ class Main(object):
         
     def quit(self):
         """Disconnect and save parameters on quit."""
+        output = params.get_params(self)
+        
+        with open('last_params', 'w') as f:
+            yaml.dump(output, f)
+        
         self.on_serial_disconnect_clicked()
         gtk.main_quit()
 
