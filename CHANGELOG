@@ -28,3 +28,11 @@ Version 1.0.6
 Version 1.0.7
     -Fixed a few bugs for systems without git
     -Implements mean crossing detection instead of windowing for shutter FFT
+
+Version 1.1
+    -Plot will be prettier if seaborn is installed
+    -Fixed bug in shutter FFT display
+    -Revamped experiment parameter system:
+        -Adds requirement for yaml
+        -Parameters automatically saved and loaded from last session
+        -Can manually save and load parameter files

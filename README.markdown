@@ -1,3 +1,6 @@
+##### _DStat is described in detail in [Dryden MDM, Wheeler AR (2015) DStat: A Versatile, Open-Source Potentiostat for Electroanalysis and Integration. PLoS ONE 10(10): e0140349. doi: 10.1371/journal.pone.0140349](http://journals.plos.org/plosone/article?id=10.1371/journal.pone.0140349) If you use this information in published work, please cite accordingly._
+---
+
 This is the documentation for the DStat interface software.
 The DStat interface is written primarily in Python and runs on Linux, Mac, and Windows.
 It is the main method for running experiments on the DStat, controlling experimental parameters and collecting and plotting data.
@@ -29,6 +32,11 @@ Python and related packages needed: (versions listed are tested, older versions 
 * pygobject (2.28.6)
 * XQuartz (2.7.7)
 * zeromq (4.0.5) and pyzmq (14.6.0)
+* pyyaml (3.11)
+
+Optional:
+
+* seaborn (0.7.0)—Makes prettier plots if available
 
 ### Mac OS X
 The easiest way to get most of the necessary requirements to run dstat-interface is using [Homebrew](http://brew.sh):
@@ -46,13 +54,23 @@ The interface runs in X11 using the GTK+ toolkit, so [XQuartz](http://xquartz.ma
 
 The final requirements, can be installed using python's pip system:
 
-    pip install pyserial pyzmq
+    pip install pyserial pyzmq pyyaml seaborn
 
 ### Linux
 Linux prerequisite installation is similar to that of Mac OS X, only using your distribution's native package manager rather than Homebrew, and X11 will likely be installed already. Some distributions may not have packages available for installing matplotlib or numpy, in which case, they should be installed using pip.
 
+The final requirements, can be installed using python's pip system:
+
+    pip install pyserial pyzmq pyyaml seaborn
+
 ### Windows
-While it is possible to install a bare python distribution and install the required prerequisites separately, [Python(x,y)](https://code.google.com/p/pythonxy/wiki/Downloads) has a python 2.7 distribution that already contains all necessary packages.
+While it is possible to install a bare python distribution and install the required prerequisites separately, [Python(x,y)](https://code.google.com/p/pythonxy/wiki/Downloads) has a python 2.7 distribution that already contains most of the necessary packages. However, pyserial is not installed in the recommended install so it should be manually selected or the full install done instead (tested with 2.7.9.0).
+
+The newest versions of Python(x,y) are also missing PyGTK, so it should be installed from [here](http://ftp.gnome.org/pub/GNOME/binaries/win32/pygtk/2.24/pygtk-all-in-one-2.24.2.win32-py2.7.msi) once Python(x,y) is installed. Matplotlib should then be reinstalled to get gtk support from [here](https://downloads.sourceforge.net/project/matplotlib/matplotlib/matplotlib-1.4.3/windows/matplotlib-1.4.3.win32-py2.7.exe).
+
+## Experimental pip install
+Tagged git versions are uploaded to [PiPy](https://pypi.python.org/pypi/dstat-interface) regularly, and thus dstat-interface can be installed using the command `pip install dstat-interface`, which will attempt to automatically install matplotlib, numpy, pyserial, and pyzmq. (N.B. matplotlib does not install well with pip on Mac and should be manually installed with Homebrew as described above)
+This is still experimental as dstat-interface cannot be launched as a module for compatibility with multiprocessing on Windows and pygtk and pygobject must be installed manually as described above.
 
 # Getting started
 ## Interface overview
