@@ -734,6 +734,16 @@ Thanks to Christian Fobel for help with Dropbot Plugin</property>
     <property name="can_focus">False</property>
     <property name="stock">gtk-save</property>
   </object>
+  <object class="GtkImage" id="image4">
+    <property name="visible">True</property>
+    <property name="can_focus">False</property>
+    <property name="stock">gtk-save</property>
+  </object>
+  <object class="GtkImage" id="image5">
+    <property name="visible">True</property>
+    <property name="can_focus">False</property>
+    <property name="stock">gtk-open</property>
+  </object>
   <object class="GtkListStore" id="serial_liststore">
     <columns>
       <!-- column-name serial -->
@@ -783,6 +793,26 @@ Thanks to Christian Fobel for help with Dropbot Plugin</property>
                         <property name="image">image3</property>
                         <property name="use_stock">False</property>
                         <signal name="activate" handler="on_file_save_plot_activate" swapped="no"/>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="GtkImageMenuItem" id="file_save_params">
+                        <property name="label">Save Parameters…</property>
+                        <property name="visible">True</property>
+                        <property name="can_focus">False</property>
+                        <property name="image">image4</property>
+                        <property name="use_stock">False</property>
+                        <signal name="activate" handler="on_file_save_params_activate" swapped="no"/>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="GtkImageMenuItem" id="file_load_params">
+                        <property name="label">Load Parameters…</property>
+                        <property name="visible">True</property>
+                        <property name="can_focus">False</property>
+                        <property name="image">image5</property>
+                        <property name="use_stock">False</property>
+                        <signal name="activate" handler="on_file_load_params_activate" swapped="no"/>
                       </object>
                     </child>
                     <child>

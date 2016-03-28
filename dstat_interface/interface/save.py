@@ -18,11 +18,15 @@
 #     You should have received a copy of the GNU General Public License
 #     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-import gtk, io, os
+import io
+import os
+
+import gtk
 import numpy as np
 
 from errors import InputError, VarError, ErrorLogger
 _logger = ErrorLogger(sender="dstat-interface-save")
+from params import save_params, load_params
 
 def manSave(current_exp):
     fcd = gtk.FileChooserDialog("Save...", None, gtk.FILE_CHOOSER_ACTION_SAVE,
@@ -103,6 +107,66 @@ def plotSave(plots):
             plots[i].figure.savefig(path)  # determines format from file extension
         fcd.destroy()
     
+    elif response == gtk.RESPONSE_CANCEL:
+        fcd.destroy()
+
+def man_param_save(window):
+    fcd = gtk.FileChooserDialog("Save Parameters…",
+                                None,
+                                gtk.FILE_CHOOSER_ACTION_SAVE,
+                                (gtk.STOCK_CANCEL, gtk.RESPONSE_CANCEL,
+                                 gtk.STOCK_SAVE, gtk.RESPONSE_OK)
+                                )
+    
+    filters = [gtk.FileFilter()]
+    filters[0].set_name("Parameter File (.yml)")
+    filters[0].add_pattern("*.yml")
+    
+    fcd.set_do_overwrite_confirmation(True)
+    for i in filters:
+        fcd.add_filter(i)
+                 
+    response = fcd.run()
+    
+    if response == gtk.RESPONSE_OK:
+        path = fcd.get_filename()
+        _logger.error(" ".join(("Selected filepath:", path)),'INFO')
+        
+        if not path.endswith(".yml"):
+            path += '.yml'
+        
+        save_params(window, path)
+
+        fcd.destroy()
+        
+    elif response == gtk.RESPONSE_CANCEL:
+        fcd.destroy()
+
+def man_param_load(window):
+    fcd = gtk.FileChooserDialog("Load Parameters…",
+                                None,
+                                gtk.FILE_CHOOSER_ACTION_OPEN,
+                                (gtk.STOCK_CANCEL, gtk.RESPONSE_CANCEL,
+                                 gtk.STOCK_OPEN, gtk.RESPONSE_OK)
+                                )
+    
+    filters = [gtk.FileFilter()]
+    filters[0].set_name("Parameter File (.yml)")
+    filters[0].add_pattern("*.yml")
+
+    for i in filters:
+        fcd.add_filter(i)
+                 
+    response = fcd.run()
+    
+    if response == gtk.RESPONSE_OK:
+        path = fcd.get_filename()
+        _logger.error(" ".join(("Selected filepath:", path)),'INFO')
+        
+        load_params(window, path)
+
+        fcd.destroy()
+        
     elif response == gtk.RESPONSE_CANCEL:
         fcd.destroy()
 

@@ -17,33 +17,59 @@
 #     You should have received a copy of the GNU General Public License
 #     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-import os, sys
+import os
+import sys
+
 import gtk
+import gobject
+
 import dstat_comm
 import __main__
-import gobject
 from errors import InputError, VarError, ErrorLogger
 _logger = ErrorLogger(sender="dstat-interface-exp_int")
 
 class ExpInterface(object):
     """Generic experiment interface class. Should be subclassed to implement
     experiment interfaces by populating self.entry.
-    
-    Public methods:
-    get_params(self)
     """
     def __init__(self, glade_path):
         self.builder = gtk.Builder()
         self.builder.add_from_file(glade_path)
         self.builder.connect_signals(self)
-        self.entry = {}
+        self.entry = {} # to be used only for str parameters
+        self._params = None
+    
+    def _fill_params(self):
+        self._params = dict.fromkeys(self.entry.keys())
+    
+    @property
+    def params(self):
+        """Dict of parameters"""
+        if self._params == None:
+            self._fill_params()
+        self._get_params()
+        return self._params
+    
+    def _get_params(self):
+        """Updates self._params from UI."""
+        for i in self.entry:
+            self._params[i] = self.entry[i].get_text()
+    
+    @params.setter
+    def params(self, params):
+        if self._params == None:
+            self._fill_params()
+        for i in self._params:
+            try:
+                self._params[i] = params[i]
+            except KeyError as e:
+                _logger.error("Invalid parameter key: %s" % e, "WAR")
+        self._set_params()
 
-    def get_params(self):
-        """Returns a dict of parameters for experiment."""
-        parameters = {}    
-        for key, value in self.entry.iteritems():
-            parameters[key] = int(value.get_text())    
-        return parameters
+    def _set_params(self):
+        """Updates UI with new parameters."""
+        for i in self.entry:
+            self.entry[i].set_text(self._params[i])
         
 class Chronoamp(ExpInterface):
     """Experiment class for chronoamperometry. Extends ExpInterface class to
@@ -70,6 +96,11 @@ class Chronoamp(ExpInterface):
         
         self.selection = self.treeview.get_selection()
         self.selection.set_mode(gtk.SELECTION_MULTIPLE)
+
+    def _fill_params(self):
+        super(Chronoamp, self)._fill_params()
+        self._params['potential'] = []
+        self._params['time'] = []
 
     def on_add_button_clicked(self, widget):
         """Add current values in potential_entry and time_entry to model."""
@@ -105,15 +136,21 @@ class Chronoamp(ExpInterface):
         for i in referencelist:
             self.model.remove(self.model.get_iter(i.get_path()))
 
-    def get_params(self):
-        """Returns a dict of parameters for experiment. Overrides superclass
-        method.
-        """
-        parameters = {}
-        parameters['potential'] = [int(r[0]) for r in self.model]
-        parameters['time'] = [int(r[1]) for r in self.model]
+    def _get_params(self):
+        """Updates self._params from UI. Overrides superclass method."""
+
+        self._params['potential'] = [int(r[0]) for r in self.model]
+        self._params['time'] = [int(r[1]) for r in self.model]
         
-        return parameters
+    def _set_params(self):
+        """Updates UI from self._params. Overrides superclass method."""
+        
+        self.model.clear()
+        
+        table = zip(self._params['potential'], self._params['time'])
+        
+        for i in table:
+            self.model.append(i)
               
 class LSV(ExpInterface):
     """Experiment class for LSV."""
@@ -161,15 +198,25 @@ class SWV(ExpInterface):
         self.entry['pulse'] = self.builder.get_object('pulse_entry')
         self.entry['freq'] = self.builder.get_object('freq_entry')
         self.entry['scans'] = self.builder.get_object('scans_entry')
+    
+    def _fill_params(self):
+        super(SWV, self)._fill_params()
         
-    def get_params(self):
-        """Extends superclass method to pass status of cyclic_checkbutton"""
-        parameters = {}
-        parameters['cyclic_checkbutton'] = self.builder.get_object(
-                                              'cyclic_checkbutton').get_active()
-        parameters.update(super(SWV, self).get_params())
+        self._params['cyclic_true'] = False
+    
+    def _get_params(self):
+        """Updates self._params from UI."""
+        super(SWV, self)._get_params()
         
-        return parameters
+        self._params['cyclic_true'] = self.builder.get_object(    
+                           'cyclic_checkbutton').get_active()
+    
+    def _set_params(self):
+        """Updates UI with new parameters."""
+        super(SWV, self)._set_params()
+    
+        self.builder.get_object('cyclic_checkbutton').set_active(
+                                                self._params['cyclic_true']) 
         
 class DPV(ExpInterface):
     """Experiment class for DPV."""
@@ -206,11 +253,7 @@ class PD(ExpInterface):
         """Adds entry listings to superclass's self.entry dict"""
         super(PD, self).__init__('interface/pd.glade')
         
-        self.entry['voltage'] = self.builder.get_object('voltage_adjustment')
         self.entry['time'] = self.builder.get_object('time_entry')
-        self.entry['interlock'] = self.builder.get_object('interlock_button')
-        self.entry['shutter'] = self.builder.get_object('shutter_button')
-        self.entry['sync'] = self.builder.get_object('sync_button')
         self.entry['sync_freq'] = self.builder.get_object('sync_freq')
         self.entry['fft_start'] = self.builder.get_object('fft_entry')
         self.entry['fft_int'] = self.builder.get_object('fft_int_entry')
@@ -223,6 +266,41 @@ class PD(ExpInterface):
             ['sync_button', 'sync_freq', 'fft_label', 'fft_entry', 'fft_label2',
                 'fft_int_entry']
             )
+        
+        bool_keys = ['interlock_true', 'shutter_true', 'sync_true']
+        bool_cont = map(self.builder.get_object,
+                             ['interlock_button',
+                              'shutter_button',
+                              'sync_button']
+                        )
+        self.bool = dict(zip(bool_keys, bool_cont))
+
+    def _fill_params(self):
+        super(PD, self)._fill_params()
+        
+        for i in self.bool:
+            self._params[i] = self.bool[i].get_active()
+        self._params['voltage'] = 0
+
+    def _get_params(self):
+        """Updates self._params from UI."""
+        super(PD, self)._get_params()
+        
+        for i in self.bool:
+            self._params[i] = self.bool[i].get_active()
+        
+        self._params['voltage'] = self.builder.get_object(         
+                                     'voltage_adjustment').get_value()
+    
+    def _set_params(self):
+        """Updates UI with new parameters."""
+        super(PD, self)._set_params()
+
+        for i in self.bool:
+            self.bool[i].set_active(self._params[i])
+        
+        self.builder.get_object('voltage_adjustment').set_value(
+                                                          self._params['voltage']                                                    )
         
     def on_light_button_clicked(self, data=None):
         __main__.MAIN.on_pot_stop_clicked()
@@ -265,26 +343,13 @@ class PD(ExpInterface):
             gobject.timeout_add(700, restore_buttons, self.buttons)
             
     def on_shutter_button_toggled(self, widget):
-        if self.entry['shutter'].get_active():
+        if self.bool['shutter_true'].get_active():
             for i in self.shutter_buttons:
                 i.set_sensitive(True)
         else:
             for i in self.shutter_buttons:
                 i.set_sensitive(False)
                 
-    def get_params(self):
-        """Returns a dict of parameters for experiment."""
-        parameters = {}    
-        parameters['voltage'] = int(self.entry['voltage'].get_value())
-        parameters['time'] = int(self.entry['time'].get_text())
-        parameters['interlock'] = self.entry['interlock'].get_active()
-        parameters['shutter'] = self.entry['shutter'].get_active()
-        parameters['sync'] = self.entry['sync'].get_active()
-        parameters['sync_freq'] = float(self.entry['sync_freq'].get_text())
-        parameters['fft_start'] = float(self.entry['fft_start'].get_text())
-        parameters['fft_int'] = float(self.entry['fft_int'].get_text())
-            
-        return parameters
         
 class POT(ExpInterface):
     """Experiment class for Potentiometry."""

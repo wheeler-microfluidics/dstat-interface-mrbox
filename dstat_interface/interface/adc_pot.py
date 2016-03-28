@@ -20,6 +20,9 @@
 
 import gtk
 
+from errors import InputError, VarError, ErrorLogger
+_logger = ErrorLogger(sender="dstat_adc_pot")
+
 v1_1_gain = [(0, "100 Ω (15 mA FS)", 0),
              (1, "300 Ω (5 mA FS)", 1),
              (2, "3 kΩ (500 µA FS)", 2),
@@ -37,34 +40,98 @@ v1_2_gain = [(0, "Bypass", 0),
              (5, "3 MΩ (500 nA FS)", 5),
              (6, "30 MΩ (50 nA FS)", 6),
              (7, "100 MΩ (15 nA FS)", 7)]
+             
 
-class adc_pot:
+class adc_pot(object):
     def __init__(self):
         self.builder = gtk.Builder()
         self.builder.add_from_file('interface/adc_pot.glade')
         self.builder.connect_signals(self)
         self.cell = gtk.CellRendererText()
         
-        self.buffer_toggle = self.builder.get_object('buffer_checkbutton')
-        self.short_toggle = self.builder.get_object('short_checkbutton')
-
+        ui_keys = ['buffer_true',
+                   'short_true',
+                   'pga_index',
+                   'srate_index',
+                   'gain_index'
+                   ]
+        ui_cont = map(self.builder.get_object, ['buffer_checkbutton',
+                                                'short_checkbutton',
+                                                'pga_combobox',
+                                                'srate_combobox',
+                                                'gain_combobox'
+                                                ]
+                      )
+        self.ui = dict(zip(ui_keys, ui_cont))
+        
         #initialize comboboxes
-        self.pga_combobox = self.builder.get_object('pga_combobox')
-        self.pga_combobox.pack_start(self.cell, True)
-        self.pga_combobox.add_attribute(self.cell, 'text', 1)
-        self.pga_combobox.set_active(1)
+        self.ui['pga_index'].pack_start(self.cell, True)
+        self.ui['pga_index'].add_attribute(self.cell, 'text', 1)
+        self.ui['pga_index'].set_active(1)
 
-        self.srate_combobox = self.builder.get_object('srate_combobox')
-        self.srate_combobox.pack_start(self.cell, True)
-        self.srate_combobox.add_attribute(self.cell, 'text', 1)
-        self.srate_combobox.set_active(7)
+        self.ui['srate_index'].pack_start(self.cell, True)
+        self.ui['srate_index'].add_attribute(self.cell, 'text', 1)
+        self.ui['srate_index'].set_active(7)
         
-        self.gain_combobox = self.builder.get_object('gain_combobox')
         self.gain_liststore = self.builder.get_object('gain_liststore')
-        self.gain_combobox.pack_start(self.cell, True)
-        self.gain_combobox.add_attribute(self.cell, 'text', 1)
-        self.gain_combobox.set_active(2)
+        self.ui['gain_index'].pack_start(self.cell, True)
+        self.ui['gain_index'].add_attribute(self.cell, 'text', 1)
+        self.ui['gain_index'].set_active(2)
         
+        self._params = {}
+    
+    @property
+    def params(self):
+        """Dict of parameters."""
+        try:
+            self._get_params()
+        except InputError as e:
+            raise e
+        finally:
+            return self._params
+    
+    def _get_params(self):
+        """Updates self._params from UI."""
+        for i in self.ui:
+            self._params[i] = self.ui[i].get_active()
+        
+        srate_model = self.ui['srate_index'].get_model()
+        self._params['adc_rate'] = srate_model[self._params['srate_index']][2]
+        srate = srate_model[self._params['srate_index']][1]
+        
+        if srate.endswith("kHz"):
+            sample_rate = float(srate.rstrip(" kHz"))*1000
+        else:
+            sample_rate = float(srate.rstrip(" Hz"))
+        
+        self._params['adc_rate_hz'] = sample_rate
+        
+        pga_model = self.ui['srate_index'].get_model()
+        self._params['adc_pga'] = pga_model[self._params['pga_index']][2]
+        
+        gain_model = self.ui['gain_index'].get_model()
+        self._params['gain'] = gain_model[self._params['gain_index']][2]
+        if self._params['gain_index'] not in range(len(gain_model)):
+            raise InputError(self._params['gain_index'],
+                             "Select a potentiostat gain.")
+        
+    @params.setter
+    def params(self, params):
+        if self._params is {}:
+            self._params = dict.fromkeys(self.ui.keys())
+        
+        for i in self._params:
+            try:
+                self._params[i] = params[i]
+            except KeyError as e:
+                _logger.error("Invalid parameter key: %s" % e, "WAR")
+        self._set_params()
+
+    def _set_params(self):
+        """Updates UI with new parameters."""
+        for i in self.ui:
+            self.ui[i].set_active(self._params[i])
+            
     def set_version(self, version):
         """ Sets menus for DStat version. """
         self.gain_liststore.clear()
@@ -75,4 +142,5 @@ class adc_pot:
             elif version[1] >= 2:
                 for i in v1_2_gain:
                     self.gain_liststore.append(i)
-                
+            
+        
