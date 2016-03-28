@@ -18,7 +18,10 @@
 #     You should have received a copy of the GNU General Public License
 #     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-import gtk, io, os
+import io
+import os
+
+import gtk
 import numpy as np
 
 from errors import InputError, VarError, ErrorLogger

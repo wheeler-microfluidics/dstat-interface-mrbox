@@ -159,6 +159,9 @@ class Main(object):
                         self.plot_notebook.page_num(self.ft_window)).hide()
         self.plot_notebook.get_nth_page(
                         self.plot_notebook.page_num(self.period_window)).hide()
+                        
+        self.params_loaded = False
+                        
 
     def on_window1_destroy(self, object, data=None):
         """ Quit when main window closed."""
@@ -208,13 +211,15 @@ class Main(object):
             self.statusbar.remove_all(self.error_context_id)
             
             if not len(self.version) == 2:
-                self.statusbar.push(self.error_context_id, "Communication Error")
+                self.statusbar.push(self.error_context_id,
+                    "Communication Error")
                 return
             
             else:
                 self.adc_pot.set_version(self.version)
                 self.statusbar.push(self.error_context_id,
-                                    "".join(["DStat version: ", str(self.version[0]),
+                                    "".join(["DStat version: ",
+                                    str(self.version[0]),
                                     ".", str(self.version[1])])
                                 )
                                 
@@ -432,7 +437,6 @@ class Main(object):
         
         while comm.serial_instance.data_pipe_p.poll(): # Clear data pipe
             comm.serial_instance.data_pipe_p.recv()
-        
         
         selection = self.expcombobox.get_active()
         parameters = {}
