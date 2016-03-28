@@ -71,3 +71,5 @@ def load_params(window, path):
     window.expcombobox.set_active(
                     window.exp_window.classes[params['experiment_index']][0])
     window.exp_window.set_params(params['experiment_index'], params)
+    
+    window.params_loaded = True

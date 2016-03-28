@@ -233,10 +233,11 @@ class Main(object):
             _logger.error(err, 'WAR')
             self.serial_connect.set_sensitive(True)
         
-        try:
-            params.load_params(self, 'last_params.yml')
-        except IOError:
-            _logger.error("No previous parameters found.", 'INFO')
+        if self.params_loaded == False:
+            try:
+                params.load_params(self, 'last_params.yml')
+            except IOError:
+                _logger.error("No previous parameters found.", 'INFO')
             
     def on_serial_disconnect_clicked(self, data=None):
         """Disconnect from DStat."""
