@@ -751,6 +751,14 @@ class Main(object):
         
         save.plotSave(plots)
     
+    def on_file_save_params_activate(self, menuitem, data=None):
+        """Activate dialogue to save current experiment parameters. """
+        save.man_param_save(self)
+    
+    def on_file_load_params_activate(self, menuitem, data=None):
+        """Activate dialogue to load experiment parameters from file. """
+        save.man_param_load(self)
+        
     def on_menu_dropbot_connect_activate(self, menuitem, data=None):
         """Listen for remote control connection from µDrop."""
         self.microdrop = microdrop.microdropConnection()
