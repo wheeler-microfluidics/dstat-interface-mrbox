@@ -39,11 +39,14 @@ class ExpInterface(object):
         self.entry = {} # to be used only for str parameters
         self._params = None
     
+    def _fill_params(self):
+        self._params = dict.fromkeys(self.entry.keys())
+    
     @property
     def params(self):
         """Dict of parameters"""
-        if self._params is None:
-            self._params = dict.fromkeys(self.entry.keys())
+        if self._params == None:
+            self._fill_params()
         self._get_params()
         return self._params
     
@@ -54,20 +57,19 @@ class ExpInterface(object):
     
     @params.setter
     def params(self, params):
-        if self._params is None:
-            self._params = dict.fromkeys(self.entry.keys())
-            
+        if self._params == None:
+            self._fill_params()
         for i in self._params:
             try:
                 self._params[i] = params[i]
-            except IndexError as e:
+            except KeyError as e:
                 _logger.error("Invalid parameter key: %s" % e, "WAR")
         self._set_params()
 
     def _set_params(self):
         """Updates UI with new parameters."""
         for i in self.entry:
-            self.entry.set_text(self._params[i])
+            self.entry[i].set_text(self._params[i])
         
 class Chronoamp(ExpInterface):
     """Experiment class for chronoamperometry. Extends ExpInterface class to
@@ -94,6 +96,11 @@ class Chronoamp(ExpInterface):
         
         self.selection = self.treeview.get_selection()
         self.selection.set_mode(gtk.SELECTION_MULTIPLE)
+
+    def _fill_params(self):
+        super(Chronoamp, self)._fill_params()
+        self._params['potential'] = []
+        self._params['time'] = []
 
     def on_add_button_clicked(self, widget):
         """Add current values in potential_entry and time_entry to model."""
@@ -128,8 +135,6 @@ class Chronoamp(ExpInterface):
         
         for i in referencelist:
             self.model.remove(self.model.get_iter(i.get_path()))
-
-   
 
     def _get_params(self):
         """Updates self._params from UI. Overrides superclass method."""
@@ -193,7 +198,12 @@ class SWV(ExpInterface):
         self.entry['pulse'] = self.builder.get_object('pulse_entry')
         self.entry['freq'] = self.builder.get_object('freq_entry')
         self.entry['scans'] = self.builder.get_object('scans_entry')
-
+    
+    def _fill_params(self):
+        super(SWV, self)._fill_params()
+        
+        self._params['cyclic_true'] = False
+    
     def _get_params(self):
         """Updates self._params from UI."""
         super(SWV, self)._get_params()
@@ -265,6 +275,13 @@ class PD(ExpInterface):
                         )
         self.bool = dict(zip(bool_keys, bool_cont))
 
+    def _fill_params(self):
+        super(PD, self)._fill_params()
+        
+        for i in self.bool:
+            self._params[i] = self.bool[i].get_active()
+        self._params['voltage'] = 0
+
     def _get_params(self):
         """Updates self._params from UI."""
         super(PD, self)._get_params()
@@ -278,7 +295,7 @@ class PD(ExpInterface):
     def _set_params(self):
         """Updates UI with new parameters."""
         super(PD, self)._set_params()
-        
+
         for i in self.bool:
             self.bool[i].set_active(self._params[i])
         

@@ -12,3 +12,4 @@ dist
 setup.py
 *.egg-info
 last_params
+last_params.yml

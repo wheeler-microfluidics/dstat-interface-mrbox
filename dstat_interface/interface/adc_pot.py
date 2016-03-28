@@ -83,8 +83,12 @@ class adc_pot(object):
     @property
     def params(self):
         """Dict of parameters."""
-        self._get_params()
-        return self._params
+        try:
+            self._get_params()
+        except InputError as e:
+            raise e
+        finally:
+            return self._params
     
     def _get_params(self):
         """Updates self._params from UI."""
@@ -113,20 +117,20 @@ class adc_pot(object):
         
     @params.setter
     def params(self, params):
-        if self._params is None:
+        if self._params is {}:
             self._params = dict.fromkeys(self.ui.keys())
         
         for i in self._params:
             try:
                 self._params[i] = params[i]
-            except IndexError as e:
+            except KeyError as e:
                 _logger.error("Invalid parameter key: %s" % e, "WAR")
         self._set_params()
 
     def _set_params(self):
         """Updates UI with new parameters."""
         for i in self.ui:
-            self.ui.set_active(self._params[i])
+            self.ui[i].set_active(self._params[i])
             
     def set_version(self, version):
         """ Sets menus for DStat version. """

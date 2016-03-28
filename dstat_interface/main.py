@@ -44,7 +44,6 @@ except ImportError:
     sys.exit(1)
 from serial import SerialException
 from datetime import datetime
-import yaml
 
 os.chdir(os.path.dirname(os.path.abspath(sys.argv[0])))
 
@@ -171,10 +170,7 @@ class Main(object):
         
     def quit(self):
         """Disconnect and save parameters on quit."""
-        output = params.get_params(self)
-        
-        with open('last_params', 'w') as f:
-            yaml.dump(output, f)
+        params.save_params(self, 'last_params.yml')
         
         self.on_serial_disconnect_clicked()
         gtk.main_quit()
@@ -236,6 +232,11 @@ class Main(object):
         except TypeError as err:
             _logger.error(err, 'WAR')
             self.serial_connect.set_sensitive(True)
+        
+        try:
+            params.load_params(self, 'last_params.yml')
+        except IOError:
+            _logger.error("No previous parameters found.", 'INFO')
             
     def on_serial_disconnect_clicked(self, data=None):
         """Disconnect from DStat."""
