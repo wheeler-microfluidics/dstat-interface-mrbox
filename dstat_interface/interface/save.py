@@ -34,11 +34,8 @@ def manSave(current_exp):
                                  gtk.STOCK_SAVE, gtk.RESPONSE_OK))
     
     filters = [gtk.FileFilter()]
-    filters[0].set_name("NumPy binary (.npy)")
-    filters[0].add_pattern("*.npy")
-    filters.append(gtk.FileFilter())
-    filters[1].set_name("Space separated text (.txt)")
-    filters[1].add_pattern("*.txt")
+    filters[0].set_name("Space separated text (.txt)")
+    filters[0].add_pattern("*.txt")
     
     fcd.set_do_overwrite_confirmation(True)
     for i in filters:
