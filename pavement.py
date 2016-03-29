@@ -18,7 +18,7 @@ setup(name='dstat_interface',
       license='GPLv3',
       packages=['dstat_interface', ],
       install_requires=['matplotlib', 'numpy', 'pyserial', 
-                        'pyzmq'],
+                        'pyzmq', 'pyyaml','seaborn'],
       # Install data listed in `MANIFEST.in`
       include_package_data=True)
 
