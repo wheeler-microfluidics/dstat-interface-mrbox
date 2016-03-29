@@ -36,3 +36,6 @@ Version 1.1
         -Adds requirement for yaml
         -Parameters automatically saved and loaded from last session
         -Can manually save and load parameter files
+
+Version 1.1.1
+    -Fixed critical bug that made PGA setting change with Gain resistor
