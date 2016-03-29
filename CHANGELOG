@@ -39,3 +39,6 @@ Version 1.1
 
 Version 1.1.1
     -Fixed critical bug that made PGA setting change with Gain resistor
+    
+Version 1.1.2
+    -Fixed more critical bugs from refactoring
