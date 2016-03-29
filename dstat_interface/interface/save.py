@@ -52,13 +52,13 @@ def manSave(current_exp):
         filter_selection = fcd.get_filter().get_name()
         
         if filter_selection.endswith("(.npy)"):
-            if (current_exp.parameters['shutter'] and current_exp.parameters['sync']):
+            if (current_exp.parameters['shutter_true'] and current_exp.parameters['sync_true']):
                 npy(current_exp, current_exp.data, "-".join((path,'data')))
                 npy(current_exp, current_exp.ftdata, "-".join((path,'ft')))
             else:
                 npy(current_exp, current_exp.data, path, auto=True)
         elif filter_selection.endswith("(.txt)"):
-            if (current_exp.parameters['shutter'] and current_exp.parameters['sync']):
+            if (current_exp.parameters['shutter_true'] and current_exp.parameters['sync_true']):
                 text(current_exp, current_exp.data, "-".join((path,'data')))
                 text(current_exp, current_exp.ftdata, "-".join((path,'ft')))
             else:
@@ -179,7 +179,7 @@ def autoSave(current_exp, dir_button, name, expnumber):
     path += '-'
     path += str(expnumber)
     
-    if (current_exp.parameters['shutter'] and current_exp.parameters['sync']):
+    if (current_exp.parameters['shutter_true'] and current_exp.parameters['sync_true']):
         text(current_exp, current_exp.data, "-".join((path,'data')), auto=True)
         text(current_exp, current_exp.ftdata, "-".join((path,'ft')), auto=True)
     else:
@@ -255,7 +255,7 @@ def text(exp, data, path, auto=False):
                     "# FT Integral (",
                     str(exp.parameters['sync_freq']),
                     "±",
-                    str(exp.parameters['fft_int']/2),
+                    str(int(exp.parameters['fft_int'])/2),
                     " Hz): ",
                     str(exp.ft_int),
                     " A"
