@@ -106,7 +106,7 @@ class adc_pot(object):
         
         self._params['adc_rate_hz'] = sample_rate
         
-        pga_model = self.ui['srate_index'].get_model()
+        pga_model = self.ui['pga_index'].get_model()
         self._params['adc_pga'] = pga_model[self._params['pga_index']][2]
         
         gain_model = self.ui['gain_index'].get_model()
