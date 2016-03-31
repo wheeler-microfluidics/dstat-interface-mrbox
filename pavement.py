@@ -17,14 +17,14 @@ setup(name='dstat_interface',
       url='http://microfluidics.utoronto.ca/dstat',
       license='GPLv3',
       packages=['dstat_interface', ],
-      install_requires=['matplotlib', 'numpy', 'pyserial', 
-                        'pyzmq', 'pyyaml','seaborn'],
+      install_requires=['matplotlib', 'numpy', 'pyserial', 'pyzmq',
+                        'pyyaml','seaborn', 'zmq-plugin>=0.2.post2'],
       # Install data listed in `MANIFEST.in`
       include_package_data=True)
 
 
 @task
-@needs('generate_setup', 'minilib', 'setuptools.command.sdist') 
+@needs('generate_setup', 'minilib', 'setuptools.command.sdist')
 def sdist():
     """Overrides sdist to make sure that our setup.py is generated."""
     pass
