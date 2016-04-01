@@ -24,6 +24,7 @@ import sys
 import os
 import multiprocessing
 import time
+from copy import deepcopy
 from datetime import datetime
 
 try:
@@ -583,22 +584,16 @@ class Main(object):
         try:
             if comm.serial_instance.data_pipe_p.poll(): 
                 incoming = comm.serial_instance.data_pipe_p.recv()
-                # if isinstance(incoming, basestring): # Test if incoming is str
-                #     self.experiment_done()
-                #     self.on_serial_disconnect_clicked()
-                #     return False
                 
                 self.line, data = incoming
                 if self.line > self.lastdataline:
-                    self.current_exp.data += [[], []]
-                    if len(data) > 2:
-                        self.current_exp.data_extra += [[], []]
+                    self.current_exp.data.append(
+                        deepcopy(self.current_exp.line_data))
                     self.lastdataline = self.line
-                for i in range(2):
-                    self.current_exp.data[2*self.line+i].append(data[i])
-                    if len(data) > 2:
-                        self.current_exp.data_extra[2*self.line+i].append(
-                                                                    data[i+2])
+
+                for i in range(len(self.current_exp.data[self.line])):
+                    self.current_exp.data[self.line][i].append(data[i])
+                
                 if comm.serial_instance.data_pipe_p.poll():
                     self.experiment_running_data()
                 return True
@@ -673,39 +668,50 @@ class Main(object):
         gobject.source_remove(self.plot_proc)  # stop automatic plot update
         self.experiment_running_plot()  # make sure all data updated on plot
         
-        if (self.current_exp.parameters['shutter_true'] and
-            self.current_exp.parameters['sync_true']):
-            self.ft_plot.updateline(self.current_exp, 0) 
-            self.ft_plot.redraw()
-            self.current_exp.data_extra = self.current_exp.ftdata
-            self.statusbar.push(
-                self.message_context_id, " ".join(
-                    ("Integral:", str(self.current_exp.ft_int), " A")
-                    )
-                )
-
         self.databuffer.set_text("")
         self.databuffer.place_cursor(self.databuffer.get_start_iter())
         self.rawbuffer.insert_at_cursor("\n")
         self.rawbuffer.set_text("")
         self.rawbuffer.place_cursor(self.rawbuffer.get_start_iter())
-
+        
+        # Shutter stuff
+        if (self.current_exp.parameters['shutter_true'] and
+            self.current_exp.parameters['sync_true']):
+            self.ft_plot.updateline(self.current_exp, 0) 
+            self.ft_plot.redraw()
+            for col in zip(*self.current_exp.ftdata):
+                for row in col:
+                    self.databuffer.insert_at_cursor(str(row)+ "    ")
+                self.databuffer.insert_at_cursor("\n")
+            
+            self.statusbar.push(
+                self.message_context_id, " ".join(
+                    ("Integral:", str(self.current_exp.ft_int), " A")
+                    )
+                )
+        
+        # Write DStat commands
         for i in self.current_exp.commands:
             self.rawbuffer.insert_at_cursor(i)
 
         self.rawbuffer.insert_at_cursor("\n")
-
-        for col in zip(*self.current_exp.data):
-            for row in col:
-                self.rawbuffer.insert_at_cursor(str(row)+ "    ")
-            self.rawbuffer.insert_at_cursor("\n")
         
-        if self.current_exp.data_extra:
-            for col in zip(*self.current_exp.data_extra):
-                for row in col:
-                    self.databuffer.insert_at_cursor(str(row)+ "    ")
-                self.databuffer.insert_at_cursor("\n")
-    
+        # Data Output
+        line_buffer = []
+        
+        for scan in self.current_exp.data:
+            for dimension in scan:
+                for i in range(len(dimension)):
+                    try:
+                        line_buffer[i] += "%s     " % dimension[i]
+                    except IndexError:
+                        line_buffer.append("")
+                        line_buffer[i] += "%s     " % dimension[i]
+                
+        for i in line_buffer:
+            self.rawbuffer.insert_at_cursor("%s\n" % i)
+        
+        # Autosaving
         if self.autosave_checkbox.get_active():
             save.autoSave(self.current_exp, self.autosavedir_button,
                           self.autosavename.get_text(), self.expnumber)
@@ -718,7 +724,8 @@ class Main(object):
             save.autoPlot(plots, self.autosavedir_button,
                           self.autosavename.get_text(), self.expnumber)
             self.expnumber += 1
-        
+            
+        # uDrop
         if self.dropbot_enabled == True:
             if self.dropbot_triggered == True:
                 self.dropbot_triggered = False
@@ -726,9 +733,11 @@ class Main(object):
             self.microdrop_proc = gobject.timeout_add(500,
                                                       self.microdrop_listen)
         
+        # UI stuff
         self.spinner.stop()
         self.startbutton.set_sensitive(True)
         self.stopbutton.set_sensitive(False)
+        
         self.start_ocp()
 
     def on_pot_stop_clicked(self, data=None):

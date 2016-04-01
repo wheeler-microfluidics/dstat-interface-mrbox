@@ -345,8 +345,10 @@ class Experiment(object):
         self.databytes = 8
         self.scan = 0
         self.time = 0
-
-        self.data_extra = []  # must be defined even when not needed
+        
+        # list of scans, tuple of dimensions, list of data
+        self.data = [([], [])]
+        self.line_data = ([], [])
         
         major, minor = self.parameters['version']
         
@@ -463,13 +465,15 @@ class Experiment(object):
     def data_handler(self, data_input):
         """Takes data_input as tuple -- (scan, data).
         Returns:
-        (scan number, [voltage, current]) -- voltage in mV, current in A
+        (scan number, (voltage, current)) -- voltage in mV, current in A
         """
         scan, data = data_input
         voltage, current = struct.unpack('<Hl', data) #uint16 + int32
-        return (scan,
-                [(voltage-32768)*3000./65536,
-                (current+self.gain_trim)*(1.5/self.gain/8388607)])
+        return (scan, (
+                       (voltage-32768)*3000./65536,
+                       (current+self.gain_trim)*(1.5/self.gain/8388607)
+                       )
+               )
     
     def data_postprocessing(self):
         """No data postprocessing done by default, can be overridden
@@ -571,7 +575,6 @@ class Chronoamp(Experiment):
         self.datatype = "linearData"
         self.xlabel = "Time (s)"
         self.ylabel = "Current (A)"
-        self.data = [[], []]
         self.datalength = 2
         self.databytes = 8
         self.xmin = 0
@@ -597,9 +600,11 @@ class Chronoamp(Experiment):
         scan, data = data_input
         # 2*uint16 + int32
         seconds, milliseconds, current = struct.unpack('<HHl', data)
-        return (scan,
-                [seconds+milliseconds/1000.,
-                (current+self.gain_trim)*(1.5/self.gain/8388607)])
+        return (scan, (
+                       seconds+milliseconds/1000.,
+                       (current+self.gain_trim)*(1.5/self.gain/8388607)
+                       )
+                )
 
 class PDExp(Chronoamp):
     """Photodiode/PMT experiment"""
@@ -609,7 +614,6 @@ class PDExp(Chronoamp):
         self.datatype = "linearData"
         self.xlabel = "Time (s)"
         self.ylabel = "Current (A)"
-        self.data = [[], []]
         self.datalength = 2
         self.databytes = 8
         self.xmin = 0
@@ -653,7 +657,6 @@ class PotExp(Experiment):
         self.datatype = "linearData"
         self.xlabel = "Time (s)"
         self.ylabel = "Voltage (V)"
-        self.data = [[], []]
         self.datalength = 2
         self.databytes = 8
         self.xmin = 0
@@ -669,8 +672,10 @@ class PotExp(Experiment):
         scan, data = data_input
         # 2*uint16 + int32
         seconds, milliseconds, voltage = struct.unpack('<HHl', data)
-        return (scan,
-                [seconds+milliseconds/1000., voltage*(1.5/8388607.)])
+        return (scan, (
+                       seconds+milliseconds/1000., voltage*(1.5/8388607.)
+                       )
+                )
 
 class LSVExp(Experiment):
     """Linear Scan Voltammetry experiment"""
@@ -680,7 +685,6 @@ class LSVExp(Experiment):
         self.datatype = "linearData"
         self.xlabel = "Voltage (mV)"
         self.ylabel = "Current (A)"
-        self.data = [[], []]
         self.datalength = 2
         self.databytes = 6  # uint16 + int32
         self.xmin = int(self.parameters['start'])
@@ -713,7 +717,6 @@ class CVExp(Experiment):
         self.datatype = "CVData"
         self.xlabel = "Voltage (mV)"
         self.ylabel = "Current (A)"
-        self.data = [[], []]
         self.datalength = 2 * self.parameters['scans']  # x and y for each scan
         self.databytes = 6  # uint16 + int32
         self.xmin = int(self.parameters['v1'])
@@ -750,14 +753,13 @@ class SWVExp(Experiment):
         self.datatype = "SWVData"
         self.xlabel = "Voltage (mV)"
         self.ylabel = "Current (A)"
-        self.data = [[], []]  # only difference stored here
+        self.data = [([], [], [], [])]  # voltage, current, forwards, reverse
+        self.line_data = ([], [], [], [])
         self.datalength = 2 * self.parameters['scans']
         self.databytes = 10
         
         self.xmin = int(self.parameters['start'])
         self.xmax = int(self.parameters['stop'])
-
-        self.data_extra = [[], []]  
         
         self.commands += "E"
         self.commands[2] += "S"
@@ -792,10 +794,13 @@ class SWVExp(Experiment):
         f_trim = forward+self.gain_trim
         r_trim = reverse+self.gain_trim
         
-        return (scan, [(voltage-32768)*3000./65536,
+        return (scan, (
+                       (voltage-32768)*3000./65536,
                        (f_trim-r_trim)*(1.5/self.gain/8388607),
                        f_trim*(1.5/self.gain/8388607),
-                       r_trim*(1.5/self.gain/8388607)])
+                       r_trim*(1.5/self.gain/8388607)
+                       )
+                )
 
 
 class DPVExp(SWVExp):
@@ -807,14 +812,13 @@ class DPVExp(SWVExp):
         self.datatype = "SWVData"
         self.xlabel = "Voltage (mV)"
         self.ylabel = "Current (A)"
-        self.data = [[], []]  # only difference stored here
+        self.data = [([], [], [], [])]  # voltage, current, forwards, reverse
+        self.line_data = ([], [], [], [])
         self.datalength = 2
         self.databytes = 10
         
         self.xmin = int(self.parameters['start'])
         self.xmax = int(self.parameters['stop'])
-
-        self.data_extra = [[], []]
         
         self.commands += "E"
         self.commands[2] += "D"

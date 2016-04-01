@@ -262,9 +262,20 @@ def text(exp, data, path, auto=False):
         pass
 
     file.write("".join([header, '\n']))
-    for col in zip(*data):
-        for row in col:
-            file.write(str(row)+ "    ")
-        file.write('\n')
+      
+    # Write out actual data  
+    line_buffer = []
+    
+    for scan in zip(*data):
+        for dimension in scan:
+            for i in range(len(dimension)):
+                try:
+                    line_buffer[i] += "%s     " % dimension[i]
+                except IndexError:
+                    line_buffer.append("")
+                    line_buffer[i] += "%s     " % dimension[i]
+            
+    for i in line_buffer:
+        file.write("%s\n" % i)
     
     file.close()

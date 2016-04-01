@@ -138,12 +138,12 @@ class plotbox(object):
         the Experiment instance.
         """
         # limits display to 2000 data points per line
-        divisor = len(Experiment.data[1+line_number*2]) // 2000 + 1
-        
+        divisor = len(Experiment.data[line_number][0]) // 2000 + 1
+
         self.axe1.lines[line_number].set_ydata(
-                                   Experiment.data[1+line_number*2][1::divisor])
+                                   Experiment.data[line_number][1][1::divisor])
         self.axe1.lines[line_number].set_xdata(
-                                   Experiment.data[line_number*2][1::divisor])
+                                   Experiment.data[line_number][0][1::divisor])
 
     def changetype(self, Experiment):
         """Change plot type. Set axis labels and x bounds to those stored
@@ -170,8 +170,8 @@ class ft_box(plotbox):
                 if data[i] > target:
                     return i
         
-        y = Experiment.data[1+line_number*2]
-        x = Experiment.data[line_number*2]
+        y = Experiment.data[line_number][1]
+        x = Experiment.data[line_number][0]
         freq = Experiment.parameters['adc_rate_hz']
         i = search_value(x, float(Experiment.parameters['fft_start']))
         y1 = y[i:]
