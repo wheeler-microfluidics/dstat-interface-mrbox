@@ -181,15 +181,9 @@ class ft_box(plotbox):
         y1[min_index] = avg
         y1[max_index] = avg
         f, Y = plotSpectrum(y1[min_index:max_index],freq)
-        Experiment.ft_int = integrateSpectrum(
-                                f,
-                                Y,
-                                float(Experiment.parameters['sync_freq']),
-                                float(Experiment.parameters['fft_int'])
-                                )
         self.axe1.lines[line_number].set_ydata(Y)
         self.axe1.lines[line_number].set_xdata(f)
-        Experiment.ftdata = (f, Y)
+        Experiment.ftdata = [(f, Y)]
         
     def changetype(self, Experiment):
         """Change plot type. Set axis labels and x bounds to those stored

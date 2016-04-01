@@ -90,18 +90,19 @@ def plotSave(plots):
         filter_selection = fcd.get_filter().get_name()
         
         for i in plots:
-            path += '-'
-            path += i
+            save_path = path
+            save_path += '-'
+            save_path += i
         
             if filter_selection.endswith("(.pdf)"):
-                if not path.endswith(".pdf"):
-                    path += ".pdf"
+                if not save_path.endswith(".pdf"):
+                    save_path += ".pdf"
             
             elif filter_selection.endswith("(.png)"):
-                if not path.endswith(".png"):
-                    path += ".png"
+                if not save_path.endswith(".png"):
+                    save_path += ".png"
     
-            plots[i].figure.savefig(path)  # determines format from file extension
+            plots[i].figure.savefig(save_path)  # determines format from file extension
         fcd.destroy()
     
     elif response == gtk.RESPONSE_CANCEL:
@@ -245,23 +246,6 @@ def text(exp, data, path, auto=False):
     header += "# DSTAT COMMANDS\n#  "
     for i in exp.commands:
         header += i
-    
-    try:
-        if exp.ft_int:
-            header += "\n"
-            header += "".join(
-                (
-                    "# FT Integral (",
-                    str(exp.parameters['sync_freq']),
-                    "±",
-                    str(int(exp.parameters['fft_int'])/2),
-                    " Hz): ",
-                    str(exp.ft_int),
-                    " A"
-                )
-            )
-    except AttributeError:
-        pass
 
     file.write("".join([header, '\n']))
     

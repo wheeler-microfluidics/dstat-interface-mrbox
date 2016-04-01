@@ -24,7 +24,7 @@ import logging
 
 import pygtk
 import gtk
-from numpy import mean
+from numpy import mean, trapz
 
 logger = logging.getLogger(__name__)
 
@@ -124,6 +124,18 @@ def do_analysis(experiment):
             data = experiment.data
         
         experiment.analysis.update(_summary_stats(data))
+    
+    try:
+        x, y = experiment.ftdata[0]
+        experiment.analysis['FT Integral'] = _integrateSpectrum(
+                x,
+                y,
+                float(experiment.parameters['sync_freq']),
+                float(experiment.parameters['fft_int'])
+        )
+
+    except AttributeError:
+        pass
 
 def _data_slice(data, start, stop):
     """Accepts data (as list of tuples of lists) and returns copy of data
@@ -162,5 +174,22 @@ def _summary_stats(data):
                             (scan, mean(data[scan][1]))
                             )
     return stats
-                                
-        
+    
+def _integrateSpectrum(x, y, target, bandwidth):
+    """
+    Returns integral of range of bandwidth centered on target.
+    """
+    j = 0
+    k = len(x)
+
+    for i in range(len(x)):
+        if x[i] >= target-bandwidth/2:
+            j = i
+            break
+    
+    for i in range(j,len(x)):
+        if x[i] >= target+bandwidth/2:
+            k = i
+            break
+
+    return [(0, trapz(y=y[j:k], x=x[j:k]))]

@@ -674,9 +674,7 @@ class Main(object):
         gobject.source_remove(self.plot_proc)  # stop automatic plot update
         self.experiment_running_plot()  # make sure all data updated on plot
         
-        # Run Analysis
-        
-        analysis.do_analysis(self.current_exp)
+
         
         self.databuffer.set_text("")
         self.databuffer.place_cursor(self.databuffer.get_start_iter())
@@ -693,18 +691,23 @@ class Main(object):
                 for row in col:
                     self.databuffer.insert_at_cursor(str(row)+ "    ")
                 self.databuffer.insert_at_cursor("\n")
-            
-            self.statusbar.push(
-                self.message_context_id, " ".join(
-                    ("Integral:", str(self.current_exp.ft_int), " A")
-                    )
-                )
+        
+        # Run Analysis
+        analysis.do_analysis(self.current_exp)
         
         # Write DStat commands
         for i in self.current_exp.commands:
             self.rawbuffer.insert_at_cursor(i)
 
         self.rawbuffer.insert_at_cursor("\n")
+        
+        try:
+            self.statusbar.push(
+                self.message_context_id, 
+                "Integral: %s A" % self.current_exp.analysis['FT Integral'][0][1]
+            )
+        except KeyError:
+            pass
         
         # Data Output
         analysis_buffer = []
