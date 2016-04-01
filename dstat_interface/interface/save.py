@@ -240,7 +240,9 @@ def text(exp, data, path, auto=False):
     
     time = exp.time
 
-    header = "".join(['#', time.isoformat(), "\n#"])
+    header = "".join(['# TIME ', time.isoformat(), "\n"])
+    
+    header += "# DSTAT COMMANDS\n#  "
     for i in exp.commands:
         header += i
     
@@ -262,6 +264,21 @@ def text(exp, data, path, auto=False):
         pass
 
     file.write("".join([header, '\n']))
+    
+    analysis_buffer = []
+    
+    if exp.analysis != {}:
+        analysis_buffer.append("# ANALYSIS")
+        for key, value in exp.analysis.iteritems():
+            analysis_buffer.append("#  %s:" % key)
+            for scan in value:
+                number, result = scan
+                analysis_buffer.append(
+                    "#    Scan %s -- %s" % (number, result)
+                    )
+    
+    for i in analysis_buffer:
+        file.write("%s\n" % i)
       
     # Write out actual data  
     line_buffer = []

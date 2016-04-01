@@ -41,6 +41,7 @@ def get_params(window):
     except InputError:
         _logger.error("No gain selected.", 'INFO')
     parameters.update(window.exp_window.get_params(selection))
+    parameters.update(window.analysis_opt_window.params)
     
     return parameters
 
@@ -71,5 +72,6 @@ def load_params(window, path):
     window.expcombobox.set_active(
                     window.exp_window.classes[params['experiment_index']][0])
     window.exp_window.set_params(params['experiment_index'], params)
+    window.analysis_opt_window.params = params
     
     window.params_loaded = True

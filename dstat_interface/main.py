@@ -57,6 +57,7 @@ import plot
 import microdrop
 import params
 import parameter_test
+import analysis
 from errors import InputError, VarError, ErrorLogger
 _logger = ErrorLogger(sender="dstat-interface-main")
 
@@ -87,6 +88,7 @@ class Main(object):
         self.period_window = self.builder.get_object('period_box')
         
         self.exp_window = exp_window.Experiments(self.builder)
+        self.analysis_opt_window = analysis.AnalysisOptions(self.builder)
         
         # Setup Autosave
         self.autosave_checkbox = self.builder.get_object('autosave_checkbutton')
@@ -183,6 +185,9 @@ class Main(object):
         """Display the about window."""
         self.response = self.aboutdialog.run()  # waits for user to click close
         self.aboutdialog.hide()
+    
+    def on_menu_analysis_options_activate(self, menuitem, data=None):
+        self.analysis_opt_window.show()
 
     def on_expcombobox_changed(self, data=None):
         """Change the experiment window when experiment box changed."""
@@ -448,6 +453,7 @@ class Main(object):
         parameters['shutter_true'] = False
         try:
             parameters.update(self.adc_pot.params)
+            parameters.update(self.analysis_opt_window.params)
 
             self.line = 0
             self.lastline = 0
@@ -668,6 +674,10 @@ class Main(object):
         gobject.source_remove(self.plot_proc)  # stop automatic plot update
         self.experiment_running_plot()  # make sure all data updated on plot
         
+        # Run Analysis
+        
+        analysis.do_analysis(self.current_exp)
+        
         self.databuffer.set_text("")
         self.databuffer.place_cursor(self.databuffer.get_start_iter())
         self.rawbuffer.insert_at_cursor("\n")
@@ -697,6 +707,21 @@ class Main(object):
         self.rawbuffer.insert_at_cursor("\n")
         
         # Data Output
+        analysis_buffer = []
+        
+        if self.current_exp.analysis != {}:
+            analysis_buffer.append("# ANALYSIS")
+            for key, value in self.current_exp.analysis.iteritems():
+                analysis_buffer.append("#  %s:" % key)
+                for scan in value:
+                    number, result = scan
+                    analysis_buffer.append(
+                        "#    Scan %s -- %s" % (number, result)
+                        )
+        
+        for i in analysis_buffer:
+            self.rawbuffer.insert_at_cursor("%s\n" % i)
+        
         line_buffer = []
         
         for scan in self.current_exp.data:

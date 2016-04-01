@@ -744,6 +744,11 @@ Thanks to Christian Fobel for help with Dropbot Plugin</property>
     <property name="can_focus">False</property>
     <property name="stock">gtk-open</property>
   </object>
+  <object class="GtkImage" id="image6">
+    <property name="visible">True</property>
+    <property name="can_focus">False</property>
+    <property name="stock">gtk-preferences</property>
+  </object>
   <object class="GtkListStore" id="serial_liststore">
     <columns>
       <!-- column-name serial -->
@@ -858,6 +863,29 @@ Thanks to Christian Fobel for help with Dropbot Plugin</property>
                         <property name="use_underline">True</property>
                         <property name="use_stock">True</property>
                         <signal name="activate" handler="on_menu_dropbot_disconnect_activate" swapped="no"/>
+                      </object>
+                    </child>
+                  </object>
+                </child>
+              </object>
+            </child>
+            <child>
+              <object class="GtkMenuItem" id="menu_analysis">
+                <property name="visible">True</property>
+                <property name="can_focus">False</property>
+                <property name="label" translatable="yes">Analysis</property>
+                <child type="submenu">
+                  <object class="GtkMenu" id="menu4">
+                    <property name="visible">True</property>
+                    <property name="can_focus">False</property>
+                    <child>
+                      <object class="GtkImageMenuItem" id="menu_analysis_options">
+                        <property name="label">Analysis options…</property>
+                        <property name="visible">True</property>
+                        <property name="can_focus">False</property>
+                        <property name="image">image6</property>
+                        <property name="use_stock">False</property>
+                        <signal name="activate" handler="on_menu_analysis_options_activate" swapped="no"/>
                       </object>
                     </child>
                   </object>
