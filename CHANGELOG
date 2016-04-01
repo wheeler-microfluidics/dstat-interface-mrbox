@@ -42,3 +42,9 @@ Version 1.1.1
     
 Version 1.1.2
     -Fixed more critical bugs from refactoring
+
+Version 1.1.3
+    -Changed internal storage of experiment data
+    -Added Analysis options:
+        -FFT integral moved there
+        -Basic statistics
