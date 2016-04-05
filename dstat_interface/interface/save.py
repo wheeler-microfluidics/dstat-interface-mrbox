@@ -23,9 +23,11 @@ import os
 
 import gtk
 import numpy as np
+import logging
 
-from errors import InputError, VarError, ErrorLogger
-_logger = ErrorLogger(sender="dstat-interface-save")
+logger = logging.getLogger("dstat.interface.save")
+
+from errors import InputError, VarError
 from params import save_params, load_params
 
 def manSave(current_exp):
@@ -45,7 +47,7 @@ def manSave(current_exp):
 
     if response == gtk.RESPONSE_OK:
         path = fcd.get_filename()
-        _logger.error(" ".join(("Selected filepath:", path)),'INFO')
+        logger.info("Selected filepath: %s", path)
         filter_selection = fcd.get_filter().get_name()
 
         if filter_selection.endswith("(.npy)"):
@@ -86,7 +88,7 @@ def plotSave(plots):
 
     if response == gtk.RESPONSE_OK:
         path = fcd.get_filename()
-        _logger.error(" ".join(("Selected filepath:", path)),'INFO')
+        logger.info("Selected filepath: %s", path)
         filter_selection = fcd.get_filter().get_name()
 
         for i in plots:
@@ -128,7 +130,7 @@ def man_param_save(window):
 
     if response == gtk.RESPONSE_OK:
         path = fcd.get_filename()
-        _logger.error(" ".join(("Selected filepath:", path)),'INFO')
+        logger.info("Selected filepath: %s", path)
 
         if not path.endswith(".yml"):
             path += '.yml'
@@ -159,7 +161,7 @@ def man_param_load(window):
 
     if response == gtk.RESPONSE_OK:
         path = fcd.get_filename()
-        _logger.error(" ".join(("Selected filepath:", path)),'INFO')
+        logger.info("Selected filepath: %s", path)
 
         load_params(window, path)
 

@@ -39,7 +39,7 @@ def get_params(window):
     try:
         parameters.update(window.adc_pot.params)
     except InputError:
-        _logger.error("No gain selected.", 'INFO')
+        logger.info("No gain selected.")
     parameters.update(window.exp_window.get_params(selection))
     parameters.update(window.analysis_opt_window.params)
 
@@ -69,7 +69,7 @@ def set_params(window, params):
     window.adc_pot.params = params
 
     if not 'experiment_index' in params:
-        _logger.error("Missing experiment parameters.", 'WAR')
+        logger.warning("Missing experiment parameters.")
         return
     window.expcombobox.set_active(
                     window.exp_window.classes[params['experiment_index']][0])
