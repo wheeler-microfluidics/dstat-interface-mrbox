@@ -26,7 +26,7 @@ import pygtk
 import gtk
 from numpy import mean, trapz
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger('dstat.analysis')
 
 class AnalysisOptions(object):
     """Analysis options window."""
