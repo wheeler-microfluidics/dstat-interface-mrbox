@@ -45,7 +45,7 @@ except ImportError:
     print "ERR: gobject not available"
     sys.exit(1)
 from serial import SerialException
-
+import logging
 os.chdir(os.path.dirname(os.path.abspath(sys.argv[0])))
 
 from version import getVersion
@@ -58,11 +58,22 @@ import params
 import parameter_test
 import analysis
 import zmq
-from errors import InputError, ErrorLogger
-_logger = ErrorLogger(sender="dstat-interface-main")
+from errors import InputError
 
 from plugin import DstatPlugin, get_hub_uri
 
+# Setup Logging
+root_logger = logging.getLogger("dstat")
+root_logger.setLevel(level=logging.INFO)
+log_handler = logging.StreamHandler()
+log_formatter = logging.Formatter(
+                    fmt='%(asctime)s [%(name)s](%(levelname)s) %(message)s',
+                    datefmt='%H:%M:%S'
+                )
+log_handler.setFormatter(log_formatter)
+root_logger.addHandler(log_handler)
+
+logger = logging.getLogger("dstat.main")
 
 class Main(object):
     """Main program """
@@ -141,7 +152,7 @@ class Main(object):
             ver = getVersion()
         except ValueError:
             ver = "1.x"
-            _logger.error("Could not fetch version number", "WAR")
+            logger.warning("Could not fetch version number")
         self.mainwindow.set_title(" ".join(("DStat Interface", ver)))
         self.aboutdialog.set_version(ver)
 
@@ -247,17 +258,17 @@ class Main(object):
                 self.serial_disconnect.set_sensitive(True)
 
         except AttributeError as err:
-            _logger.error(err, 'WAR')
+            logger.warning("AttributeError: %s", err)
             self.serial_connect.set_sensitive(True)
         except TypeError as err:
-            _logger.error(err, 'WAR')
+            logger.warning("TypeError: %s", err)
             self.serial_connect.set_sensitive(True)
 
         if self.params_loaded == False:
             try:
                 params.load_params(self, 'last_params.yml')
             except IOError:
-                _logger.error("No previous parameters found.", 'INFO')
+                logger.info("No previous parameters found.")
 
     def on_serial_disconnect_clicked(self, data=None):
         """Disconnect from DStat."""
@@ -273,7 +284,7 @@ class Main(object):
             comm.serial_instance.proc.terminate()
 
         except AttributeError as err:
-            _logger.error(err, 'WAR')
+            logger.warning("AttributeError: %s", err)
             pass
 
         self.pmt_mode = False
@@ -299,11 +310,11 @@ class Main(object):
                 comm.serial_instance.data_pipe_p.recv()
 
             if self.pmt_mode == True:
-                _logger.error("Start PMT idle mode", "INFO")
+                logger.info("Start PMT idle mode")
                 comm.serial_instance.proc_pipe_p.send(comm.PMTIdle())
 
             else:
-                _logger.error("Start OCP", "INFO")
+                logger.info("Start OCP")
                 comm.serial_instance.proc_pipe_p.send(comm.OCPExp())
 
             self.ocp_proc = (gobject.timeout_add(300, self.ocp_running_data),
@@ -312,7 +323,7 @@ class Main(object):
             self.ocp_is_running = True
 
         else:
-            _logger.error("OCP measurements not supported on v1.1 boards.",'INFO')
+            logger.info("OCP measurements not supported on v1.1 boards.")
         return
 
     def stop_ocp(self):
@@ -320,9 +331,9 @@ class Main(object):
 
         if self.version[0] >= 1 and self.version[1] >= 2:
             if self.pmt_mode == True:
-                _logger.error("Stop PMT idle mode",'INFO')
+                logger.info("Stop PMT idle mode")
             else:
-                _logger.error("Stop OCP",'INFO')
+                logger.info("Stop OCP")
             comm.serial_instance.ctrl_pipe_p.send('a')
 
             for i in self.ocp_proc:
@@ -332,8 +343,7 @@ class Main(object):
             self.ocp_is_running = False
             self.ocp_disp.set_text("")
         else:
-            _logger.error("OCP measurements not supported on v1.1 boards.",
-                          'INFO')
+            logger.error("OCP measurements not supported on v1.1 boards.")
         return
 
     def ocp_running_data(self):
@@ -381,15 +391,13 @@ class Main(object):
         try:
             if comm.serial_instance.proc_pipe_p.poll():
                 proc_buffer = comm.serial_instance.proc_pipe_p.recv()
-                _logger.error("".join(("ocp_running_proc: ", proc_buffer)), 'DBG')
+                logger.debug("ocp_running_proc: %s", proc_buffer)
                 if proc_buffer in ["DONE", "SERIAL_ERROR", "ABORT"]:
                     if proc_buffer == "SERIAL_ERROR":
                         self.on_serial_disconnect_clicked()
 
                     while comm.serial_instance.data_pipe_p.poll():
                         comm.serial_instance.data_pipe_p.recv()
-
-                    gobject.source_remove(self.ocp_proc[0])
                     return False
 
                 return True
@@ -564,34 +572,34 @@ class Main(object):
                 exceptions()
 
         except ValueError as i:
-            _logger.error(i, "INFO")
+            logger.info("ValueError: %s",i)
             self.statusbar.push(self.error_context_id,
                                 "Experiment parameters must be integers.")
             exceptions()
             raise
 
         except KeyError as i:
-            _logger.error("KeyError: %s" % i, "INFO")
+            logger.info("KeyError: %s", i)
             self.statusbar.push(self.error_context_id,
                                 "Experiment parameters must be integers.")
             exceptions()
             raise
 
         except InputError as err:
-            _logger.error(err, "INFO")
+            logger.info("InputError: %s", err)
             self.statusbar.push(self.error_context_id, err.msg)
             exceptions()
             raise
 
         except SerialException as err:
-            _logger.error(err, "INFO")
+            logger.info("SerialException: %s", err)
             self.statusbar.push(self.error_context_id,
                                 "Could not establish serial connection.")
             exceptions()
             raise
 
         except AssertionError as err:
-            _logger.error(err, "INFO")
+            logger.info("AssertionError: %s", err)
             self.statusbar.push(self.error_context_id, str(err))
             exceptions()
             raise
@@ -652,20 +660,19 @@ class Main(object):
                         self.on_serial_disconnect_clicked()
 
                 else:
-                    e = "Unrecognized experiment return code "
-                    e += proc_buffer
-                    _logger.error(e, 'WAR')
+                    logger.warning("Unrecognized experiment return code: %s",
+                                   proc_buffer)
 
                 return False
 
             return True
 
         except EOFError as err:
-            _logger.error(err, 'WAR')
+            logger.warning("EOFError: %s", err)
             self.experiment_done()
             return False
         except IOError as err:
-            _logger.error(err, 'WAR')
+            logger.warning("IOError: %s", err)
             self.experiment_done()
             return False
 
@@ -789,7 +796,7 @@ class Main(object):
         except AttributeError:
             pass
         except:
-            _logger.error(sys.exc_info(),'WAR')
+            logger.warning(sys.exc_info())
 
     def on_file_save_exp_activate(self, menuitem, data=None):
         """Activate dialogue to save current experiment data. """
