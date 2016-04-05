@@ -50,14 +50,9 @@ def manSave(current_exp):
         logger.info("Selected filepath: %s", path)
         filter_selection = fcd.get_filter().get_name()
 
-        if filter_selection.endswith("(.npy)"):
-            if (current_exp.parameters['shutter_true'] and current_exp.parameters['sync_true']):
-                npy(current_exp, current_exp.data, "-".join((path,'data')))
-                npy(current_exp, current_exp.ftdata, "-".join((path,'ft')))
-            else:
-                npy(current_exp, current_exp.data, path, auto=True)
-        elif filter_selection.endswith("(.txt)"):
-            if (current_exp.parameters['shutter_true'] and current_exp.parameters['sync_true']):
+        if filter_selection.endswith("(.txt)"):
+            if (current_exp.parameters['shutter_true'] and
+                     current_exp.parameters['sync_true']):
                 text(current_exp, current_exp.data, "-".join((path,'data')))
                 text(current_exp, current_exp.ftdata, "-".join((path,'ft')))
             else:
@@ -67,7 +62,7 @@ def manSave(current_exp):
     elif response == gtk.RESPONSE_CANCEL:
         fcd.destroy()
 
-def plotSave(plots):
+def plot_save_dialog(plots):
     fcd = gtk.FileChooserDialog("Save Plot…", None,
                                 gtk.FILE_CHOOSER_ACTION_SAVE,
                                 (gtk.STOCK_CANCEL, gtk.RESPONSE_CANCEL,
@@ -90,25 +85,41 @@ def plotSave(plots):
         path = fcd.get_filename()
         logger.info("Selected filepath: %s", path)
         filter_selection = fcd.get_filter().get_name()
+        
+        if filter_selection.endswith("(.pdf)"):
+            if not path.endswith(".pdf"):
+                path += ".pdf"
 
-        for i in plots:
-            save_path = path
-            save_path += '-'
-            save_path += i
+        elif filter_selection.endswith("(.png)"):
+            if not path.endswith(".png"):
+                path += ".png"
+        
+        save_plot(plots, path)
 
-            if filter_selection.endswith("(.pdf)"):
-                if not save_path.endswith(".pdf"):
-                    save_path += ".pdf"
-
-            elif filter_selection.endswith("(.png)"):
-                if not save_path.endswith(".png"):
-                    save_path += ".png"
-
-            plots[i].figure.savefig(save_path)  # determines format from file extension
         fcd.destroy()
 
     elif response == gtk.RESPONSE_CANCEL:
         fcd.destroy()
+
+def save_plot(plots, path):
+    """Saves everything in plots to path. Appends a number for duplicates.
+    If no file extension or unknown, uses pdf.
+    """
+    root_path = path
+    name, _sep, ext = root_path.rpartition('.')
+    if ext == '':
+        ext = 'pdf'
+    
+    num = ''
+    j = 0
+    
+    for i in plots: # Test for any existing files
+        while os.path.exists("%s%s-%s.%s" % (name, num, i, ext)):
+            j += 1
+            num = j
+    
+    for i in plots: # save data
+        plots[i].figure.savefig("%s%s-%s.%s" % (name, num, i, ext))
 
 def man_param_save(window):
     fcd = gtk.FileChooserDialog("Save Parameters…",
@@ -176,8 +187,6 @@ def autoSave(current_exp, dir_button, name, expnumber):
     path = dir_button.get_filename()
     path += '/'
     path += name
-    path += '-'
-    path += str(expnumber)
 
     if (current_exp.parameters['shutter_true'] and current_exp.parameters['sync_true']):
         text(current_exp, current_exp.data, "-".join((path,'data')), auto=True)
@@ -211,28 +220,13 @@ def autoPlot(plots, dir_button, name, expnumber):
         path += ".pdf"
         plots[i].figure.savefig(path)
 
-def npy(exp, data, path, auto=False):
-    if path.endswith(".npy"):
-        path = path.rstrip(".npy")
-
-    if auto == True:
-        j = 1
-        while os.path.exists("".join([path, ".npy"])):
-            if j > 1:
-                path = path[:-len(str(j))]
-            path += str(j)
-            j += 1
-
-    np.save(path, data)
-
 def text(exp, data, path, auto=False):
     if path.endswith(".txt"):
         path = path.rstrip(".txt")
 
     if auto == True:
         j = 1
-
-        while os.path.exists("".join([path, ".txt"])):
+        while os.path.exists("%s.txt" % path):
             if j > 1:
                 path = path[:-len(str(j))]
             path += str(j)

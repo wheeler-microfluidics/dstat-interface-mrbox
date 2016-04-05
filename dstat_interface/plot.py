@@ -90,7 +90,7 @@ def findBounds(y):
     return (start_index, stop_index)
     
     
-class plotbox(object):
+class PlotBox(object):
     """Contains main data plot and associated methods."""
     def __init__(self, plotwindow_instance):
         """Creates plot and moves it to a gtk container.
@@ -147,11 +147,13 @@ class plotbox(object):
 
     def changetype(self, Experiment):
         """Change plot type. Set axis labels and x bounds to those stored
-        in the Experiment instance.
+        in the Experiment instance. Stores class instance in Experiment.
         """
         self.axe1.set_xlabel(Experiment.xlabel)
         self.axe1.set_ylabel(Experiment.ylabel)
         self.axe1.set_xlim(Experiment.xmin, Experiment.xmax)
+        
+        Experiment.plots['data'] = self
 
         self.figure.canvas.draw()
 
@@ -163,7 +165,7 @@ class plotbox(object):
 
         return True
 
-class ft_box(plotbox):
+class FT_Box(PlotBox):
     def updateline(self, Experiment, line_number):
         def search_value(data, target):
             for i in range(len(data)):
@@ -187,11 +189,13 @@ class ft_box(plotbox):
         
     def changetype(self, Experiment):
         """Change plot type. Set axis labels and x bounds to those stored
-        in the Experiment instance.
+        in the Experiment instance. Stores class instance in Experiment.
         """
         self.axe1.set_xlabel("Freq (Hz)")
         self.axe1.set_ylabel("|Y| (A/Hz)")
         self.axe1.set_xlim(0, Experiment.parameters['adc_rate_hz']/2)
+        
+        Experiment.plots['ft'] = self
 
         self.figure.canvas.draw()
                                 

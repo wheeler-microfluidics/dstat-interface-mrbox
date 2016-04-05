@@ -112,8 +112,8 @@ class Main(object):
         # Setup Plots
         self.plot_notebook = self.builder.get_object('plot_notebook')
 
-        self.plot = plot.plotbox(self.plotwindow)
-        self.ft_plot = plot.ft_box(self.ft_window)
+        self.plot = plot.PlotBox(self.plotwindow)
+        self.ft_plot = plot.FT_Box(self.ft_window)
 
         #fill adc_pot_box
         self.adc_pot_box = self.builder.get_object('gain_adc_box')
@@ -805,13 +805,7 @@ class Main(object):
 
     def on_file_save_plot_activate(self, menuitem, data=None):
         """Activate dialogue to save current plot."""
-        plots = {'data':self.plot}
-
-        if (self.current_exp.parameters['shutter_true'] and
-            self.current_exp.parameters['sync_true']):
-            plots['ft'] = self.ft_plot
-
-        save.plotSave(plots)
+        save.plot_save_dialog(self.current_exp.plots)
 
     def on_file_save_params_activate(self, menuitem, data=None):
         """Activate dialogue to save current experiment parameters. """

@@ -339,6 +339,7 @@ class Experiment(object):
         self.databytes = 8
         self.scan = 0
         self.time = 0
+        self.plots = {}
         
         # list of scans, tuple of dimensions, list of data
         self.data = [([], [])]
