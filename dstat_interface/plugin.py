@@ -2,6 +2,7 @@
 import logging
 
 from params import get_params, set_params, load_params, save_params
+from interface.save import save_text, save_plot
 from zmq_plugin.plugin import Plugin as ZmqPlugin
 from zmq_plugin.schema import decode_content_data
 import gtk
@@ -100,6 +101,26 @@ class DstatPlugin(ZmqPlugin):
         self.parent.statusbar.push(self.parent.message_context_id, "µDrop "
                                    "acquisition requested.")
         return self.parent.run_active_experiment()
+    
+    def on_execute__save_text(self, request):
+        '''
+        Args
+        ----
+
+            save_data_path (str) : Path to file to save text data.
+        '''
+        data = decode_content_data(request)
+        save_text(self.parent.current_exp, data['save_data_path'])
+
+    def on_execute__save_plot(self, request):
+        '''
+        Args
+        ----
+
+            save_plot_path (str) : Path to file to save text data.
+        '''
+        data = decode_content_data(request)
+        save_text(self.parent.current_exp, data['save_plot_path'])
 
     def on_execute__acquisition_complete(self, request):
         '''
