@@ -109,24 +109,24 @@ def do_analysis(experiment):
             if experiment.parameters['stats_start_true']:
                 start = experiment.parameters['stats_start']
             else:
-                start = min(experiment.data[0][0])
+                start = min(experiment.data['data'][0][0])
         
             if experiment.parameters['stats_stop_true']:
                 stop = experiment.parameters['stats_stop']
             else:
-                stop = min(experiment.data[0][0])
+                stop = min(experiment.data['data'][0][0])
                 
-            data = _data_slice(experiment.data,
+            data = _data_slice(experiment.data['data'],
                                start,
                                stop
                                )
         else:
-            data = experiment.data
+            data = experiment.data['data']
         
         experiment.analysis.update(_summary_stats(data))
     
     try:
-        x, y = experiment.ftdata[0]
+        x, y = experiment.data['ft'][0]
         experiment.analysis['FT Integral'] = _integrateSpectrum(
                 x,
                 y,
@@ -134,7 +134,7 @@ def do_analysis(experiment):
                 float(experiment.parameters['fft_int'])
         )
 
-    except AttributeError:
+    except KeyError:
         pass
 
 def _data_slice(data, start, stop):

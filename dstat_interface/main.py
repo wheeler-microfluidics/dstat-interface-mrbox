@@ -605,7 +605,8 @@ class Main(object):
             raise
 
     def experiment_running_data(self):
-        """Receive data from experiment process and add to current_exp.data.
+        """Receive data from experiment process and add to 
+        current_exp.data['data].
         Run in GTK main loop.
 
         Returns:
@@ -619,12 +620,12 @@ class Main(object):
 
                 self.line, data = incoming
                 if self.line > self.lastdataline:
-                    self.current_exp.data.append(
+                    self.current_exp.data['data'].append(
                         deepcopy(self.current_exp.line_data))
                     self.lastdataline = self.line
 
-                for i in range(len(self.current_exp.data[self.line])):
-                    self.current_exp.data[self.line][i].append(data[i])
+                for i in range(len(self.current_exp.data['data'][self.line])):
+                    self.current_exp.data['data'][self.line][i].append(data[i])
                 
                 if comm.serial_instance.data_pipe_p.poll():
                     self.experiment_running_data()
@@ -698,8 +699,6 @@ class Main(object):
         gobject.source_remove(self.experiment_proc[0])
         gobject.source_remove(self.plot_proc)  # stop automatic plot update
         self.experiment_running_plot()  # make sure all data updated on plot
-
-
         
         self.databuffer.set_text("")
         self.databuffer.place_cursor(self.databuffer.get_start_iter())
@@ -712,10 +711,20 @@ class Main(object):
             self.current_exp.parameters['sync_true']):
             self.ft_plot.updateline(self.current_exp, 0) 
             self.ft_plot.redraw()
-            for col in zip(*self.current_exp.ftdata):
-                for row in col:
-                    self.databuffer.insert_at_cursor(str(row)+ "    ")
-                self.databuffer.insert_at_cursor("\n")
+            
+            line_buffer = []
+        
+            for scan in self.current_exp.data['ft']:
+                for dimension in scan:
+                    for i in range(len(dimension)):
+                        try:
+                            line_buffer[i] += "%s     " % dimension[i]
+                        except IndexError:
+                            line_buffer.append("")
+                            line_buffer[i] += "%s     " % dimension[i]
+                
+            for i in line_buffer:
+                self.databuffer.insert_at_cursor("%s\n" % i)
         
         # Run Analysis
         analysis.do_analysis(self.current_exp)
@@ -752,7 +761,7 @@ class Main(object):
         
         line_buffer = []
         
-        for scan in self.current_exp.data:
+        for scan in self.current_exp.data['data']:
             for dimension in scan:
                 for i in range(len(dimension)):
                     try:
@@ -766,17 +775,15 @@ class Main(object):
         
         # Autosaving
         if self.autosave_checkbox.get_active():
-            save.autoSave(self.current_exp, self.autosavedir_button,
-                          self.autosavename.get_text(), self.expnumber)
-            plots = {'data':self.plot}
+            save.autoSave(self.current_exp, 
+                          self.autosavedir_button.get_filename(),
+                          self.autosavename.get_text()
+                          )
 
-            if (self.current_exp.parameters['shutter_true'] and
-                self.current_exp.parameters['sync_true']):
-                plots['ft'] = self.ft_plot
-
-            save.autoPlot(plots, self.autosavedir_button,
-                          self.autosavename.get_text(), self.expnumber)
-            self.expnumber += 1
+            save.autoPlot(self.current_exp, 
+                          self.autosavedir_button.get_filename(),
+                          self.autosavename.get_text()
+                          )
             
         # uDrop
         # UI stuff
@@ -800,12 +807,17 @@ class Main(object):
 
     def on_file_save_exp_activate(self, menuitem, data=None):
         """Activate dialogue to save current experiment data. """
-        if self.current_exp:
+        try:
             save.manSave(self.current_exp)
-
+        except AttributeError:
+            logger.warning("Tried to save with no experiment run")
+        
     def on_file_save_plot_activate(self, menuitem, data=None):
         """Activate dialogue to save current plot."""
-        save.plot_save_dialog(self.current_exp.plots)
+        try:
+            save.plot_save_dialog(self.current_exp)
+        except AttributeError:
+            logger.warning("Tried to save with no experiment run")
 
     def on_file_save_params_activate(self, menuitem, data=None):
         """Activate dialogue to save current experiment parameters. """

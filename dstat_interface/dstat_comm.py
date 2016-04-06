@@ -340,9 +340,10 @@ class Experiment(object):
         self.scan = 0
         self.time = 0
         self.plots = {}
+        self.data = {}
         
         # list of scans, tuple of dimensions, list of data
-        self.data = [([], [])]
+        self.data['data'] = [([], [])]
         self.line_data = ([], [])
         
         major, minor = self.parameters['version']
@@ -744,7 +745,7 @@ class SWVExp(Experiment):
         self.datatype = "SWVData"
         self.xlabel = "Voltage (mV)"
         self.ylabel = "Current (A)"
-        self.data = [([], [], [], [])]  # voltage, current, forwards, reverse
+        self.data['data'] = [([], [], [], [])]  # voltage, current, forwards, reverse
         self.line_data = ([], [], [], [])
         self.datalength = 2 * self.parameters['scans']
         self.databytes = 10
@@ -803,7 +804,7 @@ class DPVExp(SWVExp):
         self.datatype = "SWVData"
         self.xlabel = "Voltage (mV)"
         self.ylabel = "Current (A)"
-        self.data = [([], [], [], [])]  # voltage, current, forwards, reverse
+        self.data['data'] = [([], [], [], [])]  # voltage, current, forwards, reverse
         self.line_data = ([], [], [], [])
         self.datalength = 2
         self.databytes = 10

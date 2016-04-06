@@ -51,12 +51,8 @@ def manSave(current_exp):
         filter_selection = fcd.get_filter().get_name()
 
         if filter_selection.endswith("(.txt)"):
-            if (current_exp.parameters['shutter_true'] and
-                     current_exp.parameters['sync_true']):
-                text(current_exp, current_exp.data, "-".join((path,'data')))
-                text(current_exp, current_exp.ftdata, "-".join((path,'ft')))
-            else:
-                text(current_exp, current_exp.data, path, auto=True)
+            save_text(current_exp, path)
+            
         fcd.destroy()
 
     elif response == gtk.RESPONSE_CANCEL:
@@ -101,25 +97,6 @@ def plot_save_dialog(plots):
     elif response == gtk.RESPONSE_CANCEL:
         fcd.destroy()
 
-def save_plot(plots, path):
-    """Saves everything in plots to path. Appends a number for duplicates.
-    If no file extension or unknown, uses pdf.
-    """
-    root_path = path
-    name, _sep, ext = root_path.rpartition('.')
-    if ext == '':
-        ext = 'pdf'
-    
-    num = ''
-    j = 0
-    
-    for i in plots: # Test for any existing files
-        while os.path.exists("%s%s-%s.%s" % (name, num, i, ext)):
-            j += 1
-            num = j
-    
-    for i in plots: # save data
-        plots[i].figure.savefig("%s%s-%s.%s" % (name, num, i, ext))
 
 def man_param_save(window):
     fcd = gtk.FileChooserDialog("Save Parameters…",
@@ -181,98 +158,101 @@ def man_param_load(window):
     elif response == gtk.RESPONSE_CANCEL:
         fcd.destroy()
 
-def autoSave(current_exp, dir_button, name, expnumber):
+def autoSave(exp, path, name):
     if name == "":
         name = "file"
-    path = dir_button.get_filename()
+
+    path += '/'
+    path += name
+     
+    save_text(exp, path)
+
+def autoPlot(exp, path, name):
+    if name == "":
+        name = "file"
+        
     path += '/'
     path += name
 
-    if (current_exp.parameters['shutter_true'] and current_exp.parameters['sync_true']):
-        text(current_exp, current_exp.data, "-".join((path,'data')), auto=True)
-        text(current_exp, current_exp.ftdata, "-".join((path,'ft')), auto=True)
-    else:
-        text(current_exp, current_exp.data, path, auto=True)
-
-def autoPlot(plots, dir_button, name, expnumber):
-    for i in plots:
-        if name == "":
-            name = "file"
-
-        path = dir_button.get_filename()
-        path += '/'
-        path += name
-        path += '-'
-        path += str(expnumber)
-        path += '-'
-        path += i
-
-        if path.endswith(".pdf"):
-            path = path.rstrip(".pdf")
-
-        j = 1
-        while os.path.exists("".join([path, ".pdf"])):
-            if j > 1:
-                path = path[:-len(str(j))]
-            path += str(j)
-            j += 1
-
+    if not (path.endswith(".pdf") or path.endswith(".png")):
         path += ".pdf"
-        plots[i].figure.savefig(path)
 
-def text(exp, data, path, auto=False):
-    if path.endswith(".txt"):
-        path = path.rstrip(".txt")
+    save_plot(exp, path)
 
-    if auto == True:
-        j = 1
-        while os.path.exists("%s.txt" % path):
-            if j > 1:
-                path = path[:-len(str(j))]
-            path += str(j)
+def save_text(exp, path):
+    name, _sep, ext = path.rpartition('.') # ('','',string) if no match
+    if _sep == '':
+        name = ext
+        ext = 'txt'
+    
+    num = ''
+    j = 0
+    
+    for dname in exp.data: # Test for any existing files
+        while os.path.exists("%s%s-%s.%s" % (name, num, dname, ext)):
             j += 1
-
-    path += ".txt"
-    file = open(path, 'w')
-
-    time = exp.time
-
-    header = "".join(['# TIME ', time.isoformat(), "\n"])
+            num = j
     
-    header += "# DSTAT COMMANDS\n#  "
-    for i in exp.commands:
-        header += i
+    for dname in exp.data: # save data
+        file = open("%s%s-%s.%s" % (name, num, dname, ext), 'w')
 
-    file.write("".join([header, '\n']))
+        time = exp.time
+        header = "".join(['# TIME ', time.isoformat(), "\n"])
     
-    analysis_buffer = []
+        header += "# DSTAT COMMANDS\n#  "
+        for i in exp.commands:
+            header += i
+
+        file.write("".join([header, '\n']))
     
-    if exp.analysis != {}:
-        analysis_buffer.append("# ANALYSIS")
-        for key, value in exp.analysis.iteritems():
-            analysis_buffer.append("#  %s:" % key)
-            for scan in value:
-                number, result = scan
-                analysis_buffer.append(
-                    "#    Scan %s -- %s" % (number, result)
-                    )
+        analysis_buffer = []
     
-    for i in analysis_buffer:
-        file.write("%s\n" % i)
+        if exp.analysis != {}:
+            analysis_buffer.append("# ANALYSIS")
+            for key, value in exp.analysis.iteritems():
+                analysis_buffer.append("#  %s:" % key)
+                for scan in value:
+                    number, result = scan
+                    analysis_buffer.append(
+                        "#    Scan %s -- %s" % (number, result)
+                        )
+    
+        for i in analysis_buffer:
+            file.write("%s\n" % i)
       
-    # Write out actual data  
-    line_buffer = []
+        # Write out actual data  
+        line_buffer = []
     
-    for scan in zip(*data):
-        for dimension in scan:
-            for i in range(len(dimension)):
-                try:
-                    line_buffer[i] += "%s     " % dimension[i]
-                except IndexError:
-                    line_buffer.append("")
-                    line_buffer[i] += "%s     " % dimension[i]
+        for scan in zip(*exp.data[dname]):
+            for dimension in scan:
+                for i in range(len(dimension)):
+                    try:
+                        line_buffer[i] += "%s     " % dimension[i]
+                    except IndexError:
+                        line_buffer.append("")
+                        line_buffer[i] += "%s     " % dimension[i]
             
-    for i in line_buffer:
-        file.write("%s\n" % i)
+        for i in line_buffer:
+            file.write("%s\n" % i)
 
-    file.close()
+        file.close()
+        
+def save_plot(exp, path):
+    """Saves everything in exp.plots to path. Appends a number for duplicates.
+    If no file extension or unknown, uses pdf.
+    """
+    name, _sep, ext = path.rpartition('.')
+    if _sep == '':
+        name = ext
+        ext = 'pdf'
+    
+    num = ''
+    j = 0
+    
+    for i in exp.plots: # Test for any existing files
+        while os.path.exists("%s%s-%s.%s" % (name, num, i, ext)):
+            j += 1
+            num = j
+    
+    for i in exp.plots: # save data
+        exp.plots[i].figure.savefig("%s%s-%s.%s" % (name, num, i, ext))
