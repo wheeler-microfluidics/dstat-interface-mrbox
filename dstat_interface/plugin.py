@@ -101,7 +101,7 @@ class DstatPlugin(ZmqPlugin):
         self.parent.statusbar.push(self.parent.message_context_id, "µDrop "
                                    "acquisition requested.")
         return self.parent.run_active_experiment()
-    
+
     def on_execute__save_text(self, request):
         '''
         Args
