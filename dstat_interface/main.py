@@ -205,7 +205,7 @@ class Main(object):
         """Display the about window."""
         self.response = self.aboutdialog.run()  # waits for user to click close
         self.aboutdialog.hide()
-    
+
     def on_menu_analysis_options_activate(self, menuitem, data=None):
         self.analysis_opt_window.show()
 
@@ -421,7 +421,7 @@ class Main(object):
         """Run currently visible experiment."""
         # Assign current experiment a unique identifier.
         experiment_id = uuid.uuid4()
-        self.active_experiment_id = uuid.uuid4()
+        self.active_experiment_id = experiment_id
 
         def exceptions():
             """ Cleans up after errors """
@@ -605,7 +605,7 @@ class Main(object):
             raise
 
     def experiment_running_data(self):
-        """Receive data from experiment process and add to 
+        """Receive data from experiment process and add to
         current_exp.data['data].
         Run in GTK main loop.
 
@@ -626,7 +626,7 @@ class Main(object):
 
                 for i in range(len(self.current_exp.data['data'][self.line])):
                     self.current_exp.data['data'][self.line][i].append(data[i])
-                
+
                 if comm.serial_instance.data_pipe_p.poll():
                     self.experiment_running_data()
                 return True
@@ -699,21 +699,21 @@ class Main(object):
         gobject.source_remove(self.experiment_proc[0])
         gobject.source_remove(self.plot_proc)  # stop automatic plot update
         self.experiment_running_plot()  # make sure all data updated on plot
-        
+
         self.databuffer.set_text("")
         self.databuffer.place_cursor(self.databuffer.get_start_iter())
         self.rawbuffer.insert_at_cursor("\n")
         self.rawbuffer.set_text("")
         self.rawbuffer.place_cursor(self.rawbuffer.get_start_iter())
-        
+
         # Shutter stuff
         if (self.current_exp.parameters['shutter_true'] and
             self.current_exp.parameters['sync_true']):
-            self.ft_plot.updateline(self.current_exp, 0) 
+            self.ft_plot.updateline(self.current_exp, 0)
             self.ft_plot.redraw()
-            
+
             line_buffer = []
-        
+
             for scan in self.current_exp.data['ft']:
                 for dimension in scan:
                     for i in range(len(dimension)):
@@ -722,22 +722,22 @@ class Main(object):
                         except IndexError:
                             line_buffer.append("")
                             line_buffer[i] += "%s     " % dimension[i]
-                
+
             for i in line_buffer:
                 self.databuffer.insert_at_cursor("%s\n" % i)
-        
+
         # Run Analysis
         analysis.do_analysis(self.current_exp)
-        
+
         # Write DStat commands
         for i in self.current_exp.commands:
             self.rawbuffer.insert_at_cursor(i)
 
         self.rawbuffer.insert_at_cursor("\n")
-        
+
         try:
             self.statusbar.push(
-                self.message_context_id, 
+                self.message_context_id,
                 "Integral: %s A" % self.current_exp.analysis['FT Integral'][0][1]
             )
         except KeyError:
@@ -745,7 +745,7 @@ class Main(object):
 
         # Data Output
         analysis_buffer = []
-        
+
         if self.current_exp.analysis != {}:
             analysis_buffer.append("# ANALYSIS")
             for key, value in self.current_exp.analysis.iteritems():
@@ -755,12 +755,12 @@ class Main(object):
                     analysis_buffer.append(
                         "#    Scan %s -- %s" % (number, result)
                         )
-        
+
         for i in analysis_buffer:
             self.rawbuffer.insert_at_cursor("%s\n" % i)
-        
+
         line_buffer = []
-        
+
         for scan in self.current_exp.data['data']:
             for dimension in scan:
                 for i in range(len(dimension)):
@@ -769,28 +769,28 @@ class Main(object):
                     except IndexError:
                         line_buffer.append("")
                         line_buffer[i] += "%s     " % dimension[i]
-                
+
         for i in line_buffer:
             self.rawbuffer.insert_at_cursor("%s\n" % i)
-        
+
         # Autosaving
         if self.autosave_checkbox.get_active():
-            save.autoSave(self.current_exp, 
+            save.autoSave(self.current_exp,
                           self.autosavedir_button.get_filename(),
                           self.autosavename.get_text()
                           )
 
-            save.autoPlot(self.current_exp, 
+            save.autoPlot(self.current_exp,
                           self.autosavedir_button.get_filename(),
                           self.autosavename.get_text()
                           )
-            
+
         # uDrop
         # UI stuff
         self.spinner.stop()
         self.startbutton.set_sensitive(True)
         self.stopbutton.set_sensitive(False)
-        
+
         self.start_ocp()
         self.completed_experiment_ids[self.active_experiment_id] =\
             datetime.utcnow()
@@ -811,7 +811,7 @@ class Main(object):
             save.manSave(self.current_exp)
         except AttributeError:
             logger.warning("Tried to save with no experiment run")
-        
+
     def on_file_save_plot_activate(self, menuitem, data=None):
         """Activate dialogue to save current plot."""
         try:

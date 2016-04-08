@@ -101,7 +101,7 @@ class DstatPlugin(ZmqPlugin):
         self.parent.statusbar.push(self.parent.message_context_id, "µDrop "
                                    "acquisition requested.")
         return self.parent.run_active_experiment()
-    
+
     def on_execute__save_text(self, request):
         '''
         Args
@@ -117,10 +117,10 @@ class DstatPlugin(ZmqPlugin):
         Args
         ----
 
-            save_plot_path (str) : Path to file to save text data.
+            save_plot_path (str) : Path to file to save plot.
         '''
         data = decode_content_data(request)
-        save_text(self.parent.current_exp, data['save_plot_path'])
+        save_plot(self.parent.current_exp, data['save_plot_path'])
 
     def on_execute__acquisition_complete(self, request):
         '''
