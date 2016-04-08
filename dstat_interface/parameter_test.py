@@ -18,8 +18,11 @@
 #     You should have received a copy of the GNU General Public License
 #     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-from errors import ErrorLogger, InputError
-_logger = ErrorLogger(sender="dstat-interface-parameters")
+import logging
+
+from errors import InputError
+
+logger = logging.getLogger("dstat.parameter_test")
 
 def lsv_test(params):
     """Test LSV parameters for sanity"""

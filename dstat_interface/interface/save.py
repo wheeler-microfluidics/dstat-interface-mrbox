@@ -1,20 +1,20 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 #     DStat Interface - An interface for the open hardware DStat potentiostat
-#     Copyright (C) 2014  Michael D. M. Dryden - 
+#     Copyright (C) 2014  Michael D. M. Dryden -
 #     Wheeler Microfluidics Laboratory <http://microfluidics.utoronto.ca>
-#         
-#     
+#
+#
 #     This program is free software: you can redistribute it and/or modify
 #     it under the terms of the GNU General Public License as published by
 #     the Free Software Foundation, either version 3 of the License, or
 #     (at your option) any later version.
-#     
+#
 #     This program is distributed in the hope that it will be useful,
 #     but WITHOUT ANY WARRANTY; without even the implied warranty of
 #     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 #     GNU General Public License for more details.
-#     
+#
 #     You should have received a copy of the GNU General Public License
 #     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
@@ -23,49 +23,42 @@ import os
 
 import gtk
 import numpy as np
+import logging
 
-from errors import InputError, VarError, ErrorLogger
-_logger = ErrorLogger(sender="dstat-interface-save")
+logger = logging.getLogger("dstat.interface.save")
+
+from errors import InputError, VarError
 from params import save_params, load_params
 
 def manSave(current_exp):
     fcd = gtk.FileChooserDialog("Save...", None, gtk.FILE_CHOOSER_ACTION_SAVE,
                                 (gtk.STOCK_CANCEL, gtk.RESPONSE_CANCEL,
                                  gtk.STOCK_SAVE, gtk.RESPONSE_OK))
-    
+
     filters = [gtk.FileFilter()]
     filters[0].set_name("Space separated text (.txt)")
     filters[0].add_pattern("*.txt")
-    
+
     fcd.set_do_overwrite_confirmation(True)
     for i in filters:
         fcd.add_filter(i)
-                 
+
     response = fcd.run()
-    
+
     if response == gtk.RESPONSE_OK:
         path = fcd.get_filename()
-        _logger.error(" ".join(("Selected filepath:", path)),'INFO')
+        logger.info("Selected filepath: %s", path)
         filter_selection = fcd.get_filter().get_name()
-        
-        if filter_selection.endswith("(.npy)"):
-            if (current_exp.parameters['shutter_true'] and current_exp.parameters['sync_true']):
-                npy(current_exp, current_exp.data, "-".join((path,'data')))
-                npy(current_exp, current_exp.ftdata, "-".join((path,'ft')))
-            else:
-                npy(current_exp, current_exp.data, path, auto=True)
-        elif filter_selection.endswith("(.txt)"):
-            if (current_exp.parameters['shutter_true'] and current_exp.parameters['sync_true']):
-                text(current_exp, current_exp.data, "-".join((path,'data')))
-                text(current_exp, current_exp.ftdata, "-".join((path,'ft')))
-            else:
-                text(current_exp, current_exp.data, path, auto=True)
+
+        if filter_selection.endswith("(.txt)"):
+            save_text(current_exp, path)
+            
         fcd.destroy()
-        
+
     elif response == gtk.RESPONSE_CANCEL:
         fcd.destroy()
 
-def plotSave(plots):
+def plot_save_dialog(plots):
     fcd = gtk.FileChooserDialog("Save Plot…", None,
                                 gtk.FILE_CHOOSER_ACTION_SAVE,
                                 (gtk.STOCK_CANCEL, gtk.RESPONSE_CANCEL,
@@ -77,36 +70,33 @@ def plotSave(plots):
     filters.append(gtk.FileFilter())
     filters[1].set_name("Portable Network Graphics (.png)")
     filters[1].add_pattern("*.png")
-    
+
     fcd.set_do_overwrite_confirmation(True)
     for i in filters:
         fcd.add_filter(i)
-    
+
     response = fcd.run()
-    
+
     if response == gtk.RESPONSE_OK:
         path = fcd.get_filename()
-        _logger.error(" ".join(("Selected filepath:", path)),'INFO')
+        logger.info("Selected filepath: %s", path)
         filter_selection = fcd.get_filter().get_name()
         
-        for i in plots:
-            save_path = path
-            save_path += '-'
-            save_path += i
+        if filter_selection.endswith("(.pdf)"):
+            if not path.endswith(".pdf"):
+                path += ".pdf"
+
+        elif filter_selection.endswith("(.png)"):
+            if not path.endswith(".png"):
+                path += ".png"
         
-            if filter_selection.endswith("(.pdf)"):
-                if not save_path.endswith(".pdf"):
-                    save_path += ".pdf"
-            
-            elif filter_selection.endswith("(.png)"):
-                if not save_path.endswith(".png"):
-                    save_path += ".png"
-    
-            plots[i].figure.savefig(save_path)  # determines format from file extension
+        save_plot(plots, path)
+
         fcd.destroy()
-    
+
     elif response == gtk.RESPONSE_CANCEL:
         fcd.destroy()
+
 
 def man_param_save(window):
     fcd = gtk.FileChooserDialog("Save Parameters…",
@@ -115,28 +105,28 @@ def man_param_save(window):
                                 (gtk.STOCK_CANCEL, gtk.RESPONSE_CANCEL,
                                  gtk.STOCK_SAVE, gtk.RESPONSE_OK)
                                 )
-    
+
     filters = [gtk.FileFilter()]
     filters[0].set_name("Parameter File (.yml)")
     filters[0].add_pattern("*.yml")
-    
+
     fcd.set_do_overwrite_confirmation(True)
     for i in filters:
         fcd.add_filter(i)
-                 
+
     response = fcd.run()
-    
+
     if response == gtk.RESPONSE_OK:
         path = fcd.get_filename()
-        _logger.error(" ".join(("Selected filepath:", path)),'INFO')
-        
+        logger.info("Selected filepath: %s", path)
+
         if not path.endswith(".yml"):
             path += '.yml'
-        
+
         save_params(window, path)
 
         fcd.destroy()
-        
+
     elif response == gtk.RESPONSE_CANCEL:
         fcd.destroy()
 
@@ -147,136 +137,122 @@ def man_param_load(window):
                                 (gtk.STOCK_CANCEL, gtk.RESPONSE_CANCEL,
                                  gtk.STOCK_OPEN, gtk.RESPONSE_OK)
                                 )
-    
+
     filters = [gtk.FileFilter()]
     filters[0].set_name("Parameter File (.yml)")
     filters[0].add_pattern("*.yml")
 
     for i in filters:
         fcd.add_filter(i)
-                 
+
     response = fcd.run()
-    
+
     if response == gtk.RESPONSE_OK:
         path = fcd.get_filename()
-        _logger.error(" ".join(("Selected filepath:", path)),'INFO')
-        
+        logger.info("Selected filepath: %s", path)
+
         load_params(window, path)
 
         fcd.destroy()
-        
+
     elif response == gtk.RESPONSE_CANCEL:
         fcd.destroy()
 
-def autoSave(current_exp, dir_button, name, expnumber):
+def autoSave(exp, path, name):
     if name == "":
         name = "file"
-    path = dir_button.get_filename()
+
     path += '/'
     path += name
-    path += '-'
-    path += str(expnumber)
-    
-    if (current_exp.parameters['shutter_true'] and current_exp.parameters['sync_true']):
-        text(current_exp, current_exp.data, "-".join((path,'data')), auto=True)
-        text(current_exp, current_exp.ftdata, "-".join((path,'ft')), auto=True)
-    else:
-        text(current_exp, current_exp.data, path, auto=True)
+     
+    save_text(exp, path)
 
-def autoPlot(plots, dir_button, name, expnumber):
-    for i in plots:
-        if name == "":
-            name = "file"
+def autoPlot(exp, path, name):
+    if name == "":
+        name = "file"
         
-        path = dir_button.get_filename()
-        path += '/'
-        path += name
-        path += '-'
-        path += str(expnumber)
-        path += '-'
-        path += i
-        
-        if path.endswith(".pdf"):
-            path = path.rstrip(".pdf")
-    
-        j = 1
-        while os.path.exists("".join([path, ".pdf"])):
-            if j > 1:
-                path = path[:-len(str(j))]
-            path += str(j)
-            j += 1
-    
+    path += '/'
+    path += name
+
+    if not (path.endswith(".pdf") or path.endswith(".png")):
         path += ".pdf"
-        plots[i].figure.savefig(path)
 
-def npy(exp, data, path, auto=False):
-    if path.endswith(".npy"):
-        path = path.rstrip(".npy")
+    save_plot(exp, path)
 
-    if auto == True:
-        j = 1
-        while os.path.exists("".join([path, ".npy"])):
-            if j > 1:
-                path = path[:-len(str(j))]
-            path += str(j)
+def save_text(exp, path):
+    name, _sep, ext = path.rpartition('.') # ('','',string) if no match
+    if _sep == '':
+        name = ext
+        ext = 'txt'
+    
+    num = ''
+    j = 0
+    
+    for dname in exp.data: # Test for any existing files
+        while os.path.exists("%s%s-%s.%s" % (name, num, dname, ext)):
             j += 1
+            num = j
+    
+    for dname in exp.data: # save data
+        file = open("%s%s-%s.%s" % (name, num, dname, ext), 'w')
 
-    np.save(path, data)
+        time = exp.time
+        header = "".join(['# TIME ', time.isoformat(), "\n"])
+    
+        header += "# DSTAT COMMANDS\n#  "
+        for i in exp.commands:
+            header += i
 
-def text(exp, data, path, auto=False):
-    if path.endswith(".txt"):
-        path = path.rstrip(".txt")
+        file.write("".join([header, '\n']))
     
-    if auto == True:
-        j = 1
-        
-        while os.path.exists("".join([path, ".txt"])):
-            if j > 1:
-                path = path[:-len(str(j))]
-            path += str(j)
-            j += 1
+        analysis_buffer = []
     
-    path += ".txt"
-    file = open(path, 'w')
+        if exp.analysis != {}:
+            analysis_buffer.append("# ANALYSIS")
+            for key, value in exp.analysis.iteritems():
+                analysis_buffer.append("#  %s:" % key)
+                for scan in value:
+                    number, result = scan
+                    analysis_buffer.append(
+                        "#    Scan %s -- %s" % (number, result)
+                        )
     
-    time = exp.time
-
-    header = "".join(['# TIME ', time.isoformat(), "\n"])
-    
-    header += "# DSTAT COMMANDS\n#  "
-    for i in exp.commands:
-        header += i
-
-    file.write("".join([header, '\n']))
-    
-    analysis_buffer = []
-    
-    if exp.analysis != {}:
-        analysis_buffer.append("# ANALYSIS")
-        for key, value in exp.analysis.iteritems():
-            analysis_buffer.append("#  %s:" % key)
-            for scan in value:
-                number, result = scan
-                analysis_buffer.append(
-                    "#    Scan %s -- %s" % (number, result)
-                    )
-    
-    for i in analysis_buffer:
-        file.write("%s\n" % i)
+        for i in analysis_buffer:
+            file.write("%s\n" % i)
       
-    # Write out actual data  
-    line_buffer = []
+        # Write out actual data  
+        line_buffer = []
     
-    for scan in zip(*data):
-        for dimension in scan:
-            for i in range(len(dimension)):
-                try:
-                    line_buffer[i] += "%s     " % dimension[i]
-                except IndexError:
-                    line_buffer.append("")
-                    line_buffer[i] += "%s     " % dimension[i]
+        for scan in zip(*exp.data[dname]):
+            for dimension in scan:
+                for i in range(len(dimension)):
+                    try:
+                        line_buffer[i] += "%s     " % dimension[i]
+                    except IndexError:
+                        line_buffer.append("")
+                        line_buffer[i] += "%s     " % dimension[i]
             
-    for i in line_buffer:
-        file.write("%s\n" % i)
+        for i in line_buffer:
+            file.write("%s\n" % i)
+
+        file.close()
+        
+def save_plot(exp, path):
+    """Saves everything in exp.plots to path. Appends a number for duplicates.
+    If no file extension or unknown, uses pdf.
+    """
+    name, _sep, ext = path.rpartition('.')
+    if _sep == '':
+        name = ext
+        ext = 'pdf'
     
-    file.close()
+    num = ''
+    j = 0
+    
+    for i in exp.plots: # Test for any existing files
+        while os.path.exists("%s%s-%s.%s" % (name, num, i, ext)):
+            j += 1
+            num = j
+    
+    for i in exp.plots: # save data
+        exp.plots[i].figure.savefig("%s%s-%s.%s" % (name, num, i, ext))
