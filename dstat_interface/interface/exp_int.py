@@ -441,7 +441,7 @@ class CAL(ExpInterface):
             __main__.MAIN.stop_ocp()
             __main__.MAIN.spinner.start()
             
-            offset = dstat_comm.measure_offset(self.get_params()['time'])
+            offset = dstat_comm.measure_offset(self.params['time'])
             
             for i in offset:
                 _logger.error(" ".join((i, str(-offset[i]))), "INFO")
