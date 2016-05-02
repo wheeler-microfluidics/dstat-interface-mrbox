@@ -101,6 +101,18 @@ class DstatPlugin(ZmqPlugin):
         self.parent.statusbar.push(self.parent.message_context_id, "µDrop "
                                    "acquisition requested.")
         return self.parent.run_active_experiment()
+        
+    def on_execute__set_metadata(self, request=None):
+        '''
+        Args
+        ----
+
+            (dict) : Dictionary of metadata to be used in subsequent
+             experiments. Should include `device_id`, `patient_id`, and
+             `experiment_id`. Leave blank to reset all metadata fields or set
+             individual keys to `None` to reset individual values.
+        '''
+        self.parent.metadata = request
 
     def on_execute__save_text(self, request):
         '''

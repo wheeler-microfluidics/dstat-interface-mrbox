@@ -171,7 +171,9 @@ class Main(object):
                                                       'menu_dropbot_disconnect')
         self.dropbot_enabled = False
         self.dropbot_triggered = False
-
+        
+        self.metadata = None
+        
         self.plot_notebook.get_nth_page(
                         self.plot_notebook.page_num(self.ft_window)).hide()
         self.plot_notebook.get_nth_page(
@@ -470,6 +472,7 @@ class Main(object):
         selection = self.expcombobox.get_active()
         parameters = {}
         parameters['version'] = self.version
+        parameters['metadata'] = self.metadata
 
         # Make sure these are defined
         parameters['sync_true'] = False
