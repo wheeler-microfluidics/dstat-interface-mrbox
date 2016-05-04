@@ -42,7 +42,8 @@ def get_params(window):
         logger.info("No gain selected.")
     parameters.update(window.exp_window.get_params(selection))
     parameters.update(window.analysis_opt_window.params)
-
+    parameters.update(window.db_window.params)
+    
     return parameters
 
 def save_params(window, path):
@@ -75,5 +76,6 @@ def set_params(window, params):
                     window.exp_window.classes[params['experiment_index']][0])
     window.exp_window.set_params(params['experiment_index'], params)
     window.analysis_opt_window.params = params
+    window.db_window.params = params
 
     window.params_loaded = True

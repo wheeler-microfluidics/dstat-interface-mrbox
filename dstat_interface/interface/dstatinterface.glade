@@ -749,6 +749,11 @@ Thanks to Christian Fobel for help with Dropbot Plugin</property>
     <property name="can_focus">False</property>
     <property name="stock">gtk-preferences</property>
   </object>
+  <object class="GtkImage" id="image7">
+    <property name="visible">True</property>
+    <property name="can_focus">False</property>
+    <property name="stock">gtk-info</property>
+  </object>
   <object class="GtkListStore" id="serial_liststore">
     <columns>
       <!-- column-name serial -->
@@ -886,6 +891,28 @@ Thanks to Christian Fobel for help with Dropbot Plugin</property>
                         <property name="image">image6</property>
                         <property name="use_stock">False</property>
                         <signal name="activate" handler="on_menu_analysis_options_activate" swapped="no"/>
+                      </object>
+                    </child>
+                  </object>
+                </child>
+              </object>
+            </child>
+            <child>
+              <object class="GtkMenuItem" id="menu_database">
+                <property name="visible">True</property>
+                <property name="can_focus">False</property>
+                <property name="label" translatable="yes">Database</property>
+                <child type="submenu">
+                  <object class="GtkMenu" id="menu5">
+                    <property name="visible">True</property>
+                    <property name="can_focus">False</property>
+                    <child>
+                      <object class="GtkImageMenuItem" id="menu_database_options">
+                        <property name="label">View…</property>
+                        <property name="visible">True</property>
+                        <property name="can_focus">False</property>
+                        <property name="image">image7</property>
+                        <property name="use_stock">False</property>
                       </object>
                     </child>
                   </object>

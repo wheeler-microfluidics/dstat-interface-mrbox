@@ -50,6 +50,7 @@ os.chdir(os.path.dirname(os.path.abspath(sys.argv[0])))
 
 from version import getVersion
 import interface.save as save
+from interface.db import DB_Window
 import dstat_comm as comm
 import interface.exp_window as exp_window
 import interface.adc_pot as adc_pot
@@ -58,6 +59,7 @@ import params
 import parameter_test
 import analysis
 import zmq
+import db
 from errors import InputError
 
 from plugin import DstatPlugin, get_hub_uri
@@ -103,6 +105,12 @@ class Main(object):
 
         self.exp_window = exp_window.Experiments(self.builder)
         self.analysis_opt_window = analysis.AnalysisOptions(self.builder)
+        
+        self.db_window = DB_Window()
+        self.builder.get_object('menu_database_options').connect_object(
+            'activate', DB_Window.show, self.db_window
+        )
+        self.db_window.connect('db_reset', db.restart_db)
 
         # Setup Autosave
         self.autosave_checkbox = self.builder.get_object('autosave_checkbutton')
