@@ -98,9 +98,10 @@ class DstatPlugin(ZmqPlugin):
         return get_params(self.parent)
 
     def on_execute__run_active_experiment(self, request):
+        data = decode_content_data(request)
         self.parent.statusbar.push(self.parent.message_context_id, "µDrop "
                                    "acquisition requested.")
-        return self.parent.run_active_experiment()
+        return self.parent.run_active_experiment(metadata=data['metadata'])
         
     def on_execute__set_metadata(self, request=None):
         '''
@@ -112,6 +113,7 @@ class DstatPlugin(ZmqPlugin):
              `experiment_id`. Leave blank to reset all metadata fields or set
              individual keys to `None` to reset individual values.
         '''
+        data = decode_content_data(request)
         self.parent.metadata = request
 
     def on_execute__save_text(self, request):
