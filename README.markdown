@@ -16,6 +16,10 @@ It currently has no abilities for analyzing recorded data or opening previously 
 The DStat interface is written primarily in Python and runs on Linux, Mac, and Windows.
 It is the main method for running experiments on the DStat, controlling experimental parameters and collecting and plotting data.
 It currently has no abilities for analyzing recorded data or opening previously saved data files, but data is saved in a simple text format or numpy-compatible binary format and plots can be saved as images.
+
+*New in version 1.3:* dstat-interface can now save all data files to a ZODB database for later analysis.
+The old autosave functionality has still been retained.
+
 # Installation
 Unfortunately, due to the python packages used, dstat-interface is difficult to make into a single self-contained package, so for the time being, the simplest way to run it is to install a python distribution. dstat-interface itself, therefore, requires no installation and can be run from any directory by executing `/dstat-interface/main.py` with python.
 
@@ -33,6 +37,9 @@ Python and related packages needed: (versions listed are tested, older versions 
 * XQuartz (2.7.7)
 * zeromq (4.0.5) and pyzmq (14.6.0)
 * pyyaml (3.11)
+* zodb
+* zeo
+* psutil
 
 Optional:
 
