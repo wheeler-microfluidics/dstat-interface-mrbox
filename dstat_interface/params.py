@@ -17,11 +17,13 @@
 #
 #     You should have received a copy of the GNU General Public License
 #     along with this program.  If not, see <http://www.gnu.org/licenses/>.
+import logging
 
 import yaml
 
-from errors import ErrorLogger, InputError
-_logger = ErrorLogger(sender="dstat-interface-params")
+from errors import InputError
+
+logger = logging.getLogger('dstat.params')
 
 def get_params(window):
     """Fetches and returns dict of all parameters for saving."""
