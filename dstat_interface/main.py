@@ -209,6 +209,7 @@ class Main(object):
         params.save_params(self, 'last_params.yml')
 
         self.on_serial_disconnect_clicked()
+        db.stop_db()
         gtk.main_quit()
 
     def on_gtk_about_activate(self, menuitem, data=None):
