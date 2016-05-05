@@ -799,13 +799,16 @@ class Main(object):
 
         # uDrop
         # UI stuff
-        self.spinner.stop()
-        self.startbutton.set_sensitive(True)
-        self.stopbutton.set_sensitive(False)
+        finally:
+            self.metadata = None # Reset metadata
+            
+            self.spinner.stop()
+            self.startbutton.set_sensitive(True)
+            self.stopbutton.set_sensitive(False)
 
-        self.start_ocp()
-        self.completed_experiment_ids[self.active_experiment_id] =\
-            datetime.utcnow()
+            self.start_ocp()
+            self.completed_experiment_ids[self.active_experiment_id] =\
+                datetime.utcnow()
 
     def on_pot_stop_clicked(self, data=None):
         """Stop current experiment. Signals experiment process to stop."""
