@@ -85,11 +85,9 @@ class AnalysisOptions(object):
     
     @params.setter
     def params(self, params):
-        try:
-            for key in self._params:
+        for key in self._params:
+            if key in params:
                 self._params[key] = params[key]
-        except KeyError as e:
-            logger.warning("Missing parameter - %s" % e)
         
         self.stats_button.set_active(self._params['stats_true'])
         self.stats_start_button.set_active(self._params['stats_start_true'])

@@ -121,10 +121,8 @@ class adc_pot(object):
             self._params = dict.fromkeys(self.ui.keys())
         
         for i in self._params:
-            try:
+            if i in params:
                 self._params[i] = params[i]
-            except KeyError as e:
-                _logger.error("Invalid parameter key: %s" % e, "WAR")
         self._set_params()
 
     def _set_params(self):
