@@ -474,6 +474,21 @@ class Experiment(object):
         in subclass.
         """
         pass
+    
+    def export(self):
+        """Return a dict containing data for saving."""
+        output = {
+                  "datatype" : self.datatype,
+                  "xlabel" : self.xlabel,
+                  "ylabel" : self.ylabel,
+                  "xmin" : self.xmin,
+                  "xmax" : self.xmax,
+                  "parameters" : self.parameters,
+                  "data" : self.data,
+                  "commands" : self.commands
+                  }
+        
+        return output
 
 class CALExp(Experiment):
     """Offset calibration experiment"""
