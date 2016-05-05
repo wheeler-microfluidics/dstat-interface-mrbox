@@ -180,7 +180,7 @@ class Main(object):
         self.dropbot_enabled = False
         self.dropbot_triggered = False
         
-        self.metadata = None
+        self.metadata = None # Should only be added to by plugin interface
         
         self.plot_notebook.get_nth_page(
                         self.plot_notebook.page_num(self.ft_window)).hide()
@@ -428,11 +428,23 @@ class Main(object):
             # Ignore expected exceptions when triggering experiment from UI.
             pass
 
-    def run_active_experiment(self):
+    def run_active_experiment(self, metadata=None):
         """Run currently visible experiment."""
         # Assign current experiment a unique identifier.
         experiment_id = uuid.uuid4()
         self.active_experiment_id = experiment_id
+        logger.info("Current measurement id: %s", experiment_id.hex)
+        
+        self.metadata = metadata
+        
+        if self.metadata is not None:
+            logger.info("Loading external metadata")
+            self.db_window.update_from_metadata(self.metadata)
+        elif self.db_window.params['exp_id_entry'] is None:
+            logger.info("DB exp_id field blank, autogenerating")
+            self.db_window.on_exp_id_autogen_button_clicked()
+            
+        self.db_window.params = {'measure_id_entry':experiment_id.hex}
 
         def exceptions():
             """ Cleans up after errors """
@@ -458,7 +470,13 @@ class Main(object):
             else:
                 nb.get_nth_page(nb.page_num(self.ft_window)).hide()
                 # nb.get_nth_page(nb.page_num(self.period_window)).hide()
-
+            
+            if parameters['db_enable_checkbutton']:
+                if db.current_db is None:
+                    db.start_db()
+                elif not db.current_db.connected:
+                    db.restart_db()
+            
             comm.serial_instance.proc_pipe_p.send(self.current_exp)
 
             # Flush data pipe
@@ -489,7 +507,8 @@ class Main(object):
         try:
             parameters.update(self.adc_pot.params)
             parameters.update(self.analysis_opt_window.params)
-
+            parameters.update(self.db_window.params)
+            
             self.line = 0
             self.lastline = 0
             self.lastdataline = 0
@@ -707,26 +726,74 @@ class Main(object):
         """Clean up after data acquisition is complete. Update plot and
         copy data to raw data tab. Saves data if autosave enabled.
         """
-        self.current_exp.time = datetime.now()
-        gobject.source_remove(self.experiment_proc[0])
-        gobject.source_remove(self.plot_proc)  # stop automatic plot update
-        self.experiment_running_plot()  # make sure all data updated on plot
+        try:
+            self.current_exp.time = datetime.now()
+            gobject.source_remove(self.experiment_proc[0])
+            gobject.source_remove(self.plot_proc)  # stop automatic plot update
+            self.experiment_running_plot()  # make sure all data updated on plot
 
-        self.databuffer.set_text("")
-        self.databuffer.place_cursor(self.databuffer.get_start_iter())
-        self.rawbuffer.insert_at_cursor("\n")
-        self.rawbuffer.set_text("")
-        self.rawbuffer.place_cursor(self.rawbuffer.get_start_iter())
+            self.databuffer.set_text("")
+            self.databuffer.place_cursor(self.databuffer.get_start_iter())
+            self.rawbuffer.insert_at_cursor("\n")
+            self.rawbuffer.set_text("")
+            self.rawbuffer.place_cursor(self.rawbuffer.get_start_iter())
 
-        # Shutter stuff
-        if (self.current_exp.parameters['shutter_true'] and
-            self.current_exp.parameters['sync_true']):
-            self.ft_plot.updateline(self.current_exp, 0)
-            self.ft_plot.redraw()
+            # Shutter stuff
+            if (self.current_exp.parameters['shutter_true'] and
+                self.current_exp.parameters['sync_true']):
+                self.ft_plot.updateline(self.current_exp, 0)
+                self.ft_plot.redraw()
+
+                line_buffer = []
+
+                for scan in self.current_exp.data['ft']:
+                    for dimension in scan:
+                        for i in range(len(dimension)):
+                            try:
+                                line_buffer[i] += "%s     " % dimension[i]
+                            except IndexError:
+                                line_buffer.append("")
+                                line_buffer[i] += "%s     " % dimension[i]
+
+                for i in line_buffer:
+                    self.databuffer.insert_at_cursor("%s\n" % i)
+
+            # Run Analysis
+            analysis.do_analysis(self.current_exp)
+
+            # Write DStat commands
+            for i in self.current_exp.commands:
+                self.rawbuffer.insert_at_cursor(i)
+
+            self.rawbuffer.insert_at_cursor("\n")
+
+            try:
+                self.statusbar.push(
+                    self.message_context_id,
+                    "Integral: %s A" % self.current_exp.analysis['FT Integral'][0][1]
+                )
+            except KeyError:
+                pass
+
+            # Data Output
+            analysis_buffer = []
+
+            if self.current_exp.analysis != {}:
+                analysis_buffer.append("# ANALYSIS")
+                for key, value in self.current_exp.analysis.iteritems():
+                    analysis_buffer.append("#  %s:" % key)
+                    for scan in value:
+                        number, result = scan
+                        analysis_buffer.append(
+                            "#    Scan %s -- %s" % (number, result)
+                            )
+
+            for i in analysis_buffer:
+                self.rawbuffer.insert_at_cursor("%s\n" % i)
 
             line_buffer = []
 
-            for scan in self.current_exp.data['ft']:
+            for scan in self.current_exp.data['data']:
                 for dimension in scan:
                     for i in range(len(dimension)):
                         try:
@@ -736,67 +803,47 @@ class Main(object):
                             line_buffer[i] += "%s     " % dimension[i]
 
             for i in line_buffer:
-                self.databuffer.insert_at_cursor("%s\n" % i)
+                self.rawbuffer.insert_at_cursor("%s\n" % i)
 
-        # Run Analysis
-        analysis.do_analysis(self.current_exp)
+            # Autosaving
+            if self.autosave_checkbox.get_active():
+                save.autoSave(self.current_exp,
+                              self.autosavedir_button.get_filename(),
+                              self.autosavename.get_text()
+                              )
 
-        # Write DStat commands
-        for i in self.current_exp.commands:
-            self.rawbuffer.insert_at_cursor(i)
-
-        self.rawbuffer.insert_at_cursor("\n")
-
-        try:
-            self.statusbar.push(
-                self.message_context_id,
-                "Integral: %s A" % self.current_exp.analysis['FT Integral'][0][1]
-            )
-        except KeyError:
-            pass
-
-        # Data Output
-        analysis_buffer = []
-
-        if self.current_exp.analysis != {}:
-            analysis_buffer.append("# ANALYSIS")
-            for key, value in self.current_exp.analysis.iteritems():
-                analysis_buffer.append("#  %s:" % key)
-                for scan in value:
-                    number, result = scan
-                    analysis_buffer.append(
-                        "#    Scan %s -- %s" % (number, result)
-                        )
-
-        for i in analysis_buffer:
-            self.rawbuffer.insert_at_cursor("%s\n" % i)
-
-        line_buffer = []
-
-        for scan in self.current_exp.data['data']:
-            for dimension in scan:
-                for i in range(len(dimension)):
-                    try:
-                        line_buffer[i] += "%s     " % dimension[i]
-                    except IndexError:
-                        line_buffer.append("")
-                        line_buffer[i] += "%s     " % dimension[i]
-
-        for i in line_buffer:
-            self.rawbuffer.insert_at_cursor("%s\n" % i)
-
-        # Autosaving
-        if self.autosave_checkbox.get_active():
-            save.autoSave(self.current_exp,
-                          self.autosavedir_button.get_filename(),
-                          self.autosavename.get_text()
-                          )
-
-            save.autoPlot(self.current_exp,
-                          self.autosavedir_button.get_filename(),
-                          self.autosavename.get_text()
-                          )
-
+                save.autoPlot(self.current_exp,
+                              self.autosavedir_button.get_filename(),
+                              self.autosavename.get_text()
+                              )
+            # Database output
+            if self.current_exp.parameters['db_enable_checkbutton']:
+                meta = {}
+                
+                if self.current_exp.parameters['metadata'] is not None:
+                    metadata = self.current_exp.parameters['metadata']
+                    exp_metakeys = ['experiment_uuid', 'patient_id', 'name']
+                    meta.update(
+                                {k: metadata[k]
+                                 for k in metadata
+                                 if k not in exp_metakeys
+                                 }
+                                )
+                    
+                name = self.current_exp.parameters['measure_name_entry']
+                                       
+                newname = db.current_db.add_results(
+                    measurement_uuid=self.active_experiment_id.hex,
+                    measurement_name=name,
+                    experiment_uuid=self.current_exp.parameters['exp_id_entry'],
+                    experiment_metadata=meta,
+                    patient_id=self.current_exp.parameters['patient_id_entry'],
+                    timestamp=None,
+                    data=self.current_exp.export()
+                    )
+                    
+                self.db_window.params = {'measure_name_entry':newname}
+        
         # uDrop
         # UI stuff
         finally:
