@@ -44,13 +44,13 @@ def get_params(window):
         logger.info("No gain selected.")
     parameters.update(window.exp_window.get_params(selection))
     parameters.update(window.analysis_opt_window.params)
-    parameters.update(window.db_window.params)
+    parameters.update(window.db_window.persistent_params)
     
     return parameters
 
 def save_params(window, path):
     """Fetches current params and saves to path."""
-
+    logger.info("Save to: %s", path)
     params = get_params(window)
 
     with open(path, 'w') as f:
@@ -58,7 +58,7 @@ def save_params(window, path):
 
 def load_params(window, path):
     """Loads params from a path into UI elements."""
-
+    
     try:
         get_params(window)
     except InputError:  # Will be thrown because no experiment will be selected
