@@ -74,8 +74,8 @@ def set_params(window, params):
         window.expcombobox.set_active(
             window.exp_window.classes[params['experiment_index']][0]
             )
-                            
-    window.exp_window.set_params(params['experiment_index'], params)
+        window.exp_window.set_params(params['experiment_index'], params)
+        
     window.analysis_opt_window.params = params
     window.db_window.params = params
 
