@@ -75,9 +75,7 @@ class DB_Window(gobject.GObject):
     @property
     def params(self):
         """Dict of parameters."""
-        logger.info("getter")
-        self._get_params()  
-        logger.info("params: %s", self._params)    
+        self._get_params()      
         return self._params
     
     def _get_params(self):
@@ -87,14 +85,12 @@ class DB_Window(gobject.GObject):
                 self._params[i] = self.ui[i].get_active()
             elif i.endswith('entry'):
                 text = self.ui[i].get_text()
-                logger.info("%s=%s",i,text)
                 if text == "":
                     text = None
                 self._params[i] = text
     
     @params.setter
     def params(self, params):
-        logger.info("Setter Params: %s", params)
         if self._params is {}:
             self._params = dict.fromkeys(self.ui.keys())
     
@@ -102,7 +98,6 @@ class DB_Window(gobject.GObject):
             if i in params:
                 self._params[i] = params[i]
         self._set_params()
-        logger.info("params: %s", self._params)
 
     def _set_params(self):
         """Updates UI with new parameters."""
