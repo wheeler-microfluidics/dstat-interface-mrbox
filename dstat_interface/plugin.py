@@ -101,8 +101,9 @@ class DstatPlugin(ZmqPlugin):
         data = decode_content_data(request)
         self.parent.statusbar.push(self.parent.message_context_id, "µDrop "
                                    "acquisition requested.")
-        return self.parent.run_active_experiment(metadata=data['metadata'])
-        
+        return self.parent.run_active_experiment(metadata=data
+                                                 .get('metadata'))
+
     def on_execute__set_metadata(self, request=None):
         '''
         Args
