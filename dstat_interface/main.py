@@ -428,7 +428,7 @@ class Main(object):
             # Ignore expected exceptions when triggering experiment from UI.
             pass
 
-    def run_active_experiment(self, metadata=None):
+    def run_active_experiment(self, param_override=None, metadata=None):
         """Run currently visible experiment."""
         # Assign current experiment a unique identifier.
         experiment_id = uuid.uuid4()
@@ -508,6 +508,9 @@ class Main(object):
             parameters.update(self.adc_pot.params)
             parameters.update(self.analysis_opt_window.params)
             parameters.update(self.db_window.params)
+            
+            if param_override is not None:
+                params.set_params(self, param_override)
             
             self.line = 0
             self.lastline = 0
