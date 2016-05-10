@@ -505,12 +505,10 @@ class Main(object):
         parameters['sync_true'] = False
         parameters['shutter_true'] = False
         try:
-            parameters.update(self.adc_pot.params)
-            parameters.update(self.analysis_opt_window.params)
-            parameters.update(self.db_window.params)
-            
             if param_override is not None:
                 params.set_params(self, param_override)
+            
+            parameters.update(params.get_params(self))
             
             self.line = 0
             self.lastline = 0
@@ -541,7 +539,6 @@ class Main(object):
                 return experiment_id
 
             elif selection == 1: # LSV
-                parameters.update(self.exp_window.get_params('lsv'))
                 parameter_test.lsv_test(parameters)
 
                 self.current_exp = comm.LSVExp(parameters)
@@ -550,7 +547,6 @@ class Main(object):
                 return experiment_id
 
             elif selection == 2: # CV
-                parameters.update(self.exp_window.get_params('cve'))
                 parameter_test.cv_test(parameters)
 
                 self.current_exp = comm.CVExp(parameters)
@@ -559,7 +555,6 @@ class Main(object):
                 return experiment_id
 
             elif selection == 3:  # SWV
-                parameters.update(self.exp_window.get_params('swv'))
                 parameter_test.swv_test(parameters)
 
                 self.current_exp = comm.SWVExp(parameters)
@@ -568,7 +563,6 @@ class Main(object):
                 return experiment_id
 
             elif selection == 4:  # DPV
-                parameters.update(self.exp_window.get_params('dpv'))
                 parameter_test.dpv_test(parameters)
 
                 self.current_exp = comm.DPVExp(parameters)
@@ -577,7 +571,6 @@ class Main(object):
                 return experiment_id
 
             elif selection == 6:  # PD
-                parameters.update(self.exp_window.get_params('pde'))
                 parameter_test.pd_test(parameters)
 
                 self.current_exp = comm.PDExp(parameters)
@@ -592,7 +585,6 @@ class Main(object):
                     exceptions()
                     return
 
-                parameters.update(self.exp_window.get_params('pot'))
                 parameter_test.pot_test(parameters)
 
                 self.current_exp = comm.PotExp(parameters)

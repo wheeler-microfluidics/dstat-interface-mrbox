@@ -26,12 +26,12 @@ logger = logging.getLogger("dstat.parameter_test")
 
 def lsv_test(params):
     """Test LSV parameters for sanity"""
+    test_parameters = ['clean_mV', 'dep_mV', 'clean_s', 'dep_s', 'start',
+                       'stop', 'slope']
     parameters = {}
     for i in params:
-        try:
+        if i in test_parameters:
             parameters[i] = int(params[i])
-        except TypeError:
-            pass
     
     if (parameters['clean_mV'] > 1499 or 
             parameters['clean_mV'] < -1500):
@@ -62,12 +62,12 @@ def lsv_test(params):
 
 def cv_test(params):
     """Test CV parameters for sanity"""
+    test_parameters = ['clean_mV', 'dep_mV', 'clean_s', 'dep_s', 'start',
+                       'stop', 'slope', 'v1', 'v2', 'scans']
     parameters = {}
     for i in params:
-        try:
+        if i in test_parameters:
             parameters[i] = int(params[i])
-        except TypeError:
-            pass
             
     if (parameters['clean_mV'] > 1499 or
             parameters['clean_mV'] < -1500):
@@ -104,12 +104,12 @@ def cv_test(params):
                          
 def swv_test(params):
     """Test SWV parameters for sanity"""
+    test_parameters = ['clean_mV', 'dep_mV', 'clean_s', 'dep_s', 'start',
+                       'stop', 'step', 'pulse', 'freq']
     parameters = {}
     for i in params:
-        try:
+        if i in test_parameters:
             parameters[i] = int(params[i])
-        except TypeError:
-            pass
     
     if params['cyclic_true'] :
         if int(params['scans']) < 1:
@@ -156,12 +156,12 @@ def swv_test(params):
                          
 def dpv_test(params):
     """Test DPV parameters for sanity"""
+    test_parameters = ['clean_mV', 'dep_mV', 'clean_s', 'dep_s', 'start',
+                       'stop', 'step', 'pulse', 'period', 'width']
     parameters = {}
     for i in params:
-        try:
+        if i in test_parameters:
             parameters[i] = int(params[i])
-        except TypeError:
-            pass
 
     if (parameters['clean_mV'] > 1499 or
             parameters['clean_mV'] < -1500):
@@ -228,12 +228,11 @@ def pd_test(parameters):
 
 def pot_test(params):
     """Test POT parameters for sanity"""
+    test_parameters = ['time']
     parameters = {}
     for i in params:
-        try:
+        if i in test_parameters:
             parameters[i] = int(params[i])
-        except TypeError:
-            pass
             
     if (int(parameters['time']) <= 0):
         raise InputError(parameters['time'],

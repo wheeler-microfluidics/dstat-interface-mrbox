@@ -667,7 +667,7 @@ class PotExp(Experiment):
         self.datalength = 2
         self.databytes = 8
         self.xmin = 0
-        self.xmax = self.parameters['time']
+        self.xmax = int(self.parameters['time'])
         
         self.commands += "E"
         self.commands[2] += "P"
