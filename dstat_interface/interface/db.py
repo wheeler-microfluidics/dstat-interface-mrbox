@@ -111,8 +111,8 @@ class DB_Window(gobject.GObject):
                     self.ui[i].set_text("")
     
     def update_from_metadata(self, metadata):
-        params = {k : metadata[j] for j, k in self.metadata_map}
-        # if j in metadata}
+        params = {k : metadata[j] for j, k in self.metadata_map
+                    if j in metadata}
         self.params = params
     
     def show(self):
