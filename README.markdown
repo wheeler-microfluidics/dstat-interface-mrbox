@@ -9,7 +9,8 @@ It currently has no abilities for analyzing recorded data or opening previously 
 ## Table of Contents:
 
 1. [Installation](#Installation)
-	1. [Prerequisites](#Prerequisites)
+	1.  [Manual Install](#manual-install)
+    1.  [pip Install](#pip-install)
 2. [Getting Started](#Getting-Started)
 
 # Introduction
@@ -23,7 +24,7 @@ The old autosave functionality has still been retained.
 # Installation
 Unfortunately, due to the python packages used, dstat-interface is difficult to make into a single self-contained package, so for the time being, the simplest way to run it is to install a python distribution. dstat-interface itself, therefore, requires no installation and can be run from any directory by executing `/dstat-interface/main.py` with python.
 
-## Prerequisites
+## Manual Install
 
 Python and related packages needed: (versions listed are tested, older versions may still work)
 
@@ -71,13 +72,40 @@ The final requirements, can be installed using python's pip system:
     pip install pyserial pyzmq pyyaml seaborn
 
 ### Windows
+**These instructions are tricky on Windows, see the [pip install](#pip-install) below for an easier alternative.**
+
 While it is possible to install a bare python distribution and install the required prerequisites separately, [Python(x,y)](https://code.google.com/p/pythonxy/wiki/Downloads) has a python 2.7 distribution that already contains most of the necessary packages. However, pyserial is not installed in the recommended install so it should be manually selected or the full install done instead (tested with 2.7.9.0).
 
 The newest versions of Python(x,y) are also missing PyGTK, so it should be installed from [here](http://ftp.gnome.org/pub/GNOME/binaries/win32/pygtk/2.24/pygtk-all-in-one-2.24.2.win32-py2.7.msi) once Python(x,y) is installed. Matplotlib should then be reinstalled to get gtk support from [here](https://downloads.sourceforge.net/project/matplotlib/matplotlib/matplotlib-1.4.3/windows/matplotlib-1.4.3.win32-py2.7.exe).
 
-## Experimental pip install
+## pip Install
 Tagged git versions are uploaded to [PiPy](https://pypi.python.org/pypi/dstat-interface) regularly, and thus dstat-interface can be installed using the command `pip install dstat-interface`, which will attempt to automatically install matplotlib, numpy, pyserial, and pyzmq. (N.B. matplotlib does not install well with pip on Mac and should be manually installed with Homebrew as described above)
-This is still experimental as dstat-interface cannot be launched as a module for compatibility with multiprocessing on Windows and pygtk and pygobject must be installed manually as described above.
+This is still a bit experimental as pygtk and pygobject must be installed separately.
+
+To launch a pip-installed dstat-interface, simply type:
+
+    python -m dstat_interface.main
+    
+into a terminal.
+
+### Windows
+The following terminal commands will result in a full installation of dstat-interface and its requirements, assuming [32-bit Miniconda][1] is installed:
+
+    conda create -n dstat python pywin32
+    activate dstat
+    pip install --find-links http://192.99.4.95/wheels --trusted-host 192.99.4.95 scipy==0.17.0 pygtk2-win pycairo-gtk2-win dstat-interface
+
+This makes use of pre-built binary wheels for many of the Windows packages, stored on our server.
+We are installing in a separate environment to keep a clean system.
+`activate dstat` will enter the environment (must be done whenever a new terminal is opened),
+and `deactivate` will return to the root environment.
+
+Therefore, to run dstat-interface from our environment, we must first activate it (if not already done) before launching it:
+
+    activate dstat
+    python -m dstat_interface.main
+
+[1]: https://repo.continuum.io/miniconda/Miniconda2-latest-Windows-x86.exe
 
 # Getting started
 ## Interface overview
