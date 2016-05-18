@@ -54,6 +54,8 @@ from interface.db import DB_Window
 import dstat_comm as comm
 import interface.exp_window as exp_window
 import interface.adc_pot as adc_pot
+import numpy as np
+import pandas as pd
 import plot
 import params
 import parameter_test
@@ -76,6 +78,34 @@ log_handler.setFormatter(log_formatter)
 root_logger.addHandler(log_handler)
 
 logger = logging.getLogger("dstat.main")
+
+
+def dstat_data_to_frame(data):
+    '''
+    Convert DStat experiment data to `pandas.DataFrame`.
+
+    Args
+    ----
+
+        data (list) : List of numpy array pairs (i.e., tuples).  For each array
+            pair, each item in the zipped array has two values; the first value
+            is the *time in seconds* since the start of the DStat experiment,
+            the second value is the measured current in *amps*.
+
+    Returns
+    -------
+
+        (`pandas.DataFrame`) : Table containing two columns, `time_s` and
+            `current_amps`.
+    '''
+    if not data:
+        return pd.DataFrame(None, columns=['time_s', 'current_amps'])
+    else:
+        return (pd.concat([pd.DataFrame(np.column_stack(d),
+                                        columns=['time_s', 'current_amps'])
+                           for d in data])
+                .reset_index(drop=True))
+
 
 class Main(object):
     """Main program """
@@ -105,7 +135,7 @@ class Main(object):
 
         self.exp_window = exp_window.Experiments(self.builder)
         self.analysis_opt_window = analysis.AnalysisOptions(self.builder)
-        
+
         self.db_window = DB_Window()
         self.builder.get_object('menu_database_options').connect_object(
             'activate', DB_Window.show, self.db_window
@@ -179,9 +209,9 @@ class Main(object):
                                                       'menu_dropbot_disconnect')
         self.dropbot_enabled = False
         self.dropbot_triggered = False
-        
+
         self.metadata = None # Should only be added to by plugin interface
-        
+
         self.plot_notebook.get_nth_page(
                         self.plot_notebook.page_num(self.ft_window)).hide()
         self.plot_notebook.get_nth_page(
@@ -195,6 +225,8 @@ class Main(object):
         self.active_experiment_id = None
         # UUIDs for completed experiments.
         self.completed_experiment_ids = OrderedDict()
+        # Data collected during completed experiments.
+        self.completed_experiment_data = OrderedDict()
 
     def on_window1_destroy(self, object, data=None):
         """ Quit when main window closed."""
@@ -434,16 +466,16 @@ class Main(object):
         experiment_id = uuid.uuid4()
         self.active_experiment_id = experiment_id
         logger.info("Current measurement id: %s", experiment_id.hex)
-        
+
         self.metadata = metadata
-        
+
         if self.metadata is not None:
             logger.info("Loading external metadata")
             self.db_window.update_from_metadata(self.metadata)
         elif self.db_window.params['exp_id_entry'] is None:
             logger.info("DB exp_id field blank, autogenerating")
             self.db_window.on_exp_id_autogen_button_clicked()
-            
+
         self.db_window.params = {'measure_id_entry':experiment_id.hex}
 
         def exceptions():
@@ -470,13 +502,13 @@ class Main(object):
             else:
                 nb.get_nth_page(nb.page_num(self.ft_window)).hide()
                 # nb.get_nth_page(nb.page_num(self.period_window)).hide()
-            
+
             if parameters['db_enable_checkbutton']:
                 if db.current_db is None:
                     db.start_db()
                 elif not db.current_db.connected:
                     db.restart_db()
-            
+
             comm.serial_instance.proc_pipe_p.send(self.current_exp)
 
             # Flush data pipe
@@ -507,9 +539,9 @@ class Main(object):
         try:
             if param_override is not None:
                 params.set_params(self, param_override)
-            
+
             parameters.update(params.get_params(self))
-            
+
             self.line = 0
             self.lastline = 0
             self.lastdataline = 0
@@ -814,7 +846,7 @@ class Main(object):
             # Database output
             if self.current_exp.parameters['db_enable_checkbutton']:
                 meta = {}
-                
+
                 if self.current_exp.parameters['metadata'] is not None:
                     metadata = self.current_exp.parameters['metadata']
                     exp_metakeys = ['experiment_uuid', 'patient_id', 'name']
@@ -824,9 +856,9 @@ class Main(object):
                                  if k not in exp_metakeys
                                  }
                                 )
-                    
+
                 name = self.current_exp.parameters['measure_name_entry']
-                                       
+
                 newname = db.current_db.add_results(
                     measurement_uuid=self.active_experiment_id.hex,
                     measurement_name=name,
@@ -836,14 +868,13 @@ class Main(object):
                     timestamp=None,
                     data=self.current_exp.export()
                     )
-                    
+
                 self.db_window.params = {'measure_name_entry':newname}
-        
         # uDrop
         # UI stuff
         finally:
             self.metadata = None # Reset metadata
-            
+
             self.spinner.stop()
             self.startbutton.set_sensitive(True)
             self.stopbutton.set_sensitive(False)
@@ -851,6 +882,9 @@ class Main(object):
             self.start_ocp()
             self.completed_experiment_ids[self.active_experiment_id] =\
                 datetime.utcnow()
+            # Save current measurements for experiment in `pandas.DataFrame`.
+            self.completed_experiment_data[self.active_experiment_id] =\
+                dstat_data_to_frame(self.current_exp.data['data'])
 
     def on_pot_stop_clicked(self, data=None):
         """Stop current experiment. Signals experiment process to stop."""

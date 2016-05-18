@@ -119,15 +119,26 @@ class DstatPlugin(ZmqPlugin):
         data = decode_content_data(request)
         self.parent.metadata = request
 
-    def on_execute__save_text(self, request):
+    def on_execute__get_experiment_data(self, request):
         '''
         Args
         ----
 
-            save_data_path (str) : Path to file to save text data.
+            experiment_id (str) : Path to file to save text data.
+
+        Returns
+        -------
+
+            (pandas.DataFrame) : Experiment results with columns `time_s` and
+                `current_amps`.
         '''
         data = decode_content_data(request)
-        save_text(self.parent.current_exp, data['save_data_path'])
+        if data['experiment_id'] in self.parent.completed_experiment_ids:
+            return self.parent.completed_experiment_data[data['experiment_id']]
+        elif data['experiment_id'] == self.parent.active_experiment_id:
+            return None
+        else:
+            raise KeyError('Unknown experiment ID: %s' % data['experiment_id'])
 
     def on_execute__save_plot(self, request):
         '''
