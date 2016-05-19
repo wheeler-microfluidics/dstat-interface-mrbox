@@ -155,7 +155,6 @@ class PlotBox(object):
         self.axe1.lines[line_number].set_xdata(
                 Experiment.data['data'][line_number][0][1::divisor])
         # Format y-axis tick labels to be like `1.0nA`, `3.7mA`, etc.
-        self.axe1.yaxis.set_major_formatter(A_formatter)
 
     def changetype(self, Experiment):
         """Change plot type. Set axis labels and x bounds to those stored
