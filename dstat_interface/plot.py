@@ -1,27 +1,30 @@
 #!/usr/bin/env python
 #     DStat Interface - An interface for the open hardware DStat potentiostat
-#     Copyright (C) 2014  Michael D. M. Dryden - 
+#     Copyright (C) 2014  Michael D. M. Dryden -
 #     Wheeler Microfluidics Laboratory <http://microfluidics.utoronto.ca>
-#         
-#     
+#
+#
 #     This program is free software: you can redistribute it and/or modify
 #     it under the terms of the GNU General Public License as published by
 #     the Free Software Foundation, either version 3 of the License, or
 #     (at your option) any later version.
-#     
+#
 #     This program is distributed in the hope that it will be useful,
 #     but WITHOUT ANY WARRANTY; without even the implied warranty of
 #     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 #     GNU General Public License for more details.
-#     
+#
 #     You should have received a copy of the GNU General Public License
 #     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 """
 Creates data plot.
 """
-import gtk
 from matplotlib.figure import Figure
+import gtk
+import matplotlib as mpl
+import matplotlib.pyplot as plt
+import si_prefix as si
 
 #from matplotlib.backends.backend_gtkcairo\
 #   import FigureCanvasGTKCairo as FigureCanvas
@@ -35,14 +38,21 @@ try:
     import seaborn as sns
 except ImportError:
     pass
-    
+
 from numpy import sin, linspace, pi, mean, trapz
 from scipy import fft, arange
+from .analysis import dstat_to_fft_frame
+
+
+# Format float values as string w.r.t. amps, e.g., `A`, `mA`, `uA`, etc.
+A_formatter = mpl.ticker.FuncFormatter(lambda x, pos:
+                                       '{}A'.format(si.si_format(x)))
+
 
 def plotSpectrum(y,Fs):
     """
     Plots a Single-Sided Amplitude Spectrum of y(t)
-    """    
+    """
     y = y-mean(y)
     n = len(y) # length of the signal
     k = arange(n)
@@ -51,7 +61,7 @@ def plotSpectrum(y,Fs):
     frq = frq[range(n/2)] # one side frequency range
     Y = fft(y)/n # fft computing and normalization
     Y = abs(Y[range(n/2)])
-    
+
     return (frq, Y)
 
 def integrateSpectrum(x, y, target, bandwidth):
@@ -198,5 +208,58 @@ class FT_Box(PlotBox):
         Experiment.plots['ft'] = self
 
         self.figure.canvas.draw()
-                                
-        
+
+
+def plot_dstat_data(df_data, settling_period_s=2., axes=None, label=None):
+    '''
+    Plot DStat experiment current measurement results.
+
+    Args
+    ----
+
+        df_data (pandas.DataFrame) : DStat experiment results with at
+            least the columns `time_s`, and `current_amps`.  For synchronous
+            detection experiments the table must also include the columns
+            `sample_frequency_hz`, `target_hz`.
+        axes (list) : List of at least two `matplotlib` axes to plot to.  The
+            first axis is used to plot the `current_amp` values.  The second
+            axis is used to plot the FFT for experiments using synchronous
+            detection. If `None`, axes are automatically created.
+
+    Returns
+    -------
+
+        (list) : List of two `matplotlib` axes use for current amps and FFT
+            plots, respectively.
+    '''
+    if axes is None:
+        fig, axes = plt.subplots(2, figsize=(12, 8))
+
+    # Get style properties to use for plot `i`.
+    plot_props = axes[0]._get_lines.prop_cycler.next()
+    # Plot measured DStat current at each time point.
+    df_data.set_index('time_s').current_amps.plot(ax=axes[0], label=label,
+                                                  **plot_props)
+
+    # Compute median measured current.  The median helps to eliminate outliers.
+    median = df_data.current_amps.median()
+    # Plot median as a straight line.
+    axes[0].plot(axes[0].get_xlim(), 2 * [median], linewidth=2, **plot_props)
+
+    #     # Annotate the median with the name of the sample.
+    #     axes[0].text(axes[0].get_xlim()[0], median, label, fontsize=14,
+    #               color='black')
+
+    # Format y-axes[0] tick labels to be like `1.0nA`, `3.7mA`, etc.
+    axes[0].yaxis.set_major_formatter(A_formatter)
+
+    if 'sample_frequency_hz' in df_data and (df_data.iloc[0]
+                                             ['sample_frequency_hz'] > 0):
+        # Synchronous detection (e.g., shuttered).
+        #
+        # Compute FFT of signal measured at specified sampling frequency.
+        df_fft = dstat_to_fft_frame(df_data, sample_frequency_hz=
+                                    df_data.iloc[0]['sample_frequency_hz'],
+                                    settling_period_s=settling_period_s)
+        df_fft.plot(x='frequency', y='amplitude', ax=axes[1], label=label)
+    return axes
