@@ -41,7 +41,7 @@ except ImportError:
 
 from numpy import sin, linspace, pi, mean, trapz
 from scipy import fft, arange
-from .analysis import dstat_to_fft_frame
+from dstat_interface.analysis import dstat_to_fft_frame
 
 
 # Format float values as string w.r.t. amps, e.g., `A`, `mA`, `uA`, etc.
