@@ -70,52 +70,52 @@ def integrateSpectrum(x, y, target, bandwidth):
     """
     j = 0
     k = len(x)
-    
+
     for i in range(len(x)):
         if x[i] >= target-bandwidth/2:
             j = i
             break
-            
+
     for i in range(j,len(x)):
         if x[i] >= target+bandwidth/2:
             k = i
             break
-        
+
     return trapz(y=y[j:k], x=x[j:k])
-    
+
 def findBounds(y):
     start_index = 0;
     stop_index = len(y)-1;
-    
+
     for i in range(len(y)):
         if (y[i] <= mean(y) and y[i+1] > mean(y)):
             start_index = i
             break
-    
+
     for i in range(len(y)):
         if (y[-(i+1)] <= mean(y) and y[-i] > mean(y)):
             stop_index = len(y)-1-i  # len(y) is last index + 1
             break
-    
+
     return (start_index, stop_index)
-    
-    
+
+
 class PlotBox(object):
     """Contains main data plot and associated methods."""
     def __init__(self, plotwindow_instance):
         """Creates plot and moves it to a gtk container.
-        
+
         Arguments:
         plotwindow_instance -- gtk container to hold plot.
         """
-        
+
         self.figure = Figure()
         self.figure.subplots_adjust(left=0.07, bottom=0.07,
                                     right=0.96, top=0.96)
         self.axe1 = self.figure.add_subplot(111)
-        
+
         self.axe1.plot([0, 1], [0, 1])
-        
+
         self.axe1.ticklabel_format(style='sci', scilimits=(0, 3),
                                    useOffset=False, axis='y')
 
@@ -127,22 +127,22 @@ class PlotBox(object):
         self.toolbar = NavigationToolbar(self.canvas, self.win)
         self.vbox.pack_start(self.toolbar, False, False)
         self.vbox.reparent(plotwindow_instance)
-    
+
     def clearall(self):
         """Remove all lines on plot. """
         for i in range(len(self.axe1.lines)):
             self.axe1.lines.pop(0)
         self.addline()
-    
+
     def clearline(self, line_number):
         """Remove a line specified by line_number."""
         self.lines[line_number].remove()
         self.lines.pop(line_number)
-    
+
     def addline(self):
         """Add a new line to plot. (initialized with dummy data)))"""
         self.axe1.plot([0, 1], [0, 1])
-    
+
     def updateline(self, Experiment, line_number):
         """Update a line specified by line_number with data stored in
         the Experiment instance.
@@ -154,6 +154,8 @@ class PlotBox(object):
                 Experiment.data['data'][line_number][1][1::divisor])
         self.axe1.lines[line_number].set_xdata(
                 Experiment.data['data'][line_number][0][1::divisor])
+        # Format y-axis tick labels to be like `1.0nA`, `3.7mA`, etc.
+        self.axe1.yaxis.set_major_formatter(A_formatter)
 
     def changetype(self, Experiment):
         """Change plot type. Set axis labels and x bounds to those stored
@@ -162,7 +164,7 @@ class PlotBox(object):
         self.axe1.set_xlabel(Experiment.xlabel)
         self.axe1.set_ylabel(Experiment.ylabel)
         self.axe1.set_xlim(Experiment.xmin, Experiment.xmax)
-        
+
         Experiment.plots['data'] = self
 
         self.figure.canvas.draw()
@@ -181,7 +183,7 @@ class FT_Box(PlotBox):
             for i in range(len(data)):
                 if data[i] > target:
                     return i
-        
+
         y = Experiment.data['data'][line_number][1]
         x = Experiment.data['data'][line_number][0]
         freq = Experiment.parameters['adc_rate_hz']
@@ -196,7 +198,7 @@ class FT_Box(PlotBox):
         self.axe1.lines[line_number].set_ydata(Y)
         self.axe1.lines[line_number].set_xdata(f)
         Experiment.data['ft'] = [(f, Y)]
-        
+
     def changetype(self, Experiment):
         """Change plot type. Set axis labels and x bounds to those stored
         in the Experiment instance. Stores class instance in Experiment.
@@ -204,7 +206,7 @@ class FT_Box(PlotBox):
         self.axe1.set_xlabel("Freq (Hz)")
         self.axe1.set_ylabel("|Y| (A/Hz)")
         self.axe1.set_xlim(0, Experiment.parameters['adc_rate_hz']/2)
-        
+
         Experiment.plots['ft'] = self
 
         self.figure.canvas.draw()
