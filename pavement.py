@@ -16,10 +16,10 @@ setup(name='dstat_interface',
       author_email='mdryden@chemutoronto.ca',
       url='http://microfluidics.utoronto.ca/dstat',
       license='GPLv3',
-      packages=['dstat_interface', ],
-      install_requires=['matplotlib', 'numpy', 'pyserial', 'pyzmq',
-                        'pyyaml','seaborn', 'zmq-plugin>=0.2.post2', 'zodb',
-                        'zeo', 'psutil'],
+      packages=['dstat_interface'],
+      install_requires=['matplotlib', 'numpy', 'pandas', 'psutil', 'pyserial',
+                        'pyyaml', 'pyzmq', 'seaborn', 'si-prefix', 'zeo',
+                        'zmq-plugin>=0.2.post2', 'zodb'],
       # Install data listed in `MANIFEST.in`
       include_package_data=True)
 
