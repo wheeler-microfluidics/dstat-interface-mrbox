@@ -880,11 +880,11 @@ class Main(object):
             self.stopbutton.set_sensitive(False)
 
             self.start_ocp()
-            self.completed_experiment_ids[self.active_experiment_id] =\
-                datetime.utcnow()
             # Save current measurements for experiment in `pandas.DataFrame`.
             self.completed_experiment_data[self.active_experiment_id] =\
                 dstat_data_to_frame(self.current_exp.data['data'])
+            self.completed_experiment_ids[self.active_experiment_id] =\
+                datetime.utcnow()
 
     def on_pot_stop_clicked(self, data=None):
         """Stop current experiment. Signals experiment process to stop."""
