@@ -103,6 +103,13 @@ class VersionCheck:
         ser_port -- address of serial port to use
         """
         try:
+            ser.flushInput()
+            ser.write('!')
+                
+            while not ser.read()=="C":
+                ser.flushInput()
+                ser.write('!')
+                
             ser.write('V')
             for line in ser:
                 if line.startswith('V'):
@@ -184,7 +191,7 @@ class Settings:
         self.ser.write('!')
                 
         while not self.ser.read()=="C":
-            time.sleep(.5)
+            self.ser.flushInput()
             self.ser.write('!')
             
         self.ser.write('SR')
@@ -210,7 +217,7 @@ class Settings:
         self.ser.write('!')
                 
         while not self.ser.read()=="C":
-            time.sleep(.5)
+            self.ser.flushInput()
             self.ser.write('!')
             
         write_buffer = range(len(self.settings))
@@ -269,9 +276,8 @@ class LightSensor:
         ser.write('!')
                 
         while not ser.read()=="C":
-            time.sleep(.5)
+            self.ser.flushInput()
             ser.write('!')
-    
             
         ser.write('T')
         for line in ser:
@@ -396,10 +402,12 @@ class Experiment(object):
             
             for i in self.commands:
                 logger.info("Command: %s", i)
+                self.serial.flushInput()
                 self.serial.write('!')
                 
-                while not self.serial.read().startswith("C"):
-                    pass
+                while not self.serial.read()=="C":
+                    self.serial.flushInput()
+                    self.serial.write('!')
     
                 self.serial.write(i)
                 if not self.serial_handler():
