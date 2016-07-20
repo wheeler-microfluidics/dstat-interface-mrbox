@@ -62,3 +62,6 @@ Version 1.3
 Version 1.3.1
     -Fixed electrochem modes broken when database added
     -Make metadata keys optional.
+    
+Version 1.3.2
+    -Improves initial connection reliability
