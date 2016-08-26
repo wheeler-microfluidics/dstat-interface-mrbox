@@ -17,8 +17,27 @@
 #
 #     You should have received a copy of the GNU General Public License
 #     along with this program.  If not, see <http://www.gnu.org/licenses/>.
+'''GUI Interface for Wheeler Lab DStat
 
-""" GUI Interface for Wheeler Lab DStat """
+Attributes
+----------
+EXPERIMENT_TYPES : pandas.Series
+    Enum-like type defining experiment type codes::
+
+        Index    Experiment type                     Value
+
+        CA       Chronoamperometry                   0
+        LSV      Linear Sweep Voltammetry            1
+        CV       Cyclic Voltammetry                  2
+        SWV      Square Wave Voltammetry             3
+        DPV      Differential Pulse Voltammetry      4
+        PD       Photodiode                          5
+        POT      Potentiometry                       6
+
+COLUMN_MAPPING : OrderedDict
+    Mapping of :data:`EXPERIMENT_TYPES` code values to list of corresponding
+    measurement column names.
+'''
 
 import sys
 import os
@@ -79,32 +98,75 @@ root_logger.addHandler(log_handler)
 
 logger = logging.getLogger("dstat.main")
 
+EXPERIMENT_TYPES = pd.Series(0, index=['CA', 'LSV', 'CV', 'SWV', 'DPV', 'PD',
+                                       'POT'])
+EXPERIMENT_TYPES[:] = range(EXPERIMENT_TYPES.size)
 
-def dstat_data_to_frame(data):
+EXPERIMENT_TYPE_NAMES = EXPERIMENT_TYPES.copy()
+EXPERIMENT_TYPE_NAMES[:] = ['Chronoamperometry',
+                            'Linear Sweep Voltammetry',
+                            'Cyclic Voltammetry',
+                            'Square Wave Voltammetry',
+                            'Differential Pulse Voltammetry',
+                            'Photodiode',
+                            'Potentiometry']
+
+COLUMN_MAPPING = OrderedDict([(EXPERIMENT_TYPES.CA, ['current_amps']),
+                              (EXPERIMENT_TYPES.LSV, ['voltage_volts',
+                                                      'current_amps']),
+                              (EXPERIMENT_TYPES.CV, ['voltage_volts',
+                                                     'current_amps']),
+                              (EXPERIMENT_TYPES.SWV, ['voltage_volts',
+                                                      'current_amps',
+                                                      'forward_current_amps',
+                                                      'reverse_current_amps']),
+                              (EXPERIMENT_TYPES.DPV, ['voltage_volts',
+                                                      'current_amps',
+                                                      'forward_current_amps',
+                                                      'reverse_current_amps']),
+                              (EXPERIMENT_TYPES.PD, ['current_amps']),
+                              (EXPERIMENT_TYPES.POT, ['voltage_volts'])])
+
+
+def dstat_data_to_frame(experiment_type, data):
     '''
-    Convert DStat experiment data to `pandas.DataFrame`.
+    Convert DStat experiment data to ``pandas.DataFrame``.
 
-    Args
-    ----
+    Parameters
+    ==========
+    experiment_type : int
+        Experiment type code (one of the values in :data:`EXPERIMENT_TYPES`).
+    data : list
+        List of numpy array pairs (i.e., tuples).  For each array pair, each
+        item in the zipped array has two values; the first value is the *time
+        in seconds* since the start of the DStat experiment, the second value
+        is an array where each row of the array contains measurements
+        corresponding to the respective time point in the time array.  The
+        columns in the second array depends on the test being run:
 
-        data (list) : List of numpy array pairs (i.e., tuples).  For each array
-            pair, each item in the zipped array has two values; the first value
-            is the *time in seconds* since the start of the DStat experiment,
-            the second value is the measured current in *amps*.
+         - Linear Sweep Voltammetry/Cyclic Voltammetry: voltage, current
+         - Square Wave Voltammetry/Differential Pulse Voltammetry:
+             - voltage, current, forward current, reverse current
+         - Photodiode: current
+         - Potentiometry: voltage
 
     Returns
-    -------
-
-        (`pandas.DataFrame`) : Table containing two columns, `time_s` and
-            `current_amps`.
+    =======
+    pandas.DataFrame
+        Table containing columns ``time_s``, ``scan_i``, and additional columns
+        matching experiment type (see :data:`COLUMN_MAPPING`).
     '''
+    columns = ['time_s'] + COLUMN_MAPPING[experiment_type]
     if not data:
-        return pd.DataFrame(None, columns=['time_s', 'current_amps'])
+        return pd.DataFrame(None, columns=columns)
     else:
-        return (pd.concat([pd.DataFrame(np.column_stack(d),
-                                        columns=['time_s', 'current_amps'])
-                           for d in data])
-                .reset_index(drop=True))
+        frames = []
+        for i, scan_arrays_i in enumerate(data):
+            frame_i = pd.DataFrame(np.column_stack(scan_arrays_i),
+                                   columns=columns)
+            frame_i.insert(1, 'scan_i', i)
+            frames.append(frame_i)
+        return pd.concat(frames).reset_index(drop=True)
 
 
 class Main(object):
@@ -175,7 +237,7 @@ class Main(object):
 
         self.serial_combobox.set_active(0)
 
-        #initialize experiment selection combobox
+        # Initialize experiment selection combobox
         self.expcombobox = self.builder.get_object('expcombobox')
         self.expcombobox.pack_start(self.cell, True)
         self.expcombobox.add_attribute(self.cell, 'text', 2)
@@ -227,6 +289,8 @@ class Main(object):
         self.completed_experiment_ids = OrderedDict()
         # Data collected during completed experiments.
         self.completed_experiment_data = OrderedDict()
+        # Active experiment type code.
+        self.active_experiment_type = None
 
     def on_window1_destroy(self, object, data=None):
         """ Quit when main window closed."""
@@ -465,6 +529,7 @@ class Main(object):
         # Assign current experiment a unique identifier.
         experiment_id = uuid.uuid4()
         self.active_experiment_id = experiment_id
+        self.active_experiment_type = self.expcombobox.get_active()
         logger.info("Current measurement id: %s", experiment_id.hex)
 
         self.metadata = metadata
@@ -528,7 +593,6 @@ class Main(object):
         while comm.serial_instance.data_pipe_p.poll(): # Clear data pipe
             comm.serial_instance.data_pipe_p.recv()
 
-        selection = self.expcombobox.get_active()
         parameters = {}
         parameters['version'] = self.version
         parameters['metadata'] = self.metadata
@@ -551,7 +615,7 @@ class Main(object):
             self.stopbutton.set_sensitive(True)
             self.statusbar.remove_all(self.error_context_id)
 
-            if selection == 0:  # CA
+            if self.active_experiment_type == EXPERIMENT_TYPES.CA:
                 # Add experiment parameters to existing
                 parameters.update(self.exp_window.get_params('cae'))
                 if not parameters['potential']:
@@ -570,7 +634,7 @@ class Main(object):
 
                 return experiment_id
 
-            elif selection == 1: # LSV
+            elif self.active_experiment_type == EXPERIMENT_TYPES.LSV:
                 parameter_test.lsv_test(parameters)
 
                 self.current_exp = comm.LSVExp(parameters)
@@ -578,7 +642,7 @@ class Main(object):
 
                 return experiment_id
 
-            elif selection == 2: # CV
+            elif self.active_experiment_type == EXPERIMENT_TYPES.CV:
                 parameter_test.cv_test(parameters)
 
                 self.current_exp = comm.CVExp(parameters)
@@ -586,7 +650,7 @@ class Main(object):
 
                 return experiment_id
 
-            elif selection == 3:  # SWV
+            elif self.active_experiment_type == EXPERIMENT_TYPES.SWV:
                 parameter_test.swv_test(parameters)
 
                 self.current_exp = comm.SWVExp(parameters)
@@ -594,7 +658,7 @@ class Main(object):
 
                 return experiment_id
 
-            elif selection == 4:  # DPV
+            elif self.active_experiment_type == EXPERIMENT_TYPES.DPV:
                 parameter_test.dpv_test(parameters)
 
                 self.current_exp = comm.DPVExp(parameters)
@@ -602,7 +666,7 @@ class Main(object):
 
                 return experiment_id
 
-            elif selection == 6:  # PD
+            elif self.active_experiment_type == EXPERIMENT_TYPES.PD:
                 parameter_test.pd_test(parameters)
 
                 self.current_exp = comm.PDExp(parameters)
@@ -610,7 +674,7 @@ class Main(object):
 
                 return experiment_id
 
-            elif selection == 7:  # POT
+            elif self.active_experiment_type == EXPERIMENT_TYPES.POT:
                 if not (self.version[0] >= 1 and self.version[1] >= 2):
                     self.statusbar.push(self.error_context_id,
                                 "v1.1 board does not support potentiometry.")
@@ -882,7 +946,8 @@ class Main(object):
             self.start_ocp()
             # Save current measurements for experiment in `pandas.DataFrame`.
             self.completed_experiment_data[self.active_experiment_id] =\
-                dstat_data_to_frame(self.current_exp.data['data'])
+                dstat_data_to_frame(self.active_experiment_type,
+                                    self.current_exp.data['data'])
             self.completed_experiment_ids[self.active_experiment_id] =\
                 datetime.utcnow()
 

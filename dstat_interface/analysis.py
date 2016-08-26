@@ -282,18 +282,24 @@ def dstat_to_fft_frame(df_data, sample_frequency_hz=60., settling_period_s=2.):
 
 def dstat_to_frame(data_path_i):
     '''
-    Convert DStat text file results to `pandas.DataFrame`.
+    Convert DStat text file results to ``pandas.DataFrame``.
 
-    Args
-    ----
-
-        data_path_i (str) : Path to DStat results text file.
+    Parameters
+    ----------
+    data_path_i : str
+        Path to DStat results text file.
 
     Returns
     -------
+    pandas.DataFrame
+        DStat measurements in a table with the column ``name`` and
+        ``current_amps``, indexed by ``utc_timestamp`` and ``time_s``.
 
-        (pandas.DataFrame) : DStat measurements in a table with the column
-            `name` and `current_amps`, indexed by `utc_timestamp` and `time_s`.
+    Notes
+    -----
+
+    **TODO** Currently only works for experiments with current as the only
+    measurement column (i.e., chronoamperometry, photodiode).
     '''
     with data_path_i.open('r') as input_i:
         diff = (dt.datetime.utcnow() - dt.datetime.now())

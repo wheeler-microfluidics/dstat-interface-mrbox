@@ -39,9 +39,9 @@ try:
 except ImportError:
     pass
 
-from numpy import sin, linspace, pi, mean, trapz
+from numpy import mean, trapz
 from scipy import fft, arange
-from dstat_interface.analysis import dstat_to_fft_frame
+from analysis import dstat_to_fft_frame
 
 
 # Format float values as string w.r.t. amps, e.g., `A`, `mA`, `uA`, etc.
