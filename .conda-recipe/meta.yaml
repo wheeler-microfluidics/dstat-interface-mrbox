@@ -23,6 +23,7 @@ requirements:
   build:
     - python
     - paver
+    - path_helpers
     - matplotlib
     - pandas
     - psutil
