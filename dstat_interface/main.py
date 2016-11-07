@@ -1031,8 +1031,12 @@ class Main(object):
             self.plugin = None
 
 
-if __name__ == "__main__":
+def main():
     multiprocessing.freeze_support()
     gobject.threads_init()
     MAIN = Main()
     gtk.main()
+
+
+if __name__ == "__main__":
+    main()

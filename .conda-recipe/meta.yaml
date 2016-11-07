@@ -13,7 +13,7 @@ package:
 
 build:
   entry_points:
-    - dstat-interface = dstat_interface.main
+    - dstat-interface = dstat_interface.main:main
 
   # If this is a new build for the same version, increment the build
   # number. If you do not include this key, it defaults to 0.
