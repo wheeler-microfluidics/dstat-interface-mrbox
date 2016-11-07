@@ -65,7 +65,16 @@ except ImportError:
     sys.exit(1)
 from serial import SerialException
 import logging
-os.chdir(os.path.dirname(os.path.abspath(sys.argv[0])))
+# Add package directory to Python path.
+#
+# This is required for relative imports, which are required for running under a
+# `multiprocessing` process.
+parent_dir = os.path.abspath(os.path.dirname(__file__))
+if parent_dir not in sys.path:
+    sys.path.insert(0, parent_dir)
+# Change directory into package parent directory to support loading glade UI
+# files using relative paths.
+os.chdir(parent_dir)
 
 from version import getVersion
 import interface.save as save
@@ -1032,11 +1041,6 @@ class Main(object):
 
 
 def main():
-    import sys
-
-    parent_dir = os.path.dirname(__file__)
-    if parent_dir not in sys.path:
-        sys.path.insert(0, parent_dir)
     multiprocessing.freeze_support()
     gobject.threads_init()
     MAIN = Main()
