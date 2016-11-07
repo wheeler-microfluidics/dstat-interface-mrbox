@@ -1032,6 +1032,11 @@ class Main(object):
 
 
 def main():
+    import sys
+
+    parent_dir = os.path.dirname(__file__)
+    if parent_dir not in sys.path:
+        sys.path.insert(0, parent_dir)
     multiprocessing.freeze_support()
     gobject.threads_init()
     MAIN = Main()
