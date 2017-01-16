@@ -18,11 +18,11 @@ The DStat interface is written primarily in Python and runs on Linux, Mac, and W
 It is the main method for running experiments on the DStat, controlling experimental parameters and collecting and plotting data.
 It currently has no abilities for analyzing recorded data or opening previously saved data files, but data is saved in a simple text format or numpy-compatible binary format and plots can be saved as images.
 
-*New in version 1.3:* dstat-interface can now save all data files to a ZODB database for later analysis.
+*New in version 1.3:* dstat-interface-mrbox can now save all data files to a ZODB database for later analysis.
 The old autosave functionality has still been retained.
 
 # Installation
-Unfortunately, due to the python packages used, dstat-interface is difficult to make into a single self-contained package, so for the time being, the simplest way to run it is to install a python distribution. dstat-interface itself, therefore, requires no installation and can be run from any directory by executing `/dstat-interface/main.py` with python.
+Unfortunately, due to the python packages used, dstat-interface-mrbox is difficult to make into a single self-contained package, so for the time being, the simplest way to run it is to install a python distribution. dstat-interface-mrbox itself, therefore, requires no installation and can be run from any directory by executing `/dstat-interface-mrbox/main.py` with python.
 
 ## Manual Install
 
@@ -47,7 +47,7 @@ Optional:
 * seaborn (0.7.0)—Makes prettier plots if available
 
 ### Mac OS X
-The easiest way to get most of the necessary requirements to run dstat-interface is using [Homebrew](http://brew.sh):
+The easiest way to get most of the necessary requirements to run dstat-interface-mrbox is using [Homebrew](http://brew.sh):
 
 	brew tap homebrew/python
 	brew update
@@ -79,31 +79,31 @@ While it is possible to install a bare python distribution and install the requi
 The newest versions of Python(x,y) are also missing PyGTK, so it should be installed from [here](http://ftp.gnome.org/pub/GNOME/binaries/win32/pygtk/2.24/pygtk-all-in-one-2.24.2.win32-py2.7.msi) once Python(x,y) is installed. Matplotlib should then be reinstalled to get gtk support from [here](https://downloads.sourceforge.net/project/matplotlib/matplotlib/matplotlib-1.4.3/windows/matplotlib-1.4.3.win32-py2.7.exe).
 
 ## pip Install
-Tagged git versions are uploaded to [PiPy](https://pypi.python.org/pypi/dstat-interface) regularly, and thus dstat-interface can be installed using the command `pip install dstat-interface`, which will attempt to automatically install matplotlib, numpy, pyserial, and pyzmq. (N.B. matplotlib does not install well with pip on Mac and should be manually installed with Homebrew as described above)
+Tagged git versions are uploaded to [PiPy](https://pypi.python.org/pypi/dstat-interface-mrbox) regularly, and thus dstat-interface-mrbox can be installed using the command `pip install dstat-interface-mrbox`, which will attempt to automatically install matplotlib, numpy, pyserial, and pyzmq. (N.B. matplotlib does not install well with pip on Mac and should be manually installed with Homebrew as described above)
 This is still a bit experimental as pygtk and pygobject must be installed separately.
 
-To launch a pip-installed dstat-interface, simply type:
+To launch a pip-installed dstat-interface-mrbox, simply type:
 
-    python -m dstat_interface.main
+    python -m dstat_interface_mrbox.main
     
 into a terminal.
 
 ### Windows
-The following terminal commands will result in a full installation of dstat-interface and its requirements, assuming [32-bit Miniconda][1] is installed:
+The following terminal commands will result in a full installation of dstat-interface-mrbox and its requirements, assuming [32-bit Miniconda][1] is installed:
 
     conda create -n dstat python pywin32
     activate dstat
-    pip install --find-links http://192.99.4.95/wheels --trusted-host 192.99.4.95 scipy==0.17.0 pygtk2-win pycairo-gtk2-win dstat-interface
+    pip install --find-links http://192.99.4.95/wheels --trusted-host 192.99.4.95 scipy==0.17.0 pygtk2-win pycairo-gtk2-win dstat-interface-mrbox
 
 This makes use of pre-built binary wheels for many of the Windows packages, stored on our server.
 We are installing in a separate environment to keep a clean system.
 `activate dstat` will enter the environment (must be done whenever a new terminal is opened),
 and `deactivate` will return to the root environment.
 
-Therefore, to run dstat-interface from our environment, we must first activate it (if not already done) before launching it:
+Therefore, to run dstat-interface-mrbox from our environment, we must first activate it (if not already done) before launching it:
 
     activate dstat
-    python -m dstat_interface.main
+    python -m dstat_interface_mrbox.main
 
 [1]: https://repo.continuum.io/miniconda/Miniconda2-latest-Windows-x86.exe
 
@@ -117,7 +117,7 @@ Therefore, to run dstat-interface from our environment, we must first activate i
 	* File
 		* Save Current data… — Saves the data of the currently visible plot as a space-separated text file or numpy .npy file
 		* Save Plot… – Save the currently visible plot as a .pdf
-		* Quit — Quits dstat-interface
+		* Quit — Quits dstat-interface-mrbox
 	* Dropbot
 		* Connect — Listens for µDrop connection over ZMQ
 		* Disconnect — Disconnect from µDrop

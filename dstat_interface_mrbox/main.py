@@ -1028,7 +1028,7 @@ class Main(object):
         '''
         self.cleanup_plugin()
         # Initialize 0MQ hub plugin and subscribe to hub messages.
-        self.plugin = DstatPlugin(self, 'dstat-interface', hub_uri,
+        self.plugin = DstatPlugin(self, 'dstat-interface-mrbox', hub_uri,
                                   subscribe_options={zmq.SUBSCRIBE: ''})
         # Initialize sockets.
         self.plugin.reset()

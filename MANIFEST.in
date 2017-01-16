@@ -2,6 +2,6 @@ include RELEASE-VERSION
 include version.py
 include setup.py
 include paver-minilib.zip
-recursive-include dstat_interface *
-recursive-exclude dstat_interface *.pyc
-recursive-exclude dstat_interface *~
+recursive-include dstat_interface_mrbox *
+recursive-exclude dstat_interface_mrbox *.pyc
+recursive-exclude dstat_interface_mrbox *~

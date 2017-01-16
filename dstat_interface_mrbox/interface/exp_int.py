@@ -26,7 +26,7 @@ import gobject
 import dstat_comm
 import __main__
 from errors import InputError, VarError, ErrorLogger
-_logger = ErrorLogger(sender="dstat-interface-exp_int")
+_logger = ErrorLogger(sender="dstat-interface-mrbox-exp_int")
 
 class ExpInterface(object):
     """Generic experiment interface class. Should be subclassed to implement

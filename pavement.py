@@ -8,7 +8,7 @@ from distutils.dep_util import newer
 sys.path.insert(0, path('.').abspath())
 import version
 
-setup(name='dstat_interface',
+setup(name='dstat_interface_mrbox',
       version=version.getVersion(),
       description='Interface software for DStat potentiostat.',
       keywords='',
@@ -16,7 +16,7 @@ setup(name='dstat_interface',
       author_email='mdryden@chemutoronto.ca',
       url='http://microfluidics.utoronto.ca/dstat',
       license='GPLv3',
-      packages=['dstat_interface'],
+      packages=['dstat_interface_mrbox'],
       install_requires=['matplotlib', 'numpy', 'pandas', 'psutil', 'pyserial',
                         'pyyaml', 'pyzmq', 'seaborn', 'si-prefix', 'zeo',
                         'zmq-plugin>=0.2.post2', 'zodb'],
