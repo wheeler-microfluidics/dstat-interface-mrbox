@@ -64,11 +64,11 @@
     <property name="border_width">5</property>
     <property name="destroy_with_parent">True</property>
     <property name="type_hint">dialog</property>
-    <property name="program_name">DStat-interface</property>
-    <property name="version">1.0.3</property>
-    <property name="copyright" translatable="yes">© Michael Dryden 2014</property>
+    <property name="program_name">DStat interface (MR-Box)</property>
+    <property name="version">1.3</property>
+    <property name="copyright" translatable="yes">© Michael Dryden 2014, Christian Fobel 2017</property>
     <property name="comments" translatable="yes">This software is licensed under the GNU GPL v3</property>
-    <property name="website">http://microfluidics.utoronto.ca/dstat</property>
+    <property name="website">https://github.com/wheeler-microfluidics/dstat-interface-mrbox</property>
     <property name="license" translatable="yes">                    GNU GENERAL PUBLIC LICENSE
                        Version 3, 29 June 2007
 
