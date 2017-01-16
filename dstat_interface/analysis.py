@@ -24,6 +24,7 @@ import logging
 import datetime as dt
 import cStringIO as StringIO
 import re
+import types
 
 import numpy as np
 import pandas as pd
@@ -378,7 +379,10 @@ def reduce_dstat_data(df_dstat, groupby, settling_period_s=2., bandwidth=1.,
             # Take mean measurement value (after settling period).
             summary_i['signal'] = (df_i.loc[df_i.time_s > settling_period_s]
                                    .current_amps.mean())
-
-        rows.append(list(index_i) + summary_i.tolist())
+        if isinstance(index_i, types.StringTypes):
+            index_i = [index_i]
+        else:
+            index_i = list(index_i)
+        rows.append(index_i + summary_i.tolist())
 
     return pd.DataFrame(rows, columns=groupby + summary_i.keys().tolist())
