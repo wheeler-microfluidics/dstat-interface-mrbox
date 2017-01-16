@@ -41,13 +41,14 @@ COLUMN_MAPPING : OrderedDict
     measurement column names.
 '''
 
-import sys
-import os
-import multiprocessing
-import uuid
-from copy import deepcopy
 from collections import OrderedDict
+from copy import deepcopy
 from datetime import datetime
+import multiprocessing
+import os
+import pkg_resources as pk
+import sys
+import uuid
 
 try:
     import pygtk
@@ -264,8 +265,11 @@ class Main(object):
         try:
             ver = getVersion()
         except ValueError:
-            ver = "1.x"
-            logger.warning("Could not fetch version number")
+            try:
+                ver = pk.get_distribution('dstat_interface_mrbox').version
+            except pk.DistributionNotFound:
+                ver = '1.x'
+                logger.warning("Could not fetch version number")
         self.mainwindow.set_title(" ".join(("DStat Interface", ver)))
         self.aboutdialog.set_version(ver)
 
