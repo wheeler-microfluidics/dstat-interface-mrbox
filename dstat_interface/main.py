@@ -31,8 +31,10 @@ EXPERIMENT_TYPES : pandas.Series
         CV       Cyclic Voltammetry                  2
         SWV      Square Wave Voltammetry             3
         DPV      Differential Pulse Voltammetry      4
-        PD       Photodiode                          5
-        POT      Potentiometry                       6
+        ACV      Alternating Current Voltammetry     5
+        PD       Photodiode                          6
+        POT      Potentiometry                       7
+        OC       Offset Calibration                  8
 
 COLUMN_MAPPING : OrderedDict
     Mapping of :data:`EXPERIMENT_TYPES` code values to list of corresponding
@@ -107,8 +109,8 @@ root_logger.addHandler(log_handler)
 
 logger = logging.getLogger("dstat.main")
 
-EXPERIMENT_TYPES = pd.Series(0, index=['CA', 'LSV', 'CV', 'SWV', 'DPV', 'PD',
-                                       'POT'])
+EXPERIMENT_TYPES = pd.Series(0, index=['CA', 'LSV', 'CV', 'SWV', 'DPV', 'ACV',
+                                       'PD', 'POT', 'OC'])
 EXPERIMENT_TYPES[:] = range(EXPERIMENT_TYPES.size)
 
 EXPERIMENT_TYPE_NAMES = EXPERIMENT_TYPES.copy()
@@ -117,8 +119,10 @@ EXPERIMENT_TYPE_NAMES[:] = ['Chronoamperometry',
                             'Cyclic Voltammetry',
                             'Square Wave Voltammetry',
                             'Differential Pulse Voltammetry',
+                            'Alternating Current Voltammetry',
                             'Photodiode',
-                            'Potentiometry']
+                            'Potentiometry',
+                            'Offset Calibration']
 
 COLUMN_MAPPING = OrderedDict([(EXPERIMENT_TYPES.CA, ['current_amps']),
                               (EXPERIMENT_TYPES.LSV, ['voltage_volts',
