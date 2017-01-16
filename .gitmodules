@@ -1,9 +1,3 @@
-[submodule "mr_db"]
-	path = mr_db
-	url = /Users/mdryden/src/mr_db
-[submodule "dstat-interface/mr_db"]
-	path = dstat-interface/mr_db
-	url = http://microfluidics.utoronto.ca/gitlab/mdryden/mr-db.git
-[submodule "dstat_interface/mr_db"]
-	path = dstat_interface/mr_db
+[submodule "dstat_interface_mrbox/mr_db"]
+	path = dstat_interface_mrbox/mr_db
 	url = http://microfluidics.utoronto.ca/gitlab/mdryden/mr-db.git

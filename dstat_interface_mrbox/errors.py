@@ -47,7 +47,7 @@ class VarError(Error):
         self.msg = msg
 
 class ErrorLogger(object):
-    def __init__(self, sender="dstat-interface", level=('ERR', 'WAR', 'INFO')):
+    def __init__(self, sender="dstat-interface-mrbox", level=('ERR', 'WAR', 'INFO')):
         self.sender = str(sender)
         self.level = level
         self.levels = ('ERR', 'WAR', 'INFO', 'DBG')

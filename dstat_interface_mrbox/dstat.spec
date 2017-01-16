@@ -1,6 +1,6 @@
 # -*- mode: python -*-
 a = Analysis(['./main.py'],
-             pathex=['/Users/mdryden/src/dstat-interface2/dstatInterface'],
+             pathex=['/Users/mdryden/src/dstat-interface-mrbox2/dstatInterface'],
              hiddenimports=[],
              hookspath=None,
              runtime_hooks=None)
